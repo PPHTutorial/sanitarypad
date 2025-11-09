@@ -45,6 +45,10 @@ class AppConstants {
   static const String collectionSubscriptions = 'subscriptions';
   static const String collectionSupportContacts = 'supportContacts';
   static const String collectionRedFlagAlerts = 'redFlagAlerts';
+  static const String collectionPregnancies = 'pregnancies';
+  static const String collectionFertilityEntries = 'fertilityEntries';
+  static const String collectionSkincareEntries = 'skincareEntries';
+  static const String collectionSkincareProducts = 'skincareProducts';
 
   // Subscription Tiers
   static const String tierFree = 'free';

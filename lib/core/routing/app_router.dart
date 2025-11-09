@@ -18,6 +18,16 @@ import '../../presentation/screens/profile/emergency_contacts_screen.dart';
 import '../../presentation/screens/profile/emergency_contact_form_screen.dart';
 import '../../data/models/emergency_contact_model.dart';
 import '../../presentation/screens/settings/notification_settings_screen.dart';
+import '../../presentation/screens/pregnancy/pregnancy_tracking_screen.dart';
+import '../../presentation/screens/pregnancy/pregnancy_form_screen.dart';
+import '../../data/models/pregnancy_model.dart';
+import '../../presentation/screens/fertility/fertility_tracking_screen.dart';
+import '../../presentation/screens/fertility/fertility_entry_form_screen.dart';
+import '../../data/models/fertility_model.dart';
+import '../../presentation/screens/skincare/skincare_tracking_screen.dart';
+import '../../presentation/screens/skincare/skincare_product_form_screen.dart';
+import '../../presentation/screens/skincare/skincare_routine_form_screen.dart';
+import '../../data/models/skincare_model.dart';
 
 /// App routing configuration
 class AppRouter {
@@ -136,6 +146,59 @@ class AppRouter {
         path: '/notification-settings',
         name: 'notification-settings',
         builder: (context, state) => const NotificationSettingsScreen(),
+      ),
+
+      // Pregnancy Tracking
+      GoRoute(
+        path: '/pregnancy-tracking',
+        name: 'pregnancy-tracking',
+        builder: (context, state) => const PregnancyTrackingScreen(),
+      ),
+      GoRoute(
+        path: '/pregnancy-form',
+        name: 'pregnancy-form',
+        builder: (context, state) {
+          final pregnancy = state.extra as Pregnancy?;
+          return PregnancyFormScreen(pregnancy: pregnancy);
+        },
+      ),
+
+      // Fertility Tracking
+      GoRoute(
+        path: '/fertility-tracking',
+        name: 'fertility-tracking',
+        builder: (context, state) => const FertilityTrackingScreen(),
+      ),
+      GoRoute(
+        path: '/fertility-entry-form',
+        name: 'fertility-entry-form',
+        builder: (context, state) {
+          final entry = state.extra as FertilityEntry?;
+          return FertilityEntryFormScreen(entry: entry);
+        },
+      ),
+
+      // Skincare Tracking
+      GoRoute(
+        path: '/skincare-tracking',
+        name: 'skincare-tracking',
+        builder: (context, state) => const SkincareTrackingScreen(),
+      ),
+      GoRoute(
+        path: '/skincare-product-form',
+        name: 'skincare-product-form',
+        builder: (context, state) {
+          final product = state.extra as SkincareProduct?;
+          return SkincareProductFormScreen(product: product);
+        },
+      ),
+      GoRoute(
+        path: '/skincare-routine-form',
+        name: 'skincare-routine-form',
+        builder: (context, state) {
+          final entry = state.extra as SkincareEntry?;
+          return SkincareRoutineFormScreen(entry: entry);
+        },
       ),
     ],
   );

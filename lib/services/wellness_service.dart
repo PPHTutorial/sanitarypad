@@ -20,6 +20,7 @@ class WellnessService {
     required WellnessMood mood,
     WellnessExercise? exercise,
     String? journal,
+    List<String>? photoUrls,
   }) async {
     final user = _authService.currentUser;
     if (user == null) {
@@ -39,6 +40,7 @@ class WellnessService {
       mood: mood,
       exercise: exercise,
       journal: journal,
+      photoUrls: photoUrls,
       createdAt: DateTime.now(),
     );
 

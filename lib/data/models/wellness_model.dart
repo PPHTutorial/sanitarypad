@@ -12,6 +12,7 @@ class WellnessModel extends Equatable {
   final WellnessMood mood;
   final WellnessExercise? exercise;
   final String? journal;
+  final List<String>? photoUrls; // Photo diary support
   final DateTime createdAt;
 
   const WellnessModel({
@@ -24,6 +25,7 @@ class WellnessModel extends Equatable {
     required this.mood,
     this.exercise,
     this.journal,
+    this.photoUrls,
     required this.createdAt,
   });
 
@@ -51,6 +53,9 @@ class WellnessModel extends Equatable {
             )
           : null,
       journal: data['journal'] as String?,
+      photoUrls: (data['photoUrls'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList(),
       createdAt: (data['createdAt'] as Timestamp).toDate(),
     );
   }
@@ -65,6 +70,7 @@ class WellnessModel extends Equatable {
       'mood': mood.toMap(),
       'exercise': exercise?.toMap(),
       'journal': journal,
+      'photoUrls': photoUrls,
       'createdAt': Timestamp.fromDate(createdAt),
     };
   }
@@ -80,6 +86,7 @@ class WellnessModel extends Equatable {
         mood,
         exercise,
         journal,
+        photoUrls,
         createdAt,
       ];
 }
@@ -182,16 +189,29 @@ class WellnessAppetite extends Equatable {
   List<Object?> get props => [level, notes];
 }
 
-/// Mood data
+/// Mood data with enhanced tracking
 class WellnessMood extends Equatable {
   final String emoji;
   final String? description;
   final int energyLevel; // 1-5
+  final List<String>
+      emotions; // Multiple emotions: happy, sad, anxious, angry, calm, etc.
+  final int? stressLevel; // 1-10
+  final int? anxietyLevel; // 1-10
+  final int? depressionLevel; // 1-10
+  final String? mentalHealthNotes;
+  final bool? pmsRelated; // Is mood related to PMS?
 
   const WellnessMood({
     required this.emoji,
     this.description,
     required this.energyLevel,
+    this.emotions = const [],
+    this.stressLevel,
+    this.anxietyLevel,
+    this.depressionLevel,
+    this.mentalHealthNotes,
+    this.pmsRelated,
   });
 
   factory WellnessMood.fromMap(Map<String, dynamic> map) {
@@ -199,6 +219,15 @@ class WellnessMood extends Equatable {
       emoji: map['emoji'] as String? ?? '😊',
       description: map['description'] as String?,
       energyLevel: map['energyLevel'] as int? ?? 3,
+      emotions: (map['emotions'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          [],
+      stressLevel: map['stressLevel'] as int?,
+      anxietyLevel: map['anxietyLevel'] as int?,
+      depressionLevel: map['depressionLevel'] as int?,
+      mentalHealthNotes: map['mentalHealthNotes'] as String?,
+      pmsRelated: map['pmsRelated'] as bool?,
     );
   }
 
@@ -207,11 +236,49 @@ class WellnessMood extends Equatable {
       'emoji': emoji,
       'description': description,
       'energyLevel': energyLevel,
+      'emotions': emotions,
+      'stressLevel': stressLevel,
+      'anxietyLevel': anxietyLevel,
+      'depressionLevel': depressionLevel,
+      'mentalHealthNotes': mentalHealthNotes,
+      'pmsRelated': pmsRelated,
     };
   }
 
+  /// Get overall mental health score (0-100)
+  double get mentalHealthScore {
+    double score = 100.0;
+    if (stressLevel != null) {
+      score -= (stressLevel! / 10 * 30);
+    }
+    if (anxietyLevel != null) {
+      score -= (anxietyLevel! / 10 * 30);
+    }
+    if (depressionLevel != null) {
+      score -= (depressionLevel! / 10 * 40);
+    }
+    return score.clamp(0.0, 100.0);
+  }
+
+  /// Check if mental health indicators are concerning
+  bool get hasConcerningIndicators {
+    return (stressLevel != null && stressLevel! >= 7) ||
+        (anxietyLevel != null && anxietyLevel! >= 7) ||
+        (depressionLevel != null && depressionLevel! >= 7);
+  }
+
   @override
-  List<Object?> get props => [emoji, description, energyLevel];
+  List<Object?> get props => [
+        emoji,
+        description,
+        energyLevel,
+        emotions,
+        stressLevel,
+        anxietyLevel,
+        depressionLevel,
+        mentalHealthNotes,
+        pmsRelated,
+      ];
 }
 
 /// Exercise data
@@ -245,4 +312,3 @@ class WellnessExercise extends Equatable {
   @override
   List<Object?> get props => [type, duration, intensity];
 }
-
