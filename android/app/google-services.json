@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "1083709001383",
+    "project_id": "sanitarypad",
+    "storage_bucket": "sanitarypad.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1083709001383:android:17cbdc92721b025fa4d582",
+        "android_client_info": {
+          "package_name": "com.codeink.technologes.sanitarypad"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1083709001383-5pg451v1r2tmek7b259rvdvdnp0dhuvb.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAapYscVQleBPGKnN6A98cWeTMIr2a0jcQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1083709001383-5pg451v1r2tmek7b259rvdvdnp0dhuvb.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "1083709001383-oj9pgfeb3rcqgv945ivq5m8pf7788cq7.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.codeink.technologes.sanitarypad"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

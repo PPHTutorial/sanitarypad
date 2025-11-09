@@ -1,0 +1,148 @@
+You are an autonomous AI product engineer. Build a complete cross-platform mobile (Flutter) and web server (nextjs, tailwindcss, Tankstack, typescript backend server) called Sanitary Pad FemCare+ — a smart FemCare, Menstrual, Skincare, Pregnancy and Wellness assistant for women.
+
+ 🎯 Mission
+
+Create a secure, private, supportive wellness platform that helps women track their menstrual cycle, manage sanitary pad usage, monitor symptoms, receive health insights, and access emotional and hygiene support. Include a pro subscription tier.
+
+---
+
+ 📱 Core Features
+
+# Menstrual & Health Tracking
+
+* Cycle, ovulation, and fertility prediction
+* PMS & period prediction alerts
+* Flow intensity tracking
+* Symptom logging (cramps, headache, fatigue, etc.)
+* Mood & emotional state tracker
+* Hydration, sleep & appetite check-ins
+* Cycle-phase insights & guidance
+* Analytics & trend charts
+
+# Sanitary Pad Management
+
+* Pad change reminders
+* Time-based & flow-based alert logic
+* Pad usage history & stats
+* Pad stock tracking & refill reminders
+* Recommended pad types based on flow
+
+# Wellness & Education
+
+* Verified menstrual & hygiene tips
+* Nutrition & fitness recommendations per cycle phase
+* Teen education mode (first-period guide)
+* Menopause support content
+* Myths vs facts knowledge base
+* Breathing/meditation guidance
+* Positive affirmations & wellness journal
+
+# Safety & Support
+
+* Red-flag symptom alerts (PCOS/Anemia/Infections indicators)
+* Anonymous mode
+* SOS/emergency contact shortcut
+* “Talk to someone” emotional support resources
+
+---
+
+ 👑 Premium / Pro Subscription — FemCare+ Premium
+
+Unlocks:
+
+* AI menstrual coach
+* AI pain & symptom analyzer
+* Personalized diet & supplement plan
+* Advanced analytics & calendar insights
+* Unlimited reminders & journal entries
+* Exclusive guided meditations & videos
+* Panic/SOS priority actions
+* Cloud backup & multi-device sync
+
+Pricing tiers: monthly, quarterly, yearly (2 months free), student discount
+
+Extras/In-App Purchases:
+
+* Self-care kit programs
+* Mood therapy packs
+* Meditation audio bundles
+
+---
+
+ 🛍 Future Feature: Marketplace
+
+* Sanitary pad + feminine hygiene store
+* Pad subscription delivery
+* Affiliate products integration
+
+---
+
+ 🔐 Privacy & Safety
+
+* Zero-knowledge design
+* End-to-end encrypted health data
+* PIN/biometric lock
+* Anonymous mode
+* Data export + delete option
+
+---
+
+ 🎨 UI / UX Style Guide
+
+* Feminine, calming soft palette (lavender, nude pinks, neutrals)
+* Smooth animations, friendly icons
+* Emoji-based mood logging
+* Motivational & supportive tone
+* Inclusive for teens & adults
+
+---
+
+ 🧠 Tech Requirements
+
+* Cross-platform (Web/frontend/backend/Server: Nextjs, TS, Tankstack, react query, tailwindcss, Mobile: Flutter app id: com.codeink.stsl.sanitarypad)
+* Secure backend + encrypted storage (everything Firebase but server/backend/frontend would be hosted on vercel) 
+* Offline mode + cloud sync
+* Push notifications engine
+* Subscription + payments integration (in-app purchase and stripe for international then flutterwave for local payments)  
+* Admin dashboard all platforms
+
+
+ ✅ Your Responsibilities
+
+The agent must autonomously:
+
+* Generate system & architecture plan
+* Create UI wireframes & design guide
+* Build front-end & back-end (auth: firebase auth)
+* Create database schema (firebase firestore)
+* Implement AI cycle-analysis features
+* Build reminder & notification engine
+* Add subscription/paywall flows
+* Write automated tests
+* Deploy to production
+* Produce App Store & Play Store listing
+* Produce marketing site & promo copy
+* Deliver versioned Git repo
+
+Output development milestones and start executing immediately.
+
+ 🎬 Kick-off Tasks
+
+1. System architecture
+2. Database schema
+3. UI layout plan
+4. Development roadmap with phases
+5. Use best stacks, lib, approach and the best practices
+
+Begin execution now.
+
+---
+
+ 📌 Notes
+
+Focus on accuracy, emotional safety, accessibility, and privacy. This is a female-focused health and wellness product — tone must be empathetic, supportive, and medically responsible.
+
+---
+
+Begin building FemCare+ now.
+
