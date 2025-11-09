@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sanitarypad/core/widgets/back_button_handler.dart';
 import '../../../core/config/responsive_config.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/providers/auth_provider.dart';
@@ -31,47 +32,49 @@ class _EmergencyContactsScreenState
       );
     }
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Emergency Contacts'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: () {
-              context.push('/emergency-contact-form');
+    return BackButtonHandler(
+        fallbackRoute: '/home',
+        child: Scaffold(
+          appBar: AppBar(
+            title: const Text('Emergency Contacts'),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.add),
+                onPressed: () {
+                  context.push('/emergency-contact-form');
+                },
+              ),
+            ],
+          ),
+          body: StreamBuilder<List<EmergencyContact>>(
+            stream: _contactService.getUserContacts(user.userId),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              if (snapshot.hasError) {
+                return Center(
+                  child: Text('Error: ${snapshot.error}'),
+                );
+              }
+
+              final contacts = snapshot.data ?? [];
+
+              if (contacts.isEmpty) {
+                return _buildEmptyState(context);
+              }
+
+              return ListView.builder(
+                padding: ResponsiveConfig.padding(all: 16),
+                itemCount: contacts.length,
+                itemBuilder: (context, index) {
+                  return _buildContactCard(context, contacts[index]);
+                },
+              );
             },
           ),
-        ],
-      ),
-      body: StreamBuilder<List<EmergencyContact>>(
-        stream: _contactService.getUserContacts(user.userId),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          if (snapshot.hasError) {
-            return Center(
-              child: Text('Error: ${snapshot.error}'),
-            );
-          }
-
-          final contacts = snapshot.data ?? [];
-
-          if (contacts.isEmpty) {
-            return _buildEmptyState(context);
-          }
-
-          return ListView.builder(
-            padding: ResponsiveConfig.padding(all: 16),
-            itemCount: contacts.length,
-            itemBuilder: (context, index) {
-              return _buildContactCard(context, contacts[index]);
-            },
-          );
-        },
-      ),
-    );
+        ));
   }
 
   Widget _buildEmptyState(BuildContext context) {

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/config/responsive_config.dart';
 import '../../../services/notification_service.dart';
+import '../../../core/widgets/back_button_handler.dart';
 
 /// Notification settings screen
 class NotificationSettingsScreen extends ConsumerStatefulWidget {
@@ -57,126 +58,129 @@ class _NotificationSettingsScreenState
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Notification Settings'),
-      ),
-      body: SingleChildScrollView(
-        padding: ResponsiveConfig.padding(all: 16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Enable Notifications
-            Card(
-              child: SwitchListTile(
-                title: const Text('Enable Notifications'),
-                subtitle: const Text(
-                  'Receive reminders and important updates',
-                ),
-                value: _notificationsEnabled,
-                onChanged: (value) {
-                  setState(() => _notificationsEnabled = value);
-                  if (value) {
-                    _requestPermissions();
-                  }
-                },
-              ),
-            ),
-            ResponsiveConfig.heightBox(16),
-
-            if (_notificationsEnabled) ...[
-              // Period Reminders
+    return BackButtonHandler(
+      fallbackRoute: '/home',
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Notification Settings'),
+        ),
+        body: SingleChildScrollView(
+          padding: ResponsiveConfig.padding(all: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Enable Notifications
               Card(
                 child: SwitchListTile(
-                  title: const Text('Period Reminders'),
+                  title: const Text('Enable Notifications'),
                   subtitle: const Text(
-                    'Get notified when your period is predicted to start',
+                    'Receive reminders and important updates',
                   ),
-                  value: _periodReminders,
+                  value: _notificationsEnabled,
                   onChanged: (value) {
-                    setState(() => _periodReminders = value);
-                  },
-                ),
-              ),
-              ResponsiveConfig.heightBox(12),
-
-              // Pad Change Reminders
-              Card(
-                child: SwitchListTile(
-                  title: const Text('Pad Change Reminders'),
-                  subtitle: const Text(
-                    'Reminders to change your sanitary pad',
-                  ),
-                  value: _padChangeReminders,
-                  onChanged: (value) {
-                    setState(() => _padChangeReminders = value);
-                  },
-                ),
-              ),
-              ResponsiveConfig.heightBox(12),
-
-              // Wellness Reminders
-              Card(
-                child: SwitchListTile(
-                  title: const Text('Wellness Check Reminders'),
-                  subtitle: const Text(
-                    'Daily reminders to log your wellness',
-                  ),
-                  value: _wellnessReminders,
-                  onChanged: (value) {
-                    setState(() => _wellnessReminders = value);
-                  },
-                ),
-              ),
-              ResponsiveConfig.heightBox(12),
-
-              // Custom Reminders
-              Card(
-                child: SwitchListTile(
-                  title: const Text('Custom Reminders'),
-                  subtitle: const Text(
-                    'Enable custom reminders you create',
-                  ),
-                  value: _customReminders,
-                  onChanged: (value) {
-                    setState(() => _customReminders = value);
-                  },
-                ),
-              ),
-              ResponsiveConfig.heightBox(24),
-
-              // Test Notification Button
-              ElevatedButton.icon(
-                onPressed: () async {
-                  try {
-                    await _notificationService.scheduleNotification(
-                      id: DateTime.now().millisecondsSinceEpoch,
-                      title: 'Test Notification',
-                      body: 'This is a test notification from FemCare+',
-                      scheduledDate:
-                          DateTime.now().add(const Duration(seconds: 2)),
-                    );
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                              'Test notification will appear in 2 seconds'),
-                        ),
-                      );
+                    setState(() => _notificationsEnabled = value);
+                    if (value) {
+                      _requestPermissions();
                     }
-                  } catch (e) {
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Error: ${e.toString()}')),
-                      );
-                    }
-                  }
-                },
-                icon: const Icon(Icons.notifications),
-                label: const Text('Send Test Notification'),
+                  },
+                ),
               ),
+              ResponsiveConfig.heightBox(16),
+
+              if (_notificationsEnabled) ...[
+                // Period Reminders
+                Card(
+                  child: SwitchListTile(
+                    title: const Text('Period Reminders'),
+                    subtitle: const Text(
+                      'Get notified when your period is predicted to start',
+                    ),
+                    value: _periodReminders,
+                    onChanged: (value) {
+                      setState(() => _periodReminders = value);
+                    },
+                  ),
+                ),
+                ResponsiveConfig.heightBox(12),
+
+                // Pad Change Reminders
+                Card(
+                  child: SwitchListTile(
+                    title: const Text('Pad Change Reminders'),
+                    subtitle: const Text(
+                      'Reminders to change your sanitary pad',
+                    ),
+                    value: _padChangeReminders,
+                    onChanged: (value) {
+                      setState(() => _padChangeReminders = value);
+                    },
+                  ),
+                ),
+                ResponsiveConfig.heightBox(12),
+
+                // Wellness Reminders
+                Card(
+                  child: SwitchListTile(
+                    title: const Text('Wellness Check Reminders'),
+                    subtitle: const Text(
+                      'Daily reminders to log your wellness',
+                    ),
+                    value: _wellnessReminders,
+                    onChanged: (value) {
+                      setState(() => _wellnessReminders = value);
+                    },
+                  ),
+                ),
+                ResponsiveConfig.heightBox(12),
+
+                // Custom Reminders
+                Card(
+                  child: SwitchListTile(
+                    title: const Text('Custom Reminders'),
+                    subtitle: const Text(
+                      'Enable custom reminders you create',
+                    ),
+                    value: _customReminders,
+                    onChanged: (value) {
+                      setState(() => _customReminders = value);
+                    },
+                  ),
+                ),
+                ResponsiveConfig.heightBox(24),
+
+                // Test Notification Button
+                ElevatedButton.icon(
+                  onPressed: () async {
+                    try {
+                      await _notificationService.scheduleNotification(
+                        id: DateTime.now().millisecondsSinceEpoch,
+                        title: 'Test Notification',
+                        body: 'This is a test notification from FemCare+',
+                        scheduledDate:
+                            DateTime.now().add(const Duration(seconds: 2)),
+                      );
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                                'Test notification will appear in 2 seconds'),
+                          ),
+                        );
+                      }
+                    } catch (e) {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Error: ${e.toString()}')),
+                        );
+                      }
+                    }
+                  },
+                  icon: const Icon(Icons.notifications),
+                  label: const Text('Send Test Notification'),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );

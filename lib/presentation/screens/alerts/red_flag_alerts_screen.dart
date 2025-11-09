@@ -6,6 +6,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/providers/auth_provider.dart';
 import '../../../services/red_flag_alert_service.dart';
 import '../../../data/models/red_flag_alert_model.dart';
+import '../../../core/widgets/back_button_handler.dart';
 
 /// Red flag alerts screen
 class RedFlagAlertsScreen extends ConsumerStatefulWidget {
@@ -30,72 +31,74 @@ class _RedFlagAlertsScreenState extends ConsumerState<RedFlagAlertsScreen> {
       );
     }
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Health Alerts'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.info_outline),
-            onPressed: () {
-              _showInfoDialog(context);
+    return BackButtonHandler(
+        fallbackRoute: '/home',
+        child: Scaffold(
+          appBar: AppBar(
+            title: const Text('Health Alerts'),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.info_outline),
+                onPressed: () {
+                  _showInfoDialog(context);
+                },
+              ),
+            ],
+          ),
+          body: StreamBuilder<List<RedFlagAlert>>(
+            stream: _alertService.getUserAlerts(user.userId),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              final alerts = snapshot.data ?? [];
+
+              if (alerts.isEmpty) {
+                return Center(
+                  child: Padding(
+                    padding: ResponsiveConfig.padding(all: 24),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.check_circle_outline,
+                          size: ResponsiveConfig.iconSize(80),
+                          color: AppTheme.successGreen,
+                        ),
+                        ResponsiveConfig.heightBox(24),
+                        Text(
+                          'No Health Alerts',
+                          style: ResponsiveConfig.textStyle(
+                            size: 24,
+                            weight: FontWeight.bold,
+                          ),
+                        ),
+                        ResponsiveConfig.heightBox(8),
+                        Text(
+                          'Your health indicators look good!',
+                          style: ResponsiveConfig.textStyle(
+                            size: 16,
+                            color: AppTheme.mediumGray,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+
+              return ListView.builder(
+                padding: ResponsiveConfig.padding(all: 16),
+                itemCount: alerts.length,
+                itemBuilder: (context, index) {
+                  return _buildAlertCard(context, alerts[index]);
+                },
+              );
             },
           ),
-        ],
-      ),
-      body: StreamBuilder<List<RedFlagAlert>>(
-        stream: _alertService.getUserAlerts(user.userId),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          final alerts = snapshot.data ?? [];
-
-          if (alerts.isEmpty) {
-            return Center(
-              child: Padding(
-                padding: ResponsiveConfig.padding(all: 24),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.check_circle_outline,
-                      size: ResponsiveConfig.iconSize(80),
-                      color: AppTheme.successGreen,
-                    ),
-                    ResponsiveConfig.heightBox(24),
-                    Text(
-                      'No Health Alerts',
-                      style: ResponsiveConfig.textStyle(
-                        size: 24,
-                        weight: FontWeight.bold,
-                      ),
-                    ),
-                    ResponsiveConfig.heightBox(8),
-                    Text(
-                      'Your health indicators look good!',
-                      style: ResponsiveConfig.textStyle(
-                        size: 16,
-                        color: AppTheme.mediumGray,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
-              ),
-            );
-          }
-
-          return ListView.builder(
-            padding: ResponsiveConfig.padding(all: 16),
-            itemCount: alerts.length,
-            itemBuilder: (context, index) {
-              return _buildAlertCard(context, alerts[index]);
-            },
-          );
-        },
-      ),
-    );
+        ));
   }
 
   Widget _buildAlertCard(BuildContext context, RedFlagAlert alert) {

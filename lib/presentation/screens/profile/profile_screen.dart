@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/config/responsive_config.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/providers/auth_provider.dart';
+import '../../../core/providers/theme_provider.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/data_export_service.dart';
 import '../../../core/widgets/femcare_bottom_nav.dart';
@@ -32,7 +33,7 @@ class ProfileScreen extends ConsumerWidget {
                 children: [
                   // Profile Header
                   _buildProfileHeader(context, user),
-                  ResponsiveConfig.heightBox(24),
+                  ResponsiveConfig.heightBox(16),
 
                   // Subscription Card
                   _buildSubscriptionCard(context, user),
@@ -52,8 +53,10 @@ class ProfileScreen extends ConsumerWidget {
 
   Widget _buildProfileHeader(BuildContext context, user) {
     return Card(
+      shadowColor: Colors.black.withValues(alpha: 0.08),
+      margin: const EdgeInsets.only(bottom: 0),
       child: Padding(
-        padding: ResponsiveConfig.padding(all: 16),
+        padding: ResponsiveConfig.padding(all: 20),
         child: Row(
           children: [
             CircleAvatar(
@@ -99,43 +102,49 @@ class ProfileScreen extends ConsumerWidget {
 
   Widget _buildSubscriptionCard(BuildContext context, user) {
     final isPremium = user.subscription.isActive;
-    return Card(
-      color: isPremium ? AppTheme.lightPink : null,
-      child: Padding(
-        padding: ResponsiveConfig.padding(all: 16),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  isPremium ? 'FemCare+ Premium' : 'Free Plan',
-                  style: ResponsiveConfig.textStyle(
-                    size: 18,
-                    weight: FontWeight.bold,
+    return SizedBox(
+      width: double.infinity,
+      child: Card(
+        shadowColor: Colors.black.withValues(alpha: 0.08),
+        margin: const EdgeInsets.only(bottom: 0),
+        color: isPremium ? AppTheme.lightPink : null,
+        child: Padding(
+          padding: ResponsiveConfig.padding(all: 20),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    isPremium ? 'FemCare+ Premium' : 'Free Plan',
+                    style: ResponsiveConfig.textStyle(
+                      size: 18,
+                      weight: FontWeight.bold,
+                    ),
                   ),
-                ),
-                ResponsiveConfig.heightBox(4),
-                Text(
-                  isPremium
-                      ? 'Active until ${user.subscription.endDate?.toString().split(' ')[0] ?? 'N/A'}'
-                      : 'Upgrade to unlock premium features',
-                  style: ResponsiveConfig.textStyle(
-                    size: 14,
-                    color: AppTheme.mediumGray,
+                  ResponsiveConfig.heightBox(4),
+                  Text(
+                    isPremium
+                        ? 'Active until ${user.subscription.endDate?.toString().split(' ')[0] ?? 'N/A'}'
+                        : 'Upgrade to unlock premium features',
+                    style: ResponsiveConfig.textStyle(
+                      size: 14,
+                      color: AppTheme.mediumGray,
+                    ),
                   ),
-                ),
-              ],
-            ),
-            if (!isPremium)
-              ElevatedButton(
-                onPressed: () {
-                  context.push('/subscription');
-                },
-                child: const Text('Upgrade'),
+                ],
               ),
-          ],
+              ResponsiveConfig.heightBox(16),
+              if (!isPremium)
+                ElevatedButton(
+                  onPressed: () {
+                    context.push('/subscription');
+                  },
+                  child: const Text('Upgrade'),
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -143,6 +152,8 @@ class ProfileScreen extends ConsumerWidget {
 
   Widget _buildSettingsSection(BuildContext context, WidgetRef ref) {
     return Card(
+      shadowColor: Colors.black.withValues(alpha: 0.08),
+      margin: const EdgeInsets.only(bottom: 0),
       child: Column(
         children: [
           _buildSettingsTile(
@@ -153,6 +164,8 @@ class ProfileScreen extends ConsumerWidget {
               // Navigate to cycle settings
             },
           ),
+          const Divider(),
+          _buildThemeToggleTile(context, ref),
           const Divider(),
           _buildSettingsTile(
             context,
@@ -244,8 +257,119 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 
+  Widget _buildThemeToggleTile(BuildContext context, WidgetRef ref) {
+    final themeMode = ref.watch(themeModeProvider);
+    final themeNotifier = ref.read(themeModeProvider.notifier);
+
+    IconData themeIcon;
+    String themeLabel;
+
+    switch (themeMode) {
+      case ThemeMode.light:
+        themeIcon = Icons.light_mode;
+        themeLabel = 'Light Mode';
+        break;
+      case ThemeMode.dark:
+        themeIcon = Icons.dark_mode;
+        themeLabel = 'Dark Mode';
+        break;
+      case ThemeMode.system:
+        themeIcon = Icons.brightness_auto;
+        themeLabel = 'System Default';
+        break;
+    }
+
+    return ListTile(
+      leading: Icon(themeIcon, color: AppTheme.primaryPink),
+      title: const Text('Theme'),
+      subtitle: Text(themeLabel),
+      trailing: Switch(
+        value: themeMode == ThemeMode.dark,
+        onChanged: (value) {
+          if (value) {
+            themeNotifier.setThemeMode(ThemeMode.dark);
+          } else {
+            themeNotifier.setThemeMode(ThemeMode.light);
+          }
+        },
+        activeColor: AppTheme.primaryPink,
+      ),
+      onTap: () {
+        // Show theme mode selection dialog
+        _showThemeModeDialog(context, ref);
+      },
+    );
+  }
+
+  void _showThemeModeDialog(BuildContext context, WidgetRef ref) {
+    final themeMode = ref.watch(themeModeProvider);
+    final themeNotifier = ref.read(themeModeProvider.notifier);
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(
+          'Select Theme',
+          style: ResponsiveConfig.textStyle(
+            size: 20,
+            weight: FontWeight.bold,
+          ),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            RadioListTile<ThemeMode>(
+              title: const Text('Light'),
+              value: ThemeMode.light,
+              groupValue: themeMode,
+              onChanged: (value) {
+                if (value != null) {
+                  themeNotifier.setThemeMode(value);
+                  Navigator.of(context).pop();
+                }
+              },
+              activeColor: AppTheme.primaryPink,
+            ),
+            RadioListTile<ThemeMode>(
+              title: const Text('Dark'),
+              value: ThemeMode.dark,
+              groupValue: themeMode,
+              onChanged: (value) {
+                if (value != null) {
+                  themeNotifier.setThemeMode(value);
+                  Navigator.of(context).pop();
+                }
+              },
+              activeColor: AppTheme.primaryPink,
+            ),
+            RadioListTile<ThemeMode>(
+              title: const Text('System Default'),
+              value: ThemeMode.system,
+              groupValue: themeMode,
+              onChanged: (value) {
+                if (value != null) {
+                  themeNotifier.setThemeMode(value);
+                  Navigator.of(context).pop();
+                }
+              },
+              activeColor: AppTheme.primaryPink,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildAccountActions(BuildContext context, WidgetRef ref) {
     return Card(
+      shadowColor: Colors.black.withValues(alpha: 0.08),
+      margin: const EdgeInsets.only(bottom: 0),
       child: Column(
         children: [
           ListTile(

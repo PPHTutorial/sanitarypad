@@ -7,6 +7,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/providers/auth_provider.dart';
 import '../../../services/skincare_service.dart';
 import '../../../data/models/skincare_model.dart';
+import '../../../core/widgets/back_button_handler.dart';
 
 /// Skincare tracking screen
 class SkincareTrackingScreen extends ConsumerStatefulWidget {
@@ -45,9 +46,11 @@ class _SkincareTrackingScreenState extends ConsumerState<SkincareTrackingScreen>
       );
     }
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Skincare Tracker'),
+    return BackButtonHandler(
+      fallbackRoute: '/home',
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Skincare Tracker'),
         bottom: TabBar(
           controller: _tabController,
           tabs: const [
@@ -63,7 +66,7 @@ class _SkincareTrackingScreenState extends ConsumerState<SkincareTrackingScreen>
           _buildProductsTab(context, user.userId),
         ],
       ),
-    );
+    ));
   }
 
   Widget _buildRoutineTab(BuildContext context, String userId) {
@@ -361,6 +364,7 @@ class _SkincareTrackingScreenState extends ConsumerState<SkincareTrackingScreen>
           },
         ),
       ),
+      
     );
   }
 }

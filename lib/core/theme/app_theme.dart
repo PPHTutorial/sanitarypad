@@ -86,11 +86,12 @@ class AppTheme {
       // Card Theme
       cardTheme: CardThemeData(
         elevation: 2,
+        shadowColor: Colors.black.withValues(alpha: 0.08),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
         ),
         color: Colors.white,
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       ),
 
       // Button Themes
@@ -426,11 +427,12 @@ class AppTheme {
       // Card Theme
       cardTheme: CardThemeData(
         elevation: 4,
+        shadowColor: Colors.black.withValues(alpha: 0.08),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
         ),
         color: const Color(0xFF1E1E1E),
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       ),
 
       // Button Themes

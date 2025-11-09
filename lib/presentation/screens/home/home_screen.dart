@@ -64,9 +64,10 @@ class HomeScreen extends ConsumerWidget {
 
   Widget _buildWelcomeCard(BuildContext context) {
     return Card(
-      color: AppTheme.lightPink,
+      shadowColor: Colors.black.withValues(alpha: 0.08),
+      margin: const EdgeInsets.only(bottom: 0),
       child: Padding(
-        padding: ResponsiveConfig.padding(all: 20),
+        padding: ResponsiveConfig.padding(all: 24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -101,9 +102,10 @@ class HomeScreen extends ConsumerWidget {
     final cycleDay = cycle.getCycleDay(now);
 
     return Card(
-      shadowColor: Colors.transparent,
+      shadowColor: Colors.black.withValues(alpha: 0.08),
+      margin: const EdgeInsets.only(bottom: 0),
       child: Padding(
-        padding: ResponsiveConfig.padding(all: 16),
+        padding: ResponsiveConfig.padding(all: 20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -174,6 +176,7 @@ class HomeScreen extends ConsumerWidget {
           ),
         ),
         ResponsiveConfig.heightBox(12),
+        // First Row: Period & Pad
         Row(
           children: [
             Expanded(
@@ -196,6 +199,7 @@ class HomeScreen extends ConsumerWidget {
           ],
         ),
         ResponsiveConfig.heightBox(12),
+        // Second Row: Wellness & Calendar
         Row(
           children: [
             Expanded(
@@ -217,15 +221,62 @@ class HomeScreen extends ConsumerWidget {
             ),
           ],
         ),
+        ResponsiveConfig.heightBox(12),
+        // Third Row: Pregnancy & Fertility
+        Row(
+          children: [
+            Expanded(
+              child: _buildActionButton(
+                context,
+                icon: Icons.child_care,
+                label: 'Pregnancy',
+                onTap: () => context.go('/pregnancy-tracking'),
+              ),
+            ),
+            ResponsiveConfig.widthBox(12),
+            Expanded(
+              child: _buildActionButton(
+                context,
+                icon: Icons.egg,
+                label: 'Fertility',
+                onTap: () => context.go('/fertility-tracking'),
+              ),
+            ),
+          ],
+        ),
+        ResponsiveConfig.heightBox(12),
+        // Fourth Row: Skincare
+        Row(
+          children: [
+            Expanded(
+              child: _buildActionButton(
+                context,
+                icon: Icons.face,
+                label: 'Skincare',
+                onTap: () => context.go('/skincare-tracking'),
+              ),
+            ),
+            ResponsiveConfig.widthBox(12),
+            Expanded(
+              child: _buildActionButton(
+                context,
+                icon: Icons.insights,
+                label: 'Insights',
+                onTap: () => context.go('/insights'),
+              ),
+            ),
+          ],
+        ),
       ],
     );
   }
 
   Widget _buildGetStartedSection(BuildContext context) {
     return Card(
-      shadowColor: Colors.transparent,
+      shadowColor: Colors.black.withValues(alpha: 0.08),
+      margin: const EdgeInsets.only(bottom: 0),
       child: Padding(
-        padding: ResponsiveConfig.padding(all: 20),
+        padding: ResponsiveConfig.padding(all: 24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -281,10 +332,14 @@ class HomeScreen extends ConsumerWidget {
       child: Container(
         padding: ResponsiveConfig.padding(all: 16),
         decoration: BoxDecoration(
-          color: AppTheme.palePink,
+          color: Theme.of(context).brightness == Brightness.dark
+              ? Theme.of(context).cardColor
+              : AppTheme.palePink,
           borderRadius: ResponsiveConfig.borderRadius(12),
           border: Border.all(
-            color: AppTheme.lightPink,
+            color: Theme.of(context).brightness == Brightness.dark
+                ? AppTheme.darkGray
+                : AppTheme.lightPink,
             width: 1,
           ),
         ),
@@ -301,7 +356,7 @@ class HomeScreen extends ConsumerWidget {
               style: ResponsiveConfig.textStyle(
                 size: 14,
                 weight: FontWeight.w500,
-                color: AppTheme.darkGray,
+                color: AppTheme.primaryPink,
               ),
               textAlign: TextAlign.center,
             ),

@@ -4,6 +4,7 @@ import '../../../core/config/responsive_config.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../services/wellness_content_service.dart';
 import '../../../core/providers/auth_provider.dart';
+import '../../../core/widgets/back_button_handler.dart';
 
 /// Wellness content detail screen
 class WellnessContentDetailScreen extends ConsumerStatefulWidget {
@@ -111,84 +112,87 @@ class _WellnessContentDetailScreenState
       );
     }
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(_content!.title),
-      ),
-      body: SingleChildScrollView(
-        padding: ResponsiveConfig.padding(all: 16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (_content!.category != null)
-              Container(
-                padding: ResponsiveConfig.padding(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: AppTheme.lightPink,
-                  borderRadius: ResponsiveConfig.borderRadius(8),
-                ),
-                child: Text(
-                  _content!.category!,
-                  style: ResponsiveConfig.textStyle(
-                    size: 12,
-                    weight: FontWeight.bold,
-                    color: AppTheme.primaryPink,
+    return BackButtonHandler(
+      fallbackRoute: '/home',
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(_content!.title),
+        ),
+        body: SingleChildScrollView(
+          padding: ResponsiveConfig.padding(all: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (_content!.category != null)
+                Container(
+                  padding: ResponsiveConfig.padding(
+                    horizontal: 12,
+                    vertical: 6,
                   ),
-                ),
-              ),
-            ResponsiveConfig.heightBox(16),
-            Text(
-              _content!.title,
-              style: ResponsiveConfig.textStyle(
-                size: 28,
-                weight: FontWeight.bold,
-              ),
-            ),
-            if (_content!.readTime != null) ...[
-              ResponsiveConfig.heightBox(8),
-              Row(
-                children: [
-                  Icon(
-                    Icons.access_time,
-                    size: ResponsiveConfig.iconSize(16),
-                    color: AppTheme.mediumGray,
+                  decoration: BoxDecoration(
+                    color: AppTheme.lightPink,
+                    borderRadius: ResponsiveConfig.borderRadius(8),
                   ),
-                  ResponsiveConfig.widthBox(4),
-                  Text(
-                    '${_content!.readTime} min read',
+                  child: Text(
+                    _content!.category!,
                     style: ResponsiveConfig.textStyle(
-                      size: 14,
-                      color: AppTheme.mediumGray,
+                      size: 12,
+                      weight: FontWeight.bold,
+                      color: AppTheme.primaryPink,
                     ),
                   ),
-                ],
+                ),
+              ResponsiveConfig.heightBox(16),
+              Text(
+                _content!.title,
+                style: ResponsiveConfig.textStyle(
+                  size: 28,
+                  weight: FontWeight.bold,
+                ),
               ),
-            ],
-            ResponsiveConfig.heightBox(24),
-            Text(
-              _content!.content,
-              style: ResponsiveConfig.textStyle(
-                size: 16,
-                height: 1.6,
-              ),
-            ),
-            if (_content!.tags != null && _content!.tags!.isNotEmpty) ...[
+              if (_content!.readTime != null) ...[
+                ResponsiveConfig.heightBox(8),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.access_time,
+                      size: ResponsiveConfig.iconSize(16),
+                      color: AppTheme.mediumGray,
+                    ),
+                    ResponsiveConfig.widthBox(4),
+                    Text(
+                      '${_content!.readTime} min read',
+                      style: ResponsiveConfig.textStyle(
+                        size: 14,
+                        color: AppTheme.mediumGray,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
               ResponsiveConfig.heightBox(24),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: _content!.tags!.map((tag) {
-                  return Chip(
-                    label: Text(tag),
-                    backgroundColor: AppTheme.palePink,
-                  );
-                }).toList(),
+              Text(
+                _content!.content,
+                style: ResponsiveConfig.textStyle(
+                  size: 16,
+                  height: 1.6,
+                ),
               ),
+              if (_content!.tags != null && _content!.tags!.isNotEmpty) ...[
+                ResponsiveConfig.heightBox(24),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: _content!.tags!.map((tag) {
+                    return Chip(
+                      label: Text(tag),
+                      backgroundColor: AppTheme.palePink,
+                    );
+                  }).toList(),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );

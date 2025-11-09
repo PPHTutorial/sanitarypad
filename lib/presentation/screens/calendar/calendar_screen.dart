@@ -49,7 +49,11 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
         children: [
           // Calendar
           Card(
-            margin: ResponsiveConfig.margin(all: 16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(ResponsiveConfig.radius(16)),
+            ),
+            shadowColor: Colors.black.withValues(alpha: 0.08),
+            margin: const EdgeInsets.only(bottom: 0),
             child: TableCalendar(
               firstDay: DateTime.utc(2020, 1, 1),
               lastDay: DateTime.utc(2030, 12, 31),
@@ -59,7 +63,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
               calendarFormat: _calendarFormat,
               eventLoader: (day) => eventMarkers[day] ?? [],
               startingDayOfWeek: StartingDayOfWeek.monday,
-              calendarStyle: CalendarStyle(
+              calendarStyle: const CalendarStyle(
                 todayDecoration: BoxDecoration(
                   color: AppTheme.lightPink,
                   shape: BoxShape.circle,
@@ -161,150 +165,156 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
       cycleForDate = null;
     }
 
-    return Card(
-      margin: ResponsiveConfig.margin(all: 16),
-      child: Padding(
-        padding: ResponsiveConfig.padding(all: 16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              app_date_utils.DateUtils.formatDate(date),
-              style: ResponsiveConfig.textStyle(
-                size: 20,
-                weight: FontWeight.bold,
-              ),
-            ),
-            ResponsiveConfig.heightBox(16),
-            if (cycleForDate != null) ...[
-              _buildDetailItem(
-                context,
-                icon: Icons.water_drop,
-                label: 'Period Day',
-                value: 'Day ${cycleForDate.getCycleDay(date)}',
-                color: AppTheme.primaryPink,
-              ),
-              ResponsiveConfig.heightBox(12),
-              _buildDetailItem(
-                context,
-                icon: Icons.speed,
-                label: 'Flow',
-                value: cycleForDate.flowIntensity.toUpperCase(),
-              ),
-              if (cycleForDate.symptoms.isNotEmpty) ...[
-                ResponsiveConfig.heightBox(12),
-                _buildDetailItem(
-                  context,
-                  icon: Icons.medical_services,
-                  label: 'Symptoms',
-                  value: cycleForDate.symptoms.join(', '),
+    return SizedBox(
+        width: double.infinity,
+        child: Card(
+          shadowColor: Colors.black.withValues(alpha: 0.08),
+          margin: const EdgeInsets.only(bottom: 0),
+          child: Padding(
+            padding: ResponsiveConfig.padding(all: 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  app_date_utils.DateUtils.formatDate(date),
+                  style: ResponsiveConfig.textStyle(
+                    size: 20,
+                    weight: FontWeight.bold,
+                  ),
                 ),
-              ],
-              if (cycleForDate.mood != null) ...[
-                ResponsiveConfig.heightBox(12),
-                _buildDetailItem(
-                  context,
-                  icon: Icons.mood,
-                  label: 'Mood',
-                  value: cycleForDate.mood!,
-                ),
-              ],
-            ] else
-              Text(
-                'No cycle data for this date',
-                style: ResponsiveConfig.textStyle(
-                  size: 14,
-                  color: AppTheme.mediumGray,
-                ),
-              ),
-            if (cycleForDate != null) ...[
-              ResponsiveConfig.heightBox(16),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () {
-                        // TODO: Navigate to edit cycle screen
-                        context.go('/log-period');
-                      },
-                      icon: const Icon(Icons.edit),
-                      label: const Text('Edit'),
+                ResponsiveConfig.heightBox(16),
+                if (cycleForDate != null) ...[
+                  _buildDetailItem(
+                    context,
+                    icon: Icons.water_drop,
+                    label: 'Period Day',
+                    value: 'Day ${cycleForDate.getCycleDay(date)}',
+                    color: AppTheme.primaryPink,
+                  ),
+                  ResponsiveConfig.heightBox(12),
+                  _buildDetailItem(
+                    context,
+                    icon: Icons.speed,
+                    label: 'Flow',
+                    value: cycleForDate.flowIntensity.toUpperCase(),
+                  ),
+                  if (cycleForDate.symptoms.isNotEmpty) ...[
+                    ResponsiveConfig.heightBox(12),
+                    _buildDetailItem(
+                      context,
+                      icon: Icons.medical_services,
+                      label: 'Symptoms',
+                      value: cycleForDate.symptoms.join(', '),
+                    ),
+                  ],
+                  if (cycleForDate.mood != null) ...[
+                    ResponsiveConfig.heightBox(12),
+                    _buildDetailItem(
+                      context,
+                      icon: Icons.mood,
+                      label: 'Mood',
+                      value: cycleForDate.mood!,
+                    ),
+                  ],
+                ] else
+                  Text(
+                    'No cycle data for this date',
+                    style: ResponsiveConfig.textStyle(
+                      size: 14,
+                      color: AppTheme.mediumGray,
                     ),
                   ),
-                  ResponsiveConfig.widthBox(12),
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () async {
-                        final confirm = await showDialog<bool>(
-                          context: context,
-                          builder: (context) => AlertDialog(
-                            title: const Text('Delete Cycle'),
-                            content: const Text(
-                              'Are you sure you want to delete this cycle entry?',
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.pop(context, false),
-                                child: const Text('Cancel'),
-                              ),
-                              ElevatedButton(
-                                onPressed: () => Navigator.pop(context, true),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppTheme.errorRed,
-                                ),
-                                child: const Text('Delete'),
-                              ),
-                            ],
-                          ),
-                        );
-                        if (confirm == true &&
-                            mounted &&
-                            cycleForDate != null) {
-                          try {
-                            final cycleService = CycleService();
-                            await cycleService
-                                .deleteCycle(cycleForDate.cycleId);
-                            if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Cycle deleted successfully'),
-                                ),
-                              );
-                            }
-                          } catch (e) {
-                            if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('Error: ${e.toString()}'),
-                                ),
-                              );
-                            }
-                          }
-                        }
-                      },
-                      icon: const Icon(Icons.delete),
-                      label: const Text('Delete'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.errorRed,
+                if (cycleForDate != null) ...[
+                  ResponsiveConfig.heightBox(16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () {
+                            // TODO: Navigate to edit cycle screen
+                            context.go('/log-period');
+                          },
+                          icon: const Icon(Icons.edit),
+                          label: const Text('Edit'),
+                        ),
                       ),
-                    ),
+                      ResponsiveConfig.widthBox(12),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () async {
+                            final confirm = await showDialog<bool>(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                title: const Text('Delete Cycle'),
+                                content: const Text(
+                                  'Are you sure you want to delete this cycle entry?',
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () =>
+                                        Navigator.pop(context, false),
+                                    child: const Text('Cancel'),
+                                  ),
+                                  ElevatedButton(
+                                    onPressed: () =>
+                                        Navigator.pop(context, true),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: AppTheme.errorRed,
+                                    ),
+                                    child: const Text('Delete'),
+                                  ),
+                                ],
+                              ),
+                            );
+                            if (confirm == true &&
+                                mounted &&
+                                cycleForDate != null) {
+                              try {
+                                final cycleService = CycleService();
+                                await cycleService
+                                    .deleteCycle(cycleForDate.cycleId);
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content:
+                                          Text('Cycle deleted successfully'),
+                                    ),
+                                  );
+                                }
+                              } catch (e) {
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('Error: ${e.toString()}'),
+                                    ),
+                                  );
+                                }
+                              }
+                            }
+                          },
+                          icon: const Icon(Icons.delete),
+                          label: const Text('Delete'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.errorRed,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ] else ...[
+                  ResponsiveConfig.heightBox(16),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      context.go('/log-period');
+                    },
+                    icon: const Icon(Icons.add),
+                    label: const Text('Add Entry'),
                   ),
                 ],
-              ),
-            ] else ...[
-              ResponsiveConfig.heightBox(16),
-              ElevatedButton.icon(
-                onPressed: () {
-                  context.go('/log-period');
-                },
-                icon: const Icon(Icons.add),
-                label: const Text('Add Entry'),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
+              ],
+            ),
+          ),
+        ));
   }
 
   Widget _buildDetailItem(

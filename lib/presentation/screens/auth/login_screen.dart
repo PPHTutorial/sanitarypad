@@ -133,6 +133,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.transparent, // Use theme background
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),

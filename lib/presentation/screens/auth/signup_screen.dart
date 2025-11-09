@@ -146,6 +146,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.transparent, // Use theme background
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),

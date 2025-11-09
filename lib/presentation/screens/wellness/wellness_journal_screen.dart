@@ -9,6 +9,7 @@ import '../../../data/models/wellness_model.dart';
 import '../../../services/wellness_service.dart';
 import '../../../services/storage_service.dart';
 import '../../../core/utils/date_utils.dart' as app_date_utils;
+import '../../../core/widgets/back_button_handler.dart';
 
 /// Wellness journal screen
 class WellnessJournalScreen extends ConsumerStatefulWidget {
@@ -199,7 +200,9 @@ class _WellnessJournalScreenState extends ConsumerState<WellnessJournalScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return BackButtonHandler(
+      fallbackRoute: '/home',
+      child: Scaffold(
       appBar: AppBar(
         title: const Text('Wellness Journal'),
       ),
@@ -275,7 +278,7 @@ class _WellnessJournalScreenState extends ConsumerState<WellnessJournalScreen> {
           ),
         ),
       ),
-    );
+    ));
   }
 
   Widget _buildMoodSection() {
@@ -867,6 +870,7 @@ class _WellnessJournalScreenState extends ConsumerState<WellnessJournalScreen> {
           ],
         ),
       ),
+      
     );
   }
 }

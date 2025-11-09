@@ -96,8 +96,10 @@ class InsightsScreen extends ConsumerWidget {
   Widget _buildStatisticsCard(
       BuildContext context, Map<String, dynamic> stats) {
     return Card(
+      shadowColor: Colors.black.withValues(alpha: 0.08),
+      margin: const EdgeInsets.only(bottom: 0),
       child: Padding(
-        padding: ResponsiveConfig.padding(all: 16),
+        padding: ResponsiveConfig.padding(all: 20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -241,8 +243,10 @@ class InsightsScreen extends ConsumerWidget {
     }).toList();
 
     return Card(
+      shadowColor: Colors.black.withValues(alpha: 0.08),
+      margin: const EdgeInsets.only(bottom: 0),
       child: Padding(
-        padding: ResponsiveConfig.padding(all: 16),
+        padding: ResponsiveConfig.padding(all: 20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -298,8 +302,10 @@ class InsightsScreen extends ConsumerWidget {
       ..sort((a, b) => b.value.compareTo(a.value));
 
     return Card(
+      shadowColor: Colors.black.withValues(alpha: 0.08),
+      margin: const EdgeInsets.only(bottom: 0),
       child: Padding(
-        padding: ResponsiveConfig.padding(all: 16),
+        padding: ResponsiveConfig.padding(all: 20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -399,8 +405,10 @@ class InsightsScreen extends ConsumerWidget {
 
   Widget _buildHealthScoreCard(BuildContext context) {
     return Card(
+      shadowColor: Colors.black.withValues(alpha: 0.08),
+      margin: const EdgeInsets.only(bottom: 0),
       child: Padding(
-        padding: ResponsiveConfig.padding(all: 16),
+        padding: ResponsiveConfig.padding(all: 20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

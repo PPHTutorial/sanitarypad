@@ -8,6 +8,8 @@ import 'core/firebase/firebase_service.dart';
 import 'core/routing/app_router.dart';
 import 'core/utils/error_handler.dart';
 import 'core/widgets/splash_background_wrapper.dart';
+import 'core/widgets/double_back_to_exit.dart';
+import 'core/providers/theme_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -18,13 +20,16 @@ void main() async {
     DeviceOrientation.portraitDown,
   ]);
 
-  // Set system UI overlay style to match splash screen background
-  // This makes the status bar transparent so the background color shows through
+  // Set initial system UI overlay style
+  // Will be overridden by SplashBackgroundWrapper based on theme
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.dark, // Will be overridden by theme
-      systemNavigationBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.dark,
+      systemNavigationBarColor:
+          AppTheme.splashLight, // Default to light splash color
+      systemNavigationBarIconBrightness: Brightness.dark,
+      systemNavigationBarDividerColor: Colors.transparent,
     ),
   );
 
@@ -63,6 +68,7 @@ class MyApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(AppRouter.routerProvider);
+    final themeMode = ref.watch(themeModeProvider);
 
     return ResponsiveConfig.init(
       context: context,
@@ -73,11 +79,17 @@ class MyApp extends ConsumerWidget {
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
         darkTheme: AppTheme.darkTheme,
-        themeMode: ThemeMode.system,
+        themeMode: themeMode,
         routerConfig: router,
         builder: (context, child) {
           // Wrap with splash background that extends behind status bar
-          return SplashBackgroundWrapper(child: child ?? const SizedBox());
+          // and double-back-to-exit functionality
+          return SplashBackgroundWrapper(
+            child: DoubleBackToExit(
+              message: 'Press back again to exit FemCare+',
+              child: child ?? const SizedBox(),
+            ),
+          );
         },
       ),
     );

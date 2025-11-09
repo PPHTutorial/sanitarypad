@@ -4,6 +4,7 @@ import '../../core/theme/app_theme.dart';
 
 /// Wrapper widget that ensures splash screen background color
 /// extends behind the status bar and to the bottom of the screen
+/// This includes the Android system navigation bar (home keys area)
 class SplashBackgroundWrapper extends StatelessWidget {
   final Widget child;
 
@@ -18,22 +19,26 @@ class SplashBackgroundWrapper extends StatelessWidget {
     final isDark = theme.brightness == Brightness.dark;
     final backgroundColor = isDark ? AppTheme.splashDark : AppTheme.splashLight;
 
-    // Set system UI overlay style to make status bar transparent
-    SystemChrome.setSystemUIOverlayStyle(
-      SystemUiOverlayStyle(
-        statusBarColor: Colors.transparent,
-        statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
-        systemNavigationBarColor: backgroundColor,
-        systemNavigationBarIconBrightness:
-            isDark ? Brightness.light : Brightness.dark,
-      ),
+    // Create system UI overlay style that matches splash screen background
+    final overlayStyle = SystemUiOverlayStyle(
+      statusBarColor:
+          Colors.transparent, // Transparent so background shows through
+      statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+      systemNavigationBarColor:
+          backgroundColor, // Android home keys area background
+      systemNavigationBarIconBrightness:
+          isDark ? Brightness.light : Brightness.dark,
+      systemNavigationBarDividerColor: Colors.transparent, // Remove divider
     );
 
-    // Return child wrapped in container with splash background
-    // This ensures the background extends behind status bar
-    return Container(
-      color: backgroundColor, // Full screen background matching splash
-      child: child,
+    // Use AnnotatedRegion to ensure the system UI style is applied to all child widgets
+    // This is more reliable than SystemChrome.setSystemUIOverlayStyle
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: overlayStyle,
+      child: Container(
+        color: backgroundColor, // Full screen background matching splash
+        child: child,
+      ),
     );
   }
 }

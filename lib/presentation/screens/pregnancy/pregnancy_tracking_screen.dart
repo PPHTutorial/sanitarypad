@@ -6,6 +6,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/providers/auth_provider.dart';
 import '../../../services/pregnancy_service.dart';
 import '../../../data/models/pregnancy_model.dart';
+import '../../../core/widgets/back_button_handler.dart';
 
 /// Pregnancy tracking screen
 class PregnancyTrackingScreen extends ConsumerStatefulWidget {
@@ -31,41 +32,43 @@ class _PregnancyTrackingScreenState
       );
     }
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Pregnancy Tracking'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: () {
-              context.push('/pregnancy-form');
+    return BackButtonHandler(
+        fallbackRoute: '/home',
+        child: Scaffold(
+          appBar: AppBar(
+            title: const Text('Pregnancy Tracking'),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.add),
+                onPressed: () {
+                  context.push('/pregnancy-form');
+                },
+              ),
+            ],
+          ),
+          body: FutureBuilder<Pregnancy?>(
+            future: _pregnancyService.getActivePregnancy(user.userId),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              if (snapshot.hasError) {
+                return Center(
+                  child: Text('Error: ${snapshot.error}'),
+                );
+              }
+
+              final pregnancy = snapshot.data;
+
+              if (pregnancy == null) {
+                return _buildEmptyState(context);
+              }
+
+              return _buildPregnancyView(context, pregnancy);
             },
           ),
-        ],
-      ),
-      body: FutureBuilder<Pregnancy?>(
-        future: _pregnancyService.getActivePregnancy(user.userId),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          if (snapshot.hasError) {
-            return Center(
-              child: Text('Error: ${snapshot.error}'),
-            );
-          }
-
-          final pregnancy = snapshot.data;
-
-          if (pregnancy == null) {
-            return _buildEmptyState(context);
-          }
-
-          return _buildPregnancyView(context, pregnancy);
-        },
-      ),
-    );
+        ));
   }
 
   Widget _buildEmptyState(BuildContext context) {

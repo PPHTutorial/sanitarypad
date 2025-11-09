@@ -5,6 +5,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/providers/pad_provider.dart';
 import '../../../core/utils/date_utils.dart' as app_date_utils;
+import '../../../core/widgets/back_button_handler.dart';
 
 /// Pad management screen
 class PadManagementScreen extends ConsumerStatefulWidget {
@@ -109,30 +110,33 @@ class _PadManagementScreenState extends ConsumerState<PadManagementScreen> {
     final recentPadsAsync = ref.watch(padChangesStreamProvider);
     final lowStockItems = ref.watch(lowStockItemsProvider);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Pad Management'),
-      ),
-      body: SingleChildScrollView(
-        padding: ResponsiveConfig.padding(all: 16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Current Stock
-            _buildInventorySection(
-                context, inventoryAsync.value ?? [], lowStockItems),
-            ResponsiveConfig.heightBox(24),
+    return BackButtonHandler(
+        fallbackRoute: '/home',
+        child: Scaffold(
+          appBar: AppBar(
+            title: const Text('Pad Management'),
+          ),
+          body: SingleChildScrollView(
+            padding: ResponsiveConfig.padding(all: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Current Stock
+                _buildInventorySection(
+                    context, inventoryAsync.value ?? [], lowStockItems),
+                ResponsiveConfig.heightBox(24),
 
-            // Log Pad Change
-            _buildLogPadSection(context),
-            ResponsiveConfig.heightBox(24),
+                // Log Pad Change
+                _buildLogPadSection(context),
+                ResponsiveConfig.heightBox(24),
 
-            // Recent Changes
-            _buildRecentChangesSection(context, recentPadsAsync.value ?? []),
-          ],
-        ),
-      ),
-    );
+                // Recent Changes
+                _buildRecentChangesSection(
+                    context, recentPadsAsync.value ?? []),
+              ],
+            ),
+          ),
+        ));
   }
 
   Widget _buildInventorySection(

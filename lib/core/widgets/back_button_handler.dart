@@ -23,20 +23,20 @@ class BackButtonHandler extends StatelessWidget {
         // Check if we can pop the navigation stack
         final router = GoRouter.of(context);
         if (router.canPop()) {
-          // Pop the current route
+          // Pop the current route (normal navigation)
           router.pop();
         } else {
           // If we can't pop, navigate to fallback route or home
           final route = fallbackRoute ?? '/home';
-          final currentPath = router.routerDelegate.currentConfiguration.uri.path;
+          final currentPath =
+              router.routerDelegate.currentConfiguration.uri.path;
           if (currentPath != route) {
             router.go(route);
           }
-          // If already on fallback route, do nothing (let system handle it)
+          // If already on fallback route, let DoubleBackToExit handle it
         }
       },
       child: child,
     );
   }
 }
-

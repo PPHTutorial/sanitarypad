@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sanitarypad/core/config/responsive_config.dart';
 import '../../core/theme/app_theme.dart';
 
 /// FemCare+ Bottom Navigation Bar
@@ -59,7 +60,7 @@ class FemCareBottomNav extends StatelessWidget {
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 12,
+            blurRadius: ResponsiveConfig.radius(12),
             offset: const Offset(0, -4),
           ),
         ],
@@ -67,8 +68,8 @@ class FemCareBottomNav extends StatelessWidget {
       child: SafeArea(
         top: false,
         child: Container(
-          height: 70,
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+          height: ResponsiveConfig.height(90),
+          padding: ResponsiveConfig.padding(horizontal: 4, vertical: 8),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             crossAxisAlignment: CrossAxisAlignment.center,
@@ -104,7 +105,7 @@ class FemCareBottomNav extends StatelessWidget {
           },
           borderRadius: BorderRadius.circular(16),
           child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+            padding: ResponsiveConfig.padding(vertical: 4, horizontal: 4),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               mainAxisAlignment: MainAxisAlignment.center,

@@ -8,6 +8,7 @@ import '../../../core/providers/auth_provider.dart';
 import '../../../core/providers/cycle_provider.dart';
 import '../../../services/fertility_service.dart';
 import '../../../data/models/fertility_model.dart';
+import '../../../core/widgets/back_button_handler.dart';
 
 /// Fertility tracking screen
 class FertilityTrackingScreen extends ConsumerStatefulWidget {
@@ -37,105 +38,108 @@ class _FertilityTrackingScreenState
       );
     }
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Fertility Tracking'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: () {
-              _showAddEntryDialog(context, user.userId);
-            },
-          ),
-        ],
-      ),
-      body: StreamBuilder<List<FertilityEntry>>(
-        stream: _fertilityService.getFertilityEntries(
-          user.userId,
-          _startDate,
-          _endDate,
-        ),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          final entries = snapshot.data ?? [];
-
-          return FutureBuilder<FertilityPrediction>(
-            future: _fertilityService.predictOvulation(
-              user.userId,
-              cycles,
-              entries,
+    return BackButtonHandler(
+      fallbackRoute: '/home',
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Fertility Tracking'),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.add),
+              onPressed: () {
+                _showAddEntryDialog(context, user.userId);
+              },
             ),
-            builder: (context, predictionSnapshot) {
-              final prediction = predictionSnapshot.data;
+          ],
+        ),
+        body: StreamBuilder<List<FertilityEntry>>(
+          stream: _fertilityService.getFertilityEntries(
+            user.userId,
+            _startDate,
+            _endDate,
+          ),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
 
-              return SingleChildScrollView(
-                padding: ResponsiveConfig.padding(all: 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // Fertility Window Card
-                    if (prediction != null)
-                      _buildFertilityWindowCard(prediction),
-                    ResponsiveConfig.heightBox(16),
+            final entries = snapshot.data ?? [];
 
-                    // Today's Entry
-                    _buildTodaysEntryCard(context, user.userId, entries),
-                    ResponsiveConfig.heightBox(16),
+            return FutureBuilder<FertilityPrediction>(
+              future: _fertilityService.predictOvulation(
+                user.userId,
+                cycles,
+                entries,
+              ),
+              builder: (context, predictionSnapshot) {
+                final prediction = predictionSnapshot.data;
 
-                    // Recent Entries
-                    Text(
-                      'Recent Entries',
-                      style: ResponsiveConfig.textStyle(
-                        size: 20,
-                        weight: FontWeight.bold,
+                return SingleChildScrollView(
+                  padding: ResponsiveConfig.padding(all: 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Fertility Window Card
+                      if (prediction != null)
+                        _buildFertilityWindowCard(prediction),
+                      ResponsiveConfig.heightBox(16),
+
+                      // Today's Entry
+                      _buildTodaysEntryCard(context, user.userId, entries),
+                      ResponsiveConfig.heightBox(16),
+
+                      // Recent Entries
+                      Text(
+                        'Recent Entries',
+                        style: ResponsiveConfig.textStyle(
+                          size: 20,
+                          weight: FontWeight.bold,
+                        ),
                       ),
-                    ),
-                    ResponsiveConfig.heightBox(12),
-                    if (entries.isEmpty)
-                      Card(
-                        child: Padding(
-                          padding: ResponsiveConfig.padding(all: 24),
-                          child: Center(
-                            child: Column(
-                              children: [
-                                Icon(
-                                  Icons.thermostat,
-                                  size: ResponsiveConfig.iconSize(48),
-                                  color: AppTheme.mediumGray,
-                                ),
-                                ResponsiveConfig.heightBox(16),
-                                Text(
-                                  'No fertility entries yet',
-                                  style: ResponsiveConfig.textStyle(
-                                    size: 16,
+                      ResponsiveConfig.heightBox(12),
+                      if (entries.isEmpty)
+                        Card(
+                          child: Padding(
+                            padding: ResponsiveConfig.padding(all: 24),
+                            child: Center(
+                              child: Column(
+                                children: [
+                                  Icon(
+                                    Icons.thermostat,
+                                    size: ResponsiveConfig.iconSize(48),
                                     color: AppTheme.mediumGray,
                                   ),
-                                ),
-                                ResponsiveConfig.heightBox(8),
-                                ElevatedButton(
-                                  onPressed: () {
-                                    _showAddEntryDialog(context, user.userId);
-                                  },
-                                  child: const Text('Add Entry'),
-                                ),
-                              ],
+                                  ResponsiveConfig.heightBox(16),
+                                  Text(
+                                    'No fertility entries yet',
+                                    style: ResponsiveConfig.textStyle(
+                                      size: 16,
+                                      color: AppTheme.mediumGray,
+                                    ),
+                                  ),
+                                  ResponsiveConfig.heightBox(8),
+                                  ElevatedButton(
+                                    onPressed: () {
+                                      _showAddEntryDialog(context, user.userId);
+                                    },
+                                    child: const Text('Add Entry'),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
-                        ),
-                      )
-                    else
-                      ...entries.take(7).map((entry) {
-                        return _buildEntryCard(context, entry);
-                      }).toList(),
-                  ],
-                ),
-              );
-            },
-          );
-        },
+                        )
+                      else
+                        ...entries.take(7).map((entry) {
+                          return _buildEntryCard(context, entry);
+                        }).toList(),
+                    ],
+                  ),
+                );
+              },
+            );
+          },
+        ),
       ),
     );
   }

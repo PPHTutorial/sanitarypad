@@ -7,6 +7,7 @@ import '../../../core/providers/auth_provider.dart';
 import '../../../services/subscription_service.dart';
 import '../../../services/iap_service.dart';
 import '../../../core/constants/app_constants.dart';
+import '../../../core/widgets/back_button_handler.dart';
 
 /// Subscription screen
 class SubscriptionScreen extends ConsumerStatefulWidget {
@@ -117,110 +118,113 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
       );
     }
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Upgrade to Premium'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.restore),
-            tooltip: 'Restore Purchases',
-            onPressed: _restorePurchases,
-          ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        padding: ResponsiveConfig.padding(all: 16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Premium Header
-            _buildPremiumHeader(context),
-            ResponsiveConfig.heightBox(24),
-
-            // Features List
-            _buildFeaturesList(context, features),
-            ResponsiveConfig.heightBox(24),
-
-            // Subscription Plans
-            Text(
-              'Choose Your Plan',
-              style: ResponsiveConfig.textStyle(
-                size: 20,
-                weight: FontWeight.bold,
-              ),
-            ),
-            ResponsiveConfig.heightBox(16),
-            ...plans.entries.map((entry) {
-              // Find matching IAP product
-              final productId = _getProductIdForPlan(entry.key);
-              final product = _products.firstWhere(
-                (p) => p.id == productId,
-                orElse: () => _createDummyProduct(entry.key, entry.value),
-              );
-
-              return Padding(
-                padding: ResponsiveConfig.padding(vertical: 8),
-                child: _buildPlanCard(
-                  context,
-                  planId: entry.key,
-                  planData: entry.value,
-                  product: product,
-                  isSelected: false,
-                ),
-              );
-            }).toList(),
-
-            ResponsiveConfig.heightBox(24),
-
-            // Current Plan Status
-            if (user?.subscription.isActive == true)
-              Card(
-                color: AppTheme.lightPink,
-                child: Padding(
-                  padding: ResponsiveConfig.padding(all: 16),
-                  child: Column(
-                    children: [
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.check_circle,
-                            color: AppTheme.successGreen,
-                          ),
-                          ResponsiveConfig.widthBox(8),
-                          Text(
-                            'Premium Active',
-                            style: ResponsiveConfig.textStyle(
-                              size: 18,
-                              weight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                      ResponsiveConfig.heightBox(8),
-                      Text(
-                        'Your subscription is active until ${user?.subscription.endDate?.toString().split(' ')[0] ?? 'N/A'}',
-                        style: ResponsiveConfig.textStyle(
-                          size: 14,
-                          color: AppTheme.mediumGray,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-            ResponsiveConfig.heightBox(16),
-
-            // Terms & Privacy
-            Text(
-              'By subscribing, you agree to our Terms of Service and Privacy Policy.',
-              style: ResponsiveConfig.textStyle(
-                size: 12,
-                color: AppTheme.mediumGray,
-              ),
-              textAlign: TextAlign.center,
+    return BackButtonHandler(
+      fallbackRoute: '/home',
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Upgrade to Premium'),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.restore),
+              tooltip: 'Restore Purchases',
+              onPressed: _restorePurchases,
             ),
           ],
+        ),
+        body: SingleChildScrollView(
+          padding: ResponsiveConfig.padding(all: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Premium Header
+              _buildPremiumHeader(context),
+              ResponsiveConfig.heightBox(24),
+
+              // Features List
+              _buildFeaturesList(context, features),
+              ResponsiveConfig.heightBox(24),
+
+              // Subscription Plans
+              Text(
+                'Choose Your Plan',
+                style: ResponsiveConfig.textStyle(
+                  size: 20,
+                  weight: FontWeight.bold,
+                ),
+              ),
+              ResponsiveConfig.heightBox(16),
+              ...plans.entries.map((entry) {
+                // Find matching IAP product
+                final productId = _getProductIdForPlan(entry.key);
+                final product = _products.firstWhere(
+                  (p) => p.id == productId,
+                  orElse: () => _createDummyProduct(entry.key, entry.value),
+                );
+
+                return Padding(
+                  padding: ResponsiveConfig.padding(vertical: 8),
+                  child: _buildPlanCard(
+                    context,
+                    planId: entry.key,
+                    planData: entry.value,
+                    product: product,
+                    isSelected: false,
+                  ),
+                );
+              }).toList(),
+
+              ResponsiveConfig.heightBox(24),
+
+              // Current Plan Status
+              if (user?.subscription.isActive == true)
+                Card(
+                  color: AppTheme.lightPink,
+                  child: Padding(
+                    padding: ResponsiveConfig.padding(all: 16),
+                    child: Column(
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.check_circle,
+                              color: AppTheme.successGreen,
+                            ),
+                            ResponsiveConfig.widthBox(8),
+                            Text(
+                              'Premium Active',
+                              style: ResponsiveConfig.textStyle(
+                                size: 18,
+                                weight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                        ResponsiveConfig.heightBox(8),
+                        Text(
+                          'Your subscription is active until ${user?.subscription.endDate?.toString().split(' ')[0] ?? 'N/A'}',
+                          style: ResponsiveConfig.textStyle(
+                            size: 14,
+                            color: AppTheme.mediumGray,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+              ResponsiveConfig.heightBox(16),
+
+              // Terms & Privacy
+              Text(
+                'By subscribing, you agree to our Terms of Service and Privacy Policy.',
+                style: ResponsiveConfig.textStyle(
+                  size: 12,
+                  color: AppTheme.mediumGray,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
         ),
       ),
     );

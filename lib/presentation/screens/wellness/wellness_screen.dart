@@ -25,13 +25,41 @@ class WellnessScreen extends ConsumerWidget {
         backgroundColor: Colors.transparent, // Use theme background
         appBar: AppBar(
           title: const Text('Wellness'),
-          bottom: TabBar(
-            tabs: const [
-              Tab(text: 'All'),
-              Tab(text: 'Tips'),
-              Tab(text: 'Articles'),
-              Tab(text: 'Meditation'),
-            ],
+          bottom: PreferredSize(
+            preferredSize: const Size.fromHeight(48),
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.white.withValues(alpha: 0.1)
+                    : Colors.white.withValues(alpha: 0.7),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: TabBar(
+                indicator: BoxDecoration(
+                  color: AppTheme.primaryPink,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                indicatorSize: TabBarIndicatorSize.tab,
+                dividerColor: Colors.transparent,
+                labelColor: Colors.white,
+                unselectedLabelColor: AppTheme.mediumGray,
+                labelStyle: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+                unselectedLabelStyle: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w400,
+                ),
+                tabs: const [
+                  Tab(text: 'All'),
+                  Tab(text: 'Tips'),
+                  Tab(text: 'Articles'),
+                  Tab(text: 'Meditation'),
+                ],
+              ),
+            ),
           ),
         ),
         bottomNavigationBar: const FemCareBottomNav(currentRoute: '/wellness'),

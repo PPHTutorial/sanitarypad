@@ -5,6 +5,7 @@ import '../../../core/config/responsive_config.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/providers/auth_provider.dart';
 import '../../../services/health_report_service.dart';
+import '../../../core/widgets/back_button_handler.dart';
 
 /// Health report screen
 class HealthReportScreen extends ConsumerStatefulWidget {
@@ -125,186 +126,191 @@ class _HealthReportScreenState extends ConsumerState<HealthReportScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Health Report'),
-      ),
-      body: SingleChildScrollView(
-        padding: ResponsiveConfig.padding(all: 16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Info Card
-            Card(
-              color: AppTheme.lightPink,
-              child: Padding(
-                padding: ResponsiveConfig.padding(all: 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.description,
-                          color: AppTheme.primaryPink,
-                        ),
-                        ResponsiveConfig.widthBox(8),
-                        Text(
-                          'Generate Health Report',
-                          style: ResponsiveConfig.textStyle(
-                            size: 18,
-                            weight: FontWeight.bold,
+    return BackButtonHandler(
+      fallbackRoute: '/home',
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Health Report'),
+        ),
+        body: SingleChildScrollView(
+          padding: ResponsiveConfig.padding(all: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Info Card
+              Card(
+                color: AppTheme.lightPink,
+                child: Padding(
+                  padding: ResponsiveConfig.padding(all: 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.description,
+                            color: AppTheme.primaryPink,
                           ),
-                        ),
-                      ],
-                    ),
-                    ResponsiveConfig.heightBox(12),
-                    Text(
-                      'Create a comprehensive PDF report of your health data including cycles, wellness entries, and pad usage. Perfect for sharing with healthcare providers.',
-                      style: ResponsiveConfig.textStyle(
-                        size: 14,
-                        color: AppTheme.mediumGray,
+                          ResponsiveConfig.widthBox(8),
+                          Text(
+                            'Generate Health Report',
+                            style: ResponsiveConfig.textStyle(
+                              size: 18,
+                              weight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                  ],
+                      ResponsiveConfig.heightBox(12),
+                      Text(
+                        'Create a comprehensive PDF report of your health data including cycles, wellness entries, and pad usage. Perfect for sharing with healthcare providers.',
+                        style: ResponsiveConfig.textStyle(
+                          size: 14,
+                          color: AppTheme.mediumGray,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-            ResponsiveConfig.heightBox(24),
+              ResponsiveConfig.heightBox(24),
 
-            // Date Range Selection
-            Text(
-              'Report Period',
-              style: ResponsiveConfig.textStyle(
-                size: 16,
-                weight: FontWeight.bold,
-              ),
-            ),
-            ResponsiveConfig.heightBox(12),
-            Card(
-              child: Padding(
-                padding: ResponsiveConfig.padding(all: 16),
-                child: Column(
-                  children: [
-                    InkWell(
-                      onTap: _selectStartDate,
-                      child: InputDecorator(
-                        decoration: const InputDecoration(
-                          labelText: 'Start Date',
-                          suffixIcon: Icon(Icons.calendar_today),
-                        ),
-                        child: Text(
-                          _startDate != null
-                              ? DateFormat('MMM dd, yyyy').format(_startDate!)
-                              : 'Select start date',
-                        ),
-                      ),
-                    ),
-                    ResponsiveConfig.heightBox(16),
-                    InkWell(
-                      onTap: _selectEndDate,
-                      child: InputDecorator(
-                        decoration: const InputDecoration(
-                          labelText: 'End Date',
-                          suffixIcon: Icon(Icons.calendar_today),
-                        ),
-                        child: Text(
-                          _endDate != null
-                              ? DateFormat('MMM dd, yyyy').format(_endDate!)
-                              : 'Select end date',
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            ResponsiveConfig.heightBox(24),
-
-            // Quick Date Presets
-            Text(
-              'Quick Presets',
-              style: ResponsiveConfig.textStyle(
-                size: 16,
-                weight: FontWeight.bold,
-              ),
-            ),
-            ResponsiveConfig.heightBox(12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                _buildPresetButton('Last 30 Days', () {
-                  setState(() {
-                    _endDate = DateTime.now();
-                    _startDate =
-                        DateTime.now().subtract(const Duration(days: 30));
-                  });
-                }),
-                _buildPresetButton('Last 90 Days', () {
-                  setState(() {
-                    _endDate = DateTime.now();
-                    _startDate =
-                        DateTime.now().subtract(const Duration(days: 90));
-                  });
-                }),
-                _buildPresetButton('Last 6 Months', () {
-                  setState(() {
-                    _endDate = DateTime.now();
-                    _startDate =
-                        DateTime.now().subtract(const Duration(days: 180));
-                  });
-                }),
-                _buildPresetButton('Last Year', () {
-                  setState(() {
-                    _endDate = DateTime.now();
-                    _startDate =
-                        DateTime.now().subtract(const Duration(days: 365));
-                  });
-                }),
-              ],
-            ),
-            ResponsiveConfig.heightBox(32),
-
-            // Generate Button
-            ElevatedButton.icon(
-              onPressed: _isGenerating ? null : _generateReport,
-              icon: _isGenerating
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.picture_as_pdf),
-              label: Text(
-                _isGenerating ? 'Generating Report...' : 'Generate PDF Report',
+              // Date Range Selection
+              Text(
+                'Report Period',
                 style: ResponsiveConfig.textStyle(
                   size: 16,
                   weight: FontWeight.bold,
                 ),
               ),
-              style: ElevatedButton.styleFrom(
-                padding: ResponsiveConfig.padding(vertical: 16),
-              ),
-            ),
-            ResponsiveConfig.heightBox(16),
-
-            // Disclaimer
-            Card(
-              color: AppTheme.palePink,
-              child: Padding(
-                padding: ResponsiveConfig.padding(all: 12),
-                child: Text(
-                  'This report is for informational purposes only and should not replace professional medical advice.',
-                  style: ResponsiveConfig.textStyle(
-                    size: 12,
-                    color: AppTheme.mediumGray,
-                  ).copyWith(fontStyle: FontStyle.italic),
-                  textAlign: TextAlign.center,
+              ResponsiveConfig.heightBox(12),
+              Card(
+                child: Padding(
+                  padding: ResponsiveConfig.padding(all: 16),
+                  child: Column(
+                    children: [
+                      InkWell(
+                        onTap: _selectStartDate,
+                        child: InputDecorator(
+                          decoration: const InputDecoration(
+                            labelText: 'Start Date',
+                            suffixIcon: Icon(Icons.calendar_today),
+                          ),
+                          child: Text(
+                            _startDate != null
+                                ? DateFormat('MMM dd, yyyy').format(_startDate!)
+                                : 'Select start date',
+                          ),
+                        ),
+                      ),
+                      ResponsiveConfig.heightBox(16),
+                      InkWell(
+                        onTap: _selectEndDate,
+                        child: InputDecorator(
+                          decoration: const InputDecoration(
+                            labelText: 'End Date',
+                            suffixIcon: Icon(Icons.calendar_today),
+                          ),
+                          child: Text(
+                            _endDate != null
+                                ? DateFormat('MMM dd, yyyy').format(_endDate!)
+                                : 'Select end date',
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          ],
+              ResponsiveConfig.heightBox(24),
+
+              // Quick Date Presets
+              Text(
+                'Quick Presets',
+                style: ResponsiveConfig.textStyle(
+                  size: 16,
+                  weight: FontWeight.bold,
+                ),
+              ),
+              ResponsiveConfig.heightBox(12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _buildPresetButton('Last 30 Days', () {
+                    setState(() {
+                      _endDate = DateTime.now();
+                      _startDate =
+                          DateTime.now().subtract(const Duration(days: 30));
+                    });
+                  }),
+                  _buildPresetButton('Last 90 Days', () {
+                    setState(() {
+                      _endDate = DateTime.now();
+                      _startDate =
+                          DateTime.now().subtract(const Duration(days: 90));
+                    });
+                  }),
+                  _buildPresetButton('Last 6 Months', () {
+                    setState(() {
+                      _endDate = DateTime.now();
+                      _startDate =
+                          DateTime.now().subtract(const Duration(days: 180));
+                    });
+                  }),
+                  _buildPresetButton('Last Year', () {
+                    setState(() {
+                      _endDate = DateTime.now();
+                      _startDate =
+                          DateTime.now().subtract(const Duration(days: 365));
+                    });
+                  }),
+                ],
+              ),
+              ResponsiveConfig.heightBox(32),
+
+              // Generate Button
+              ElevatedButton.icon(
+                onPressed: _isGenerating ? null : _generateReport,
+                icon: _isGenerating
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.picture_as_pdf),
+                label: Text(
+                  _isGenerating
+                      ? 'Generating Report...'
+                      : 'Generate PDF Report',
+                  style: ResponsiveConfig.textStyle(
+                    size: 16,
+                    weight: FontWeight.bold,
+                  ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  padding: ResponsiveConfig.padding(vertical: 16),
+                ),
+              ),
+              ResponsiveConfig.heightBox(16),
+
+              // Disclaimer
+              Card(
+                color: AppTheme.palePink,
+                child: Padding(
+                  padding: ResponsiveConfig.padding(all: 12),
+                  child: Text(
+                    'This report is for informational purposes only and should not replace professional medical advice.',
+                    style: ResponsiveConfig.textStyle(
+                      size: 12,
+                      color: AppTheme.mediumGray,
+                    ).copyWith(fontStyle: FontStyle.italic),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
