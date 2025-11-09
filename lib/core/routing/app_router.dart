@@ -1,4 +1,7 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../../core/constants/app_constants.dart';
 import '../../presentation/screens/onboarding/onboarding_screen.dart';
 import '../../presentation/screens/auth/login_screen.dart';
 import '../../presentation/screens/auth/signup_screen.dart';
@@ -28,178 +31,263 @@ import '../../presentation/screens/skincare/skincare_tracking_screen.dart';
 import '../../presentation/screens/skincare/skincare_product_form_screen.dart';
 import '../../presentation/screens/skincare/skincare_routine_form_screen.dart';
 import '../../data/models/skincare_model.dart';
+import '../../presentation/screens/alerts/red_flag_alerts_screen.dart';
+import '../../presentation/screens/reports/health_report_screen.dart';
+import '../../core/providers/auth_provider.dart';
+import 'dart:async';
+import 'package:flutter/material.dart';
 
-/// App routing configuration
+/// App routing configuration with auth guards
 class AppRouter {
-  static final GoRouter router = GoRouter(
-    initialLocation: '/onboarding',
-    routes: [
-      // Onboarding
-      GoRoute(
-        path: '/onboarding',
-        name: 'onboarding',
-        builder: (context, state) => const OnboardingScreen(),
-      ),
+  /// Check if onboarding is complete
+  static Future<bool> _isOnboardingComplete() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(AppConstants.prefsKeyOnboardingComplete) ?? false;
+  }
 
-      // Authentication
-      GoRoute(
-        path: '/login',
-        name: 'login',
-        builder: (context, state) => const LoginScreen(),
-      ),
-      GoRoute(
-        path: '/signup',
-        name: 'signup',
-        builder: (context, state) => const SignUpScreen(),
-      ),
+  static final routerProvider = Provider<GoRouter>((ref) {
+    final router = GoRouter(
+      redirect: (context, state) async {
+        final isOnboardingComplete = await _isOnboardingComplete();
 
-      // Main App (with bottom navigation)
-      GoRoute(
-        path: '/home',
-        name: 'home',
-        builder: (context, state) => const HomeScreen(),
-      ),
-      GoRoute(
-        path: '/calendar',
-        name: 'calendar',
-        builder: (context, state) => const CalendarScreen(),
-      ),
-      GoRoute(
-        path: '/insights',
-        name: 'insights',
-        builder: (context, state) => const InsightsScreen(),
-      ),
-      GoRoute(
-        path: '/wellness',
-        name: 'wellness',
-        builder: (context, state) => const WellnessScreen(),
-      ),
-      GoRoute(
-        path: '/profile',
-        name: 'profile',
-        builder: (context, state) => const ProfileScreen(),
-      ),
+        final userAsync = ref.read(currentUserStreamProvider);
+        final user = userAsync.value;
+        final isAuthenticated = user != null;
 
-      // Feature Screens
-      GoRoute(
-        path: '/log-period',
-        name: 'log-period',
-        builder: (context, state) => const LogPeriodScreen(),
-      ),
-      GoRoute(
-        path: '/pad-management',
-        name: 'pad-management',
-        builder: (context, state) => const PadManagementScreen(),
-      ),
-      GoRoute(
-        path: '/wellness-journal',
-        name: 'wellness-journal',
-        builder: (context, state) => const WellnessJournalScreen(),
-      ),
+        final isOnboardingRoute = state.matchedLocation == '/onboarding';
+        final isAuthRoute = state.matchedLocation == '/login' ||
+            state.matchedLocation == '/signup';
+        final isProtectedRoute = !isOnboardingRoute && !isAuthRoute;
 
-      // Settings
-      GoRoute(
-        path: '/pin-setup',
-        name: 'pin-setup',
-        builder: (context, state) => const PinSetupScreen(),
-      ),
-      GoRoute(
-        path: '/biometric-setup',
-        name: 'biometric-setup',
-        builder: (context, state) => const BiometricSetupScreen(),
-      ),
+        // If onboarding not complete and not on onboarding route
+        if (!isOnboardingComplete && !isOnboardingRoute) {
+          return '/onboarding';
+        }
 
-      // Subscription
-      GoRoute(
-        path: '/subscription',
-        name: 'subscription',
-        builder: (context, state) => const SubscriptionScreen(),
-      ),
+        // If onboarding complete but not authenticated and trying to access protected route
+        if (isOnboardingComplete && !isAuthenticated && isProtectedRoute) {
+          return '/login';
+        }
 
-      // Wellness Content
-      GoRoute(
-        path: '/wellness-content/:id',
-        name: 'wellness-content',
-        builder: (context, state) {
-          final id = state.pathParameters['id']!;
-          return WellnessContentDetailScreen(contentId: id);
-        },
-      ),
+        // If authenticated and on auth routes, redirect to home
+        if (isAuthenticated && isAuthRoute) {
+          return '/home';
+        }
 
-      // Emergency Contacts
-      GoRoute(
-        path: '/emergency-contacts',
-        name: 'emergency-contacts',
-        builder: (context, state) => const EmergencyContactsScreen(),
-      ),
-      GoRoute(
-        path: '/emergency-contact-form',
-        name: 'emergency-contact-form',
-        builder: (context, state) {
-          final contact = state.extra as EmergencyContact?;
-          return EmergencyContactFormScreen(contact: contact);
-        },
-      ),
+        return null; // No redirect needed
+      },
+      refreshListenable: RouterRefreshNotifier(ref),
+      initialLocation: '/onboarding', // Will be redirected by redirect logic
+      routes: [
+        // Onboarding
+        GoRoute(
+          path: '/onboarding',
+          name: 'onboarding',
+          builder: (context, state) => const OnboardingScreen(),
+        ),
 
-      // Settings
-      GoRoute(
-        path: '/notification-settings',
-        name: 'notification-settings',
-        builder: (context, state) => const NotificationSettingsScreen(),
-      ),
+        // Authentication
+        GoRoute(
+          path: '/login',
+          name: 'login',
+          builder: (context, state) => const LoginScreen(),
+        ),
+        GoRoute(
+          path: '/signup',
+          name: 'signup',
+          builder: (context, state) => const SignUpScreen(),
+        ),
 
-      // Pregnancy Tracking
-      GoRoute(
-        path: '/pregnancy-tracking',
-        name: 'pregnancy-tracking',
-        builder: (context, state) => const PregnancyTrackingScreen(),
-      ),
-      GoRoute(
-        path: '/pregnancy-form',
-        name: 'pregnancy-form',
-        builder: (context, state) {
-          final pregnancy = state.extra as Pregnancy?;
-          return PregnancyFormScreen(pregnancy: pregnancy);
-        },
-      ),
+        // Main App (with bottom navigation) - Protected routes
+        GoRoute(
+          path: '/home',
+          name: 'home',
+          builder: (context, state) => const HomeScreen(),
+        ),
+        GoRoute(
+          path: '/calendar',
+          name: 'calendar',
+          builder: (context, state) => const CalendarScreen(),
+        ),
+        GoRoute(
+          path: '/insights',
+          name: 'insights',
+          builder: (context, state) => const InsightsScreen(),
+        ),
+        GoRoute(
+          path: '/wellness',
+          name: 'wellness',
+          builder: (context, state) => const WellnessScreen(),
+        ),
+        GoRoute(
+          path: '/profile',
+          name: 'profile',
+          builder: (context, state) => const ProfileScreen(),
+        ),
 
-      // Fertility Tracking
-      GoRoute(
-        path: '/fertility-tracking',
-        name: 'fertility-tracking',
-        builder: (context, state) => const FertilityTrackingScreen(),
-      ),
-      GoRoute(
-        path: '/fertility-entry-form',
-        name: 'fertility-entry-form',
-        builder: (context, state) {
-          final entry = state.extra as FertilityEntry?;
-          return FertilityEntryFormScreen(entry: entry);
-        },
-      ),
+        // Feature Screens - Protected routes
+        GoRoute(
+          path: '/log-period',
+          name: 'log-period',
+          builder: (context, state) => const LogPeriodScreen(),
+        ),
+        GoRoute(
+          path: '/pad-management',
+          name: 'pad-management',
+          builder: (context, state) => const PadManagementScreen(),
+        ),
+        GoRoute(
+          path: '/wellness-journal',
+          name: 'wellness-journal',
+          builder: (context, state) => const WellnessJournalScreen(),
+        ),
 
-      // Skincare Tracking
-      GoRoute(
-        path: '/skincare-tracking',
-        name: 'skincare-tracking',
-        builder: (context, state) => const SkincareTrackingScreen(),
-      ),
-      GoRoute(
-        path: '/skincare-product-form',
-        name: 'skincare-product-form',
-        builder: (context, state) {
-          final product = state.extra as SkincareProduct?;
-          return SkincareProductFormScreen(product: product);
-        },
-      ),
-      GoRoute(
-        path: '/skincare-routine-form',
-        name: 'skincare-routine-form',
-        builder: (context, state) {
-          final entry = state.extra as SkincareEntry?;
-          return SkincareRoutineFormScreen(entry: entry);
-        },
-      ),
-    ],
-  );
+        // Settings - Protected routes
+        GoRoute(
+          path: '/pin-setup',
+          name: 'pin-setup',
+          builder: (context, state) => const PinSetupScreen(),
+        ),
+        GoRoute(
+          path: '/biometric-setup',
+          name: 'biometric-setup',
+          builder: (context, state) => const BiometricSetupScreen(),
+        ),
+
+        // Subscription - Protected route
+        GoRoute(
+          path: '/subscription',
+          name: 'subscription',
+          builder: (context, state) => const SubscriptionScreen(),
+        ),
+
+        // Wellness Content - Protected route
+        GoRoute(
+          path: '/wellness-content/:id',
+          name: 'wellness-content',
+          builder: (context, state) {
+            final id = state.pathParameters['id']!;
+            return WellnessContentDetailScreen(contentId: id);
+          },
+        ),
+
+        // Emergency Contacts - Protected routes
+        GoRoute(
+          path: '/emergency-contacts',
+          name: 'emergency-contacts',
+          builder: (context, state) => const EmergencyContactsScreen(),
+        ),
+        GoRoute(
+          path: '/emergency-contact-form',
+          name: 'emergency-contact-form',
+          builder: (context, state) {
+            final contact = state.extra as EmergencyContact?;
+            return EmergencyContactFormScreen(contact: contact);
+          },
+        ),
+
+        // Settings - Protected routes
+        GoRoute(
+          path: '/notification-settings',
+          name: 'notification-settings',
+          builder: (context, state) => const NotificationSettingsScreen(),
+        ),
+
+        // Health Alerts - Protected route
+        GoRoute(
+          path: '/red-flag-alerts',
+          name: 'red-flag-alerts',
+          builder: (context, state) => const RedFlagAlertsScreen(),
+        ),
+
+        // Health Reports - Protected route
+        GoRoute(
+          path: '/health-report',
+          name: 'health-report',
+          builder: (context, state) => const HealthReportScreen(),
+        ),
+
+        // Pregnancy Tracking - Protected routes
+        GoRoute(
+          path: '/pregnancy-tracking',
+          name: 'pregnancy-tracking',
+          builder: (context, state) => const PregnancyTrackingScreen(),
+        ),
+        GoRoute(
+          path: '/pregnancy-form',
+          name: 'pregnancy-form',
+          builder: (context, state) {
+            final pregnancy = state.extra as Pregnancy?;
+            return PregnancyFormScreen(pregnancy: pregnancy);
+          },
+        ),
+
+        // Fertility Tracking - Protected routes
+        GoRoute(
+          path: '/fertility-tracking',
+          name: 'fertility-tracking',
+          builder: (context, state) => const FertilityTrackingScreen(),
+        ),
+        GoRoute(
+          path: '/fertility-entry-form',
+          name: 'fertility-entry-form',
+          builder: (context, state) {
+            final entry = state.extra as FertilityEntry?;
+            return FertilityEntryFormScreen(entry: entry);
+          },
+        ),
+
+        // Skincare Tracking - Protected routes
+        GoRoute(
+          path: '/skincare-tracking',
+          name: 'skincare-tracking',
+          builder: (context, state) => const SkincareTrackingScreen(),
+        ),
+        GoRoute(
+          path: '/skincare-product-form',
+          name: 'skincare-product-form',
+          builder: (context, state) {
+            final product = state.extra as SkincareProduct?;
+            return SkincareProductFormScreen(product: product);
+          },
+        ),
+        GoRoute(
+          path: '/skincare-routine-form',
+          name: 'skincare-routine-form',
+          builder: (context, state) {
+            final entry = state.extra as SkincareEntry?;
+            return SkincareRoutineFormScreen(entry: entry);
+          },
+        ),
+      ],
+    );
+
+    return router;
+  });
+
+  // Legacy static router for backward compatibility
+  static GoRouter get router {
+    // This will be replaced by routerProvider in main.dart
+    throw UnimplementedError('Use routerProvider instead');
+  }
+}
+
+/// Router refresh notifier helper
+class RouterRefreshNotifier extends ChangeNotifier {
+  final Ref _ref;
+  StreamSubscription? _subscription;
+
+  RouterRefreshNotifier(this._ref) {
+    // Listen to auth state changes
+    final authService = _ref.read(authServiceProvider);
+    _subscription = authService.authStateChanges.listen((_) {
+      notifyListeners();
+    });
+  }
+
+  @override
+  void dispose() {
+    _subscription?.cancel();
+    super.dispose();
+  }
 }

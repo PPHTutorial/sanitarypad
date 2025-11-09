@@ -4,16 +4,15 @@ import 'package:go_router/go_router.dart';
 import '../../../core/config/responsive_config.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/providers/cycle_provider.dart';
-import '../../../core/utils/date_utils.dart' as app_date_utils;
 
-/// Home screen - Main dashboard
+/// Home screen - Blank dashboard for users to add their data
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final activeCycle = ref.watch(activeCycleProvider);
-    final predictionsAsync = ref.watch(cyclePredictionsProvider);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('FemCare+'),
@@ -21,7 +20,7 @@ class HomeScreen extends ConsumerWidget {
           IconButton(
             icon: const Icon(Icons.notifications_outlined),
             onPressed: () {
-              // Navigate to notifications
+              context.go('/red-flag-alerts');
             },
           ),
           IconButton(
@@ -37,25 +36,22 @@ class HomeScreen extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Cycle Status Card
-            _buildCycleStatusCard(
-                context, ref, activeCycle, predictionsAsync.value),
+            // Welcome Message
+            _buildWelcomeCard(context),
             ResponsiveConfig.heightBox(16),
+
+            // Cycle Status Card (only if cycle exists)
+            if (activeCycle != null) ...[
+              _buildCycleStatusCard(context, ref, activeCycle),
+              ResponsiveConfig.heightBox(16),
+            ],
 
             // Quick Actions
             _buildQuickActions(context),
             ResponsiveConfig.heightBox(16),
 
-            // Today's Wellness
-            _buildTodaysWellness(context),
-            ResponsiveConfig.heightBox(16),
-
-            // Upcoming Reminders
-            _buildReminders(context),
-            ResponsiveConfig.heightBox(16),
-
-            // Quick Tips
-            _buildQuickTips(context),
+            // Get Started Section (if no data)
+            if (activeCycle == null) _buildGetStartedSection(context),
           ],
         ),
       ),
@@ -63,55 +59,43 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
+  Widget _buildWelcomeCard(BuildContext context) {
+    return Card(
+      color: AppTheme.lightPink,
+      child: Padding(
+        padding: ResponsiveConfig.padding(all: 20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Welcome to FemCare+',
+              style: ResponsiveConfig.textStyle(
+                size: 24,
+                weight: FontWeight.bold,
+                color: AppTheme.primaryPink,
+              ),
+            ),
+            ResponsiveConfig.heightBox(8),
+            Text(
+              'Start tracking your health and wellness journey today.',
+              style: ResponsiveConfig.textStyle(
+                size: 14,
+                color: AppTheme.mediumGray,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildCycleStatusCard(
     BuildContext context,
     WidgetRef ref,
     cycle,
-    predictions,
   ) {
-    if (cycle == null) {
-      return Card(
-        child: Padding(
-          padding: ResponsiveConfig.padding(all: 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Cycle Status',
-                style: ResponsiveConfig.textStyle(
-                  size: 18,
-                  weight: FontWeight.w600,
-                  color: Theme.of(context).textTheme.titleLarge?.color,
-                ),
-              ),
-              ResponsiveConfig.heightBox(12),
-              Text(
-                'No cycle data yet. Log your first period to get started!',
-                style: ResponsiveConfig.textStyle(
-                  size: 14,
-                  color: AppTheme.mediumGray,
-                ),
-              ),
-              ResponsiveConfig.heightBox(12),
-              ElevatedButton(
-                onPressed: () => context.go('/log-period'),
-                child: const Text('Log Period'),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
     final now = DateTime.now();
     final cycleDay = cycle.getCycleDay(now);
-    final phase =
-        app_date_utils.DateUtils.getCyclePhase(cycle.startDate, cycleDay);
-    final daysUntilPeriod = predictions?.isNotEmpty == true
-        ? (predictions![0]['predictedStartDate'] as DateTime)
-            .difference(now)
-            .inDays
-        : null;
 
     return Card(
       child: Padding(
@@ -119,13 +103,21 @@ class HomeScreen extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Cycle Status',
-              style: ResponsiveConfig.textStyle(
-                size: 18,
-                weight: FontWeight.w600,
-                color: Theme.of(context).textTheme.titleLarge?.color,
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Current Cycle',
+                  style: ResponsiveConfig.textStyle(
+                    size: 18,
+                    weight: FontWeight.w600,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.edit_outlined),
+                  onPressed: () => context.go('/log-period'),
+                ),
+              ],
             ),
             ResponsiveConfig.heightBox(12),
             Row(
@@ -149,7 +141,7 @@ class HomeScreen extends ConsumerWidget {
                       ),
                       ResponsiveConfig.heightBox(4),
                       Text(
-                        phase.replaceFirst(phase[0], phase[0].toUpperCase()),
+                        'Started ${_formatDate(cycle.startDate)}',
                         style: ResponsiveConfig.textStyle(
                           size: 14,
                           color: AppTheme.mediumGray,
@@ -158,24 +150,6 @@ class HomeScreen extends ConsumerWidget {
                     ],
                   ),
                 ),
-                if (daysUntilPeriod != null) ...[
-                  Text(
-                    '$daysUntilPeriod days',
-                    style: ResponsiveConfig.textStyle(
-                      size: 14,
-                      weight: FontWeight.w600,
-                      color: AppTheme.primaryPink,
-                    ),
-                  ),
-                  ResponsiveConfig.widthBox(4),
-                  Text(
-                    'until period',
-                    style: ResponsiveConfig.textStyle(
-                      size: 14,
-                      color: AppTheme.mediumGray,
-                    ),
-                  ),
-                ],
               ],
             ),
           ],
@@ -193,7 +167,6 @@ class HomeScreen extends ConsumerWidget {
           style: ResponsiveConfig.textStyle(
             size: 18,
             weight: FontWeight.w600,
-            color: Theme.of(context).textTheme.titleLarge?.color,
           ),
         ),
         ResponsiveConfig.heightBox(12),
@@ -211,11 +184,9 @@ class HomeScreen extends ConsumerWidget {
             Expanded(
               child: _buildActionButton(
                 context,
-                icon: Icons.medical_services_outlined,
-                label: 'Log Symptom',
-                onTap: () {
-                  // Navigate to symptom logging
-                },
+                icon: Icons.sanitizer,
+                label: 'Pad Change',
+                onTap: () => context.go('/pad-management'),
               ),
             ),
           ],
@@ -226,23 +197,70 @@ class HomeScreen extends ConsumerWidget {
             Expanded(
               child: _buildActionButton(
                 context,
-                icon: Icons.sanitizer,
-                label: 'Pad Change',
-                onTap: () => context.go('/pad-management'),
+                icon: Icons.favorite_outline,
+                label: 'Wellness',
+                onTap: () => context.go('/wellness-journal'),
               ),
             ),
             ResponsiveConfig.widthBox(12),
             Expanded(
               child: _buildActionButton(
                 context,
-                icon: Icons.favorite_outline,
-                label: 'Wellness',
-                onTap: () => context.go('/wellness-journal'),
+                icon: Icons.calendar_today,
+                label: 'Calendar',
+                onTap: () => context.go('/calendar'),
               ),
             ),
           ],
         ),
       ],
+    );
+  }
+
+  Widget _buildGetStartedSection(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: ResponsiveConfig.padding(all: 20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.rocket_launch,
+                  color: AppTheme.primaryPink,
+                  size: ResponsiveConfig.iconSize(28),
+                ),
+                ResponsiveConfig.widthBox(12),
+                Text(
+                  'Get Started',
+                  style: ResponsiveConfig.textStyle(
+                    size: 20,
+                    weight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            ResponsiveConfig.heightBox(16),
+            Text(
+              'Start tracking your menstrual cycle to unlock personalized insights and predictions.',
+              style: ResponsiveConfig.textStyle(
+                size: 14,
+                color: AppTheme.mediumGray,
+              ),
+            ),
+            ResponsiveConfig.heightBox(16),
+            ElevatedButton.icon(
+              onPressed: () => context.go('/log-period'),
+              icon: const Icon(Icons.add),
+              label: const Text('Log Your First Period'),
+              style: ElevatedButton.styleFrom(
+                padding: ResponsiveConfig.padding(vertical: 16),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -260,6 +278,10 @@ class HomeScreen extends ConsumerWidget {
         decoration: BoxDecoration(
           color: AppTheme.palePink,
           borderRadius: ResponsiveConfig.borderRadius(12),
+          border: Border.all(
+            color: AppTheme.lightPink,
+            width: 1,
+          ),
         ),
         child: Column(
           children: [
@@ -277,168 +299,6 @@ class HomeScreen extends ConsumerWidget {
                 color: AppTheme.darkGray,
               ),
               textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTodaysWellness(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: ResponsiveConfig.padding(all: 16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              "Today's Wellness",
-              style: ResponsiveConfig.textStyle(
-                size: 18,
-                weight: FontWeight.w600,
-                color: Theme.of(context).textTheme.titleLarge?.color,
-              ),
-            ),
-            ResponsiveConfig.heightBox(16),
-            _buildWellnessItem(
-              context,
-              icon: Icons.mood,
-              label: 'Mood',
-              value: '😊 Happy',
-            ),
-            ResponsiveConfig.heightBox(12),
-            _buildWellnessItem(
-              context,
-              icon: Icons.water_drop_outlined,
-              label: 'Hydration',
-              value: '6/8 glasses',
-            ),
-            ResponsiveConfig.heightBox(12),
-            _buildWellnessItem(
-              context,
-              icon: Icons.bedtime_outlined,
-              label: 'Sleep',
-              value: '7.5 hours',
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildWellnessItem(
-    BuildContext context, {
-    required IconData icon,
-    required String label,
-    required String value,
-  }) {
-    return Row(
-      children: [
-        Icon(
-          icon,
-          color: AppTheme.primaryPink,
-          size: ResponsiveConfig.iconSize(20),
-        ),
-        ResponsiveConfig.widthBox(12),
-        Text(
-          label,
-          style: ResponsiveConfig.textStyle(
-            size: 14,
-            color: AppTheme.mediumGray,
-          ),
-        ),
-        const Spacer(),
-        Text(
-          value,
-          style: ResponsiveConfig.textStyle(
-            size: 14,
-            weight: FontWeight.w500,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildReminders(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: ResponsiveConfig.padding(all: 16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Upcoming Reminders',
-              style: ResponsiveConfig.textStyle(
-                size: 18,
-                weight: FontWeight.w600,
-                color: Theme.of(context).textTheme.titleLarge?.color,
-              ),
-            ),
-            ResponsiveConfig.heightBox(12),
-            _buildReminderItem(
-              context,
-              'Pad change in 2 hours',
-              Icons.sanitizer,
-            ),
-            ResponsiveConfig.heightBox(8),
-            _buildReminderItem(
-              context,
-              'Period starts in 3 days',
-              Icons.calendar_today,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildReminderItem(
-    BuildContext context,
-    String text,
-    IconData icon,
-  ) {
-    return Row(
-      children: [
-        Icon(
-          icon,
-          color: AppTheme.primaryPink,
-          size: ResponsiveConfig.iconSize(20),
-        ),
-        ResponsiveConfig.widthBox(12),
-        Expanded(
-          child: Text(
-            text,
-            style: ResponsiveConfig.textStyle(
-              size: 14,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildQuickTips(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: ResponsiveConfig.padding(all: 16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Quick Tip',
-              style: ResponsiveConfig.textStyle(
-                size: 18,
-                weight: FontWeight.w600,
-                color: Theme.of(context).textTheme.titleLarge?.color,
-              ),
-            ),
-            ResponsiveConfig.heightBox(12),
-            Text(
-              'During your follicular phase, focus on strength training. Your body is primed for building muscle!',
-              style: ResponsiveConfig.textStyle(
-                size: 14,
-                color: AppTheme.mediumGray,
-              ),
             ),
           ],
         ),
@@ -497,5 +357,20 @@ class HomeScreen extends ConsumerWidget {
         ),
       ],
     );
+  }
+
+  String _formatDate(DateTime date) {
+    final now = DateTime.now();
+    final difference = now.difference(date).inDays;
+
+    if (difference == 0) {
+      return 'today';
+    } else if (difference == 1) {
+      return 'yesterday';
+    } else if (difference < 7) {
+      return '$difference days ago';
+    } else {
+      return '${date.day}/${date.month}/${date.year}';
+    }
   }
 }

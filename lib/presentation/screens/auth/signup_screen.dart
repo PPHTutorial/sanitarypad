@@ -1,18 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/config/responsive_config.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/validators.dart';
+import '../../../services/auth_service.dart';
 
 /// Sign up screen
-class SignUpScreen extends StatefulWidget {
+class SignUpScreen extends ConsumerStatefulWidget {
   const SignUpScreen({super.key});
 
   @override
-  State<SignUpScreen> createState() => _SignUpScreenState();
+  ConsumerState<SignUpScreen> createState() => _SignUpScreenState();
 }
 
-class _SignUpScreenState extends State<SignUpScreen> {
+class _SignUpScreenState extends ConsumerState<SignUpScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
@@ -44,15 +46,14 @@ class _SignUpScreenState extends State<SignUpScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // TODO: Implement signup with AuthService
-      // final authService = AuthService();
-      // await authService.signUpWithEmail(
-      //   email: _emailController.text,
-      //   password: _passwordController.text,
-      //   displayName: _nameController.text,
-      // );
+      final authService = AuthService();
+      await authService.signUpWithEmail(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+        displayName: _nameController.text.trim(),
+      );
 
-      // Navigate to home
+      // Navigate to home (router will handle redirect if needed)
       if (mounted) {
         context.go('/home');
       }
@@ -109,7 +110,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     labelText: 'Full Name',
                     prefixIcon: Icon(Icons.person_outlined),
                   ),
-                  validator: (value) => Validators.required(value, fieldName: 'Name'),
+                  validator: (value) =>
+                      Validators.required(value, fieldName: 'Name'),
                 ),
                 ResponsiveConfig.heightBox(16),
                 TextFormField(
@@ -155,11 +157,13 @@ class _SignUpScreenState extends State<SignUpScreen> {
                             : Icons.visibility_off_outlined,
                       ),
                       onPressed: () {
-                        setState(() => _obscureConfirmPassword = !_obscureConfirmPassword);
+                        setState(() =>
+                            _obscureConfirmPassword = !_obscureConfirmPassword);
                       },
                     ),
                   ),
-                  validator: (value) => Validators.required(value, fieldName: 'Confirm Password'),
+                  validator: (value) =>
+                      Validators.required(value, fieldName: 'Confirm Password'),
                 ),
                 ResponsiveConfig.heightBox(24),
                 ElevatedButton(
@@ -197,4 +201,3 @@ class _SignUpScreenState extends State<SignUpScreen> {
     );
   }
 }
-

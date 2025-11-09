@@ -1,9 +1,13 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../../core/config/responsive_config.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/providers/auth_provider.dart';
 import '../../../data/models/wellness_model.dart';
 import '../../../services/wellness_service.dart';
+import '../../../services/storage_service.dart';
 import '../../../core/utils/date_utils.dart' as app_date_utils;
 
 /// Wellness journal screen
@@ -30,26 +34,77 @@ class _WellnessJournalScreenState extends ConsumerState<WellnessJournalScreen> {
   // Appetite
   String _appetiteLevel = 'normal';
 
-  // Mood
+  // Mood - Enhanced
   String _moodEmoji = '😊';
   int _energyLevel = 3;
   final _moodDescriptionController = TextEditingController();
+  List<String> _selectedEmotions = [];
+  int? _stressLevel;
+  int? _anxietyLevel;
+  int? _depressionLevel;
+  final _mentalHealthNotesController = TextEditingController();
+  bool? _pmsRelated;
 
   // Exercise
   String? _exerciseType;
   int? _exerciseDuration;
   String? _exerciseIntensity;
 
-  // Journal
+  // Journal & Photos
   final _journalController = TextEditingController();
+  final _imagePicker = ImagePicker();
+  final _storageService = StorageService();
+  List<String> _photoUrls = [];
 
   bool _isLoading = false;
 
   @override
   void dispose() {
     _moodDescriptionController.dispose();
+    _mentalHealthNotesController.dispose();
     _journalController.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickImage() async {
+    try {
+      final image = await _imagePicker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 80,
+      );
+
+      if (image != null) {
+        setState(() => _isLoading = true);
+        try {
+          final user = ref.read(currentUserStreamProvider).value;
+          if (user != null) {
+            final file = File(image.path);
+            final url = await _storageService.uploadFile(
+              file: file,
+              path:
+                  'wellness/${user.userId}/${DateTime.now().millisecondsSinceEpoch}.jpg',
+            );
+            setState(() {
+              _photoUrls.add(url);
+              _isLoading = false;
+            });
+          }
+        } catch (e) {
+          setState(() => _isLoading = false);
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Error uploading image: ${e.toString()}')),
+            );
+          }
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error picking image: ${e.toString()}')),
+        );
+      }
+    }
   }
 
   Future<void> _selectDate() async {
@@ -92,6 +147,14 @@ class _WellnessJournalScreenState extends ConsumerState<WellnessJournalScreen> {
             ? null
             : _moodDescriptionController.text,
         energyLevel: _energyLevel,
+        emotions: _selectedEmotions,
+        stressLevel: _stressLevel,
+        anxietyLevel: _anxietyLevel,
+        depressionLevel: _depressionLevel,
+        mentalHealthNotes: _mentalHealthNotesController.text.isEmpty
+            ? null
+            : _mentalHealthNotesController.text,
+        pmsRelated: _pmsRelated,
       );
 
       WellnessExercise? exercise;
@@ -112,6 +175,7 @@ class _WellnessJournalScreenState extends ConsumerState<WellnessJournalScreen> {
         exercise: exercise,
         journal:
             _journalController.text.isEmpty ? null : _journalController.text,
+        photoUrls: _photoUrls.isEmpty ? null : _photoUrls,
       );
 
       if (mounted) {
@@ -179,6 +243,10 @@ class _WellnessJournalScreenState extends ConsumerState<WellnessJournalScreen> {
 
               // Exercise (Optional)
               _buildExerciseSection(),
+              ResponsiveConfig.heightBox(24),
+
+              // Photo Diary
+              _buildPhotoDiarySection(),
               ResponsiveConfig.heightBox(24),
 
               // Journal Entry
@@ -307,6 +375,240 @@ class _WellnessJournalScreenState extends ConsumerState<WellnessJournalScreen> {
                 hintText: 'Describe how you\'re feeling...',
               ),
               maxLines: 2,
+            ),
+            ResponsiveConfig.heightBox(16),
+
+            // Enhanced Mood Tracking
+            Text(
+              'Emotions (Select all that apply)',
+              style: ResponsiveConfig.textStyle(
+                size: 14,
+                weight: FontWeight.w500,
+              ),
+            ),
+            ResponsiveConfig.heightBox(8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                'happy',
+                'sad',
+                'anxious',
+                'angry',
+                'calm',
+                'excited',
+                'tired',
+                'focused',
+                'irritable',
+                'peaceful'
+              ].map((emotion) {
+                final isSelected = _selectedEmotions.contains(emotion);
+                return FilterChip(
+                  label: Text(emotion),
+                  selected: isSelected,
+                  onSelected: (selected) {
+                    setState(() {
+                      if (selected) {
+                        _selectedEmotions.add(emotion);
+                      } else {
+                        _selectedEmotions.remove(emotion);
+                      }
+                    });
+                  },
+                );
+              }).toList(),
+            ),
+            ResponsiveConfig.heightBox(16),
+
+            // Mental Health Levels
+            Text(
+              'Mental Health Levels (Optional)',
+              style: ResponsiveConfig.textStyle(
+                size: 14,
+                weight: FontWeight.w500,
+              ),
+            ),
+            ResponsiveConfig.heightBox(8),
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Stress Level',
+                        style: ResponsiveConfig.textStyle(size: 12),
+                      ),
+                      if (_stressLevel != null)
+                        Text(
+                          '$_stressLevel/10',
+                          style: ResponsiveConfig.textStyle(
+                            size: 14,
+                            weight: FontWeight.bold,
+                          ),
+                        ),
+                      Slider(
+                        value: _stressLevel?.toDouble() ?? 5.0,
+                        min: 1,
+                        max: 10,
+                        divisions: 9,
+                        label: _stressLevel != null ? '$_stressLevel' : null,
+                        onChanged: (value) =>
+                            setState(() => _stressLevel = value.round()),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Anxiety Level',
+                        style: ResponsiveConfig.textStyle(size: 12),
+                      ),
+                      if (_anxietyLevel != null)
+                        Text(
+                          '$_anxietyLevel/10',
+                          style: ResponsiveConfig.textStyle(
+                            size: 14,
+                            weight: FontWeight.bold,
+                          ),
+                        ),
+                      Slider(
+                        value: _anxietyLevel?.toDouble() ?? 5.0,
+                        min: 1,
+                        max: 10,
+                        divisions: 9,
+                        label: _anxietyLevel != null ? '$_anxietyLevel' : null,
+                        onChanged: (value) =>
+                            setState(() => _anxietyLevel = value.round()),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Depression Level',
+                        style: ResponsiveConfig.textStyle(size: 12),
+                      ),
+                      if (_depressionLevel != null)
+                        Text(
+                          '$_depressionLevel/10',
+                          style: ResponsiveConfig.textStyle(
+                            size: 14,
+                            weight: FontWeight.bold,
+                          ),
+                        ),
+                      Slider(
+                        value: _depressionLevel?.toDouble() ?? 5.0,
+                        min: 1,
+                        max: 10,
+                        divisions: 9,
+                        label: _depressionLevel != null
+                            ? '$_depressionLevel'
+                            : null,
+                        onChanged: (value) =>
+                            setState(() => _depressionLevel = value.round()),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            ResponsiveConfig.heightBox(12),
+            TextFormField(
+              controller: _mentalHealthNotesController,
+              decoration: const InputDecoration(
+                labelText: 'Mental Health Notes (Optional)',
+                hintText: 'Any additional notes about your mental health...',
+              ),
+              maxLines: 2,
+            ),
+            ResponsiveConfig.heightBox(12),
+            SwitchListTile(
+              title: const Text('PMS Related'),
+              subtitle: const Text('Is this mood related to PMS?'),
+              value: _pmsRelated ?? false,
+              onChanged: (value) => setState(() => _pmsRelated = value),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPhotoDiarySection() {
+    return Card(
+      child: Padding(
+        padding: ResponsiveConfig.padding(all: 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Photo Diary (Optional)',
+              style: ResponsiveConfig.textStyle(
+                size: 16,
+                weight: FontWeight.w600,
+              ),
+            ),
+            ResponsiveConfig.heightBox(12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                ..._photoUrls.map((url) {
+                  return Stack(
+                    children: [
+                      ClipRRect(
+                        borderRadius: ResponsiveConfig.borderRadius(8),
+                        child: Image.network(
+                          url,
+                          width: 80,
+                          height: 80,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                      Positioned(
+                        top: 0,
+                        right: 0,
+                        child: IconButton(
+                          icon: const Icon(Icons.close, size: 16),
+                          onPressed: () {
+                            setState(() => _photoUrls.remove(url));
+                          },
+                        ),
+                      ),
+                    ],
+                  );
+                }).toList(),
+                GestureDetector(
+                  onTap: _pickImage,
+                  child: Container(
+                    width: 80,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color: AppTheme.mediumGray,
+                        style: BorderStyle.solid,
+                      ),
+                      borderRadius: ResponsiveConfig.borderRadius(8),
+                    ),
+                    child: const Icon(Icons.add_photo_alternate),
+                  ),
+                ),
+              ],
             ),
           ],
         ),

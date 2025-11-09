@@ -1,18 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/config/responsive_config.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/validators.dart';
+import '../../../services/auth_service.dart';
 
 /// Login screen
-class LoginScreen extends StatefulWidget {
+class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -32,14 +34,13 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // TODO: Implement login with AuthService
-      // final authService = AuthService();
-      // await authService.signInWithEmail(
-      //   email: _emailController.text,
-      //   password: _passwordController.text,
-      // );
+      final authService = AuthService();
+      await authService.signInWithEmail(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+      );
 
-      // Navigate to home
+      // Navigate to home (router will handle redirect if needed)
       if (mounted) {
         context.go('/home');
       }
@@ -165,4 +166,3 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 }
-

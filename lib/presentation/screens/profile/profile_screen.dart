@@ -189,6 +189,24 @@ class ProfileScreen extends ConsumerWidget {
           const Divider(),
           _buildSettingsTile(
             context,
+            icon: Icons.warning_amber,
+            title: 'Health Alerts',
+            onTap: () {
+              context.push('/red-flag-alerts');
+            },
+          ),
+          const Divider(),
+          _buildSettingsTile(
+            context,
+            icon: Icons.description,
+            title: 'Health Reports',
+            onTap: () {
+              context.push('/health-report');
+            },
+          ),
+          const Divider(),
+          _buildSettingsTile(
+            context,
             icon: Icons.help_outline,
             title: 'Help & Support',
             onTap: () {

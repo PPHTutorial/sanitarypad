@@ -51,6 +51,8 @@ class MyApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final router = ref.watch(AppRouter.routerProvider);
+
     return ResponsiveConfig.init(
       context: context,
       minTextAdapt: true,
@@ -61,7 +63,7 @@ class MyApp extends ConsumerWidget {
         theme: AppTheme.lightTheme,
         darkTheme: AppTheme.darkTheme,
         themeMode: ThemeMode.system,
-        routerConfig: AppRouter.router,
+        routerConfig: router,
       ),
     );
   }

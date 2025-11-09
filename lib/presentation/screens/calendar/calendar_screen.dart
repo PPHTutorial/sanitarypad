@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:table_calendar/table_calendar.dart';
 import '../../../core/config/responsive_config.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/providers/cycle_provider.dart';
 import '../../../core/utils/date_utils.dart' as app_date_utils;
+import '../../../services/cycle_service.dart';
 
 /// Calendar screen with cycle visualization
 class CalendarScreen extends ConsumerStatefulWidget {
@@ -34,7 +36,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
           IconButton(
             icon: const Icon(Icons.add),
             onPressed: () {
-              // Navigate to log period
+              context.go('/log-period');
             },
           ),
         ],
@@ -207,14 +209,88 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                   color: AppTheme.mediumGray,
                 ),
               ),
-            ResponsiveConfig.heightBox(16),
-            ElevatedButton.icon(
-              onPressed: () {
-                // Navigate to log period or edit
-              },
-              icon: const Icon(Icons.add),
-              label: const Text('Add Entry'),
-            ),
+            if (cycleForDate != null) ...[
+              ResponsiveConfig.heightBox(16),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        // TODO: Navigate to edit cycle screen
+                        context.go('/log-period');
+                      },
+                      icon: const Icon(Icons.edit),
+                      label: const Text('Edit'),
+                    ),
+                  ),
+                  ResponsiveConfig.widthBox(12),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        final confirm = await showDialog<bool>(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: const Text('Delete Cycle'),
+                            content: const Text(
+                              'Are you sure you want to delete this cycle entry?',
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, false),
+                                child: const Text('Cancel'),
+                              ),
+                              ElevatedButton(
+                                onPressed: () => Navigator.pop(context, true),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppTheme.errorRed,
+                                ),
+                                child: const Text('Delete'),
+                              ),
+                            ],
+                          ),
+                        );
+                        if (confirm == true && mounted) {
+                          try {
+                            final cycleService = CycleService();
+                            await cycleService
+                                .deleteCycle(cycleForDate.cycleId);
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Cycle deleted successfully'),
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Error: ${e.toString()}'),
+                                ),
+                              );
+                            }
+                          }
+                        }
+                      },
+                      icon: const Icon(Icons.delete),
+                      label: const Text('Delete'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.errorRed,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ] else ...[
+              ResponsiveConfig.heightBox(16),
+              ElevatedButton.icon(
+                onPressed: () {
+                  context.go('/log-period');
+                },
+                icon: const Icon(Icons.add),
+                label: const Text('Add Entry'),
+              ),
+            ],
           ],
         ),
       ),
