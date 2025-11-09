@@ -1,25 +1,132 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:in_app_purchase/in_app_purchase.dart';
 import '../../../core/config/responsive_config.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/providers/auth_provider.dart';
 import '../../../services/subscription_service.dart';
+import '../../../services/iap_service.dart';
+import '../../../core/constants/app_constants.dart';
 
 /// Subscription screen
-class SubscriptionScreen extends ConsumerWidget {
+class SubscriptionScreen extends ConsumerStatefulWidget {
   const SubscriptionScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SubscriptionScreen> createState() => _SubscriptionScreenState();
+}
+
+class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
+  final _subscriptionService = SubscriptionService();
+  final _iapService = IAPService();
+  List<ProductDetails> _products = [];
+  bool _isLoading = true;
+  bool _isPurchasing = false;
+  String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeIAP();
+  }
+
+  Future<void> _initializeIAP() async {
+    try {
+      await _subscriptionService.initializeIAP();
+      _iapService.productsStream.listen((products) {
+        if (mounted) {
+          setState(() {
+            _products = products;
+            _isLoading = false;
+          });
+        }
+      });
+
+      // Load initial products
+      await _iapService.loadProducts();
+      if (mounted) {
+        setState(() {
+          _products = _iapService.products;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _errorMessage =
+              'Failed to load subscription options: ${e.toString()}';
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _iapService.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final userAsync = ref.watch(currentUserStreamProvider);
     final user = userAsync.value;
-    final subscriptionService = SubscriptionService();
-    final plans = subscriptionService.getSubscriptionPlans();
-    final features = subscriptionService.getPremiumFeatures();
+    final plans = _subscriptionService.getSubscriptionPlans();
+    final features = _subscriptionService.getPremiumFeatures();
+
+    if (_isLoading) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Upgrade to Premium'),
+        ),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_errorMessage != null && _products.isEmpty) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Upgrade to Premium'),
+        ),
+        body: Center(
+          child: Padding(
+            padding: ResponsiveConfig.padding(all: 24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.error_outline,
+                  size: ResponsiveConfig.iconSize(64),
+                  color: AppTheme.errorRed,
+                ),
+                ResponsiveConfig.heightBox(16),
+                Text(
+                  _errorMessage!,
+                  style: ResponsiveConfig.textStyle(size: 16),
+                  textAlign: TextAlign.center,
+                ),
+                ResponsiveConfig.heightBox(24),
+                ElevatedButton(
+                  onPressed: _initializeIAP,
+                  child: const Text('Retry'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Upgrade to Premium'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.restore),
+            tooltip: 'Restore Purchases',
+            onPressed: _restorePurchases,
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: ResponsiveConfig.padding(all: 16),
@@ -44,12 +151,20 @@ class SubscriptionScreen extends ConsumerWidget {
             ),
             ResponsiveConfig.heightBox(16),
             ...plans.entries.map((entry) {
+              // Find matching IAP product
+              final productId = _getProductIdForPlan(entry.key);
+              final product = _products.firstWhere(
+                (p) => p.id == productId,
+                orElse: () => _createDummyProduct(entry.key, entry.value),
+              );
+
               return Padding(
                 padding: ResponsiveConfig.padding(vertical: 8),
                 child: _buildPlanCard(
                   context,
                   planId: entry.key,
                   planData: entry.value,
+                  product: product,
                   isSelected: false,
                 ),
               );
@@ -196,10 +311,65 @@ class SubscriptionScreen extends ConsumerWidget {
     );
   }
 
+  String _getProductIdForPlan(String planId) {
+    switch (planId) {
+      case AppConstants.planMonthly:
+        return IAPProductIds.monthly;
+      case AppConstants.planQuarterly:
+        return IAPProductIds.quarterly;
+      case AppConstants.planYearly:
+        return IAPProductIds.yearly;
+      default:
+        return IAPProductIds.monthly;
+    }
+  }
+
+  ProductDetails _createDummyProduct(
+    String planId,
+    Map<String, dynamic> planData,
+  ) {
+    // Create a dummy product for display when IAP product is not available
+    return ProductDetails(
+      id: _getProductIdForPlan(planId),
+      title: planData['name'] as String,
+      description: '',
+      price: '\$${planData['price']}',
+      rawPrice: (planData['price'] as num).toDouble(),
+      currencyCode: 'USD',
+    );
+  }
+
+  Future<void> _restorePurchases() async {
+    try {
+      setState(() => _isLoading = true);
+      await _iapService.restorePurchases();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Purchases restored successfully'),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to restore purchases: ${e.toString()}'),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
   Widget _buildPlanCard(
     BuildContext context, {
     required String planId,
     required Map<String, dynamic> planData,
+    required ProductDetails product,
     required bool isSelected,
   }) {
     final hasDiscount = planData['discount'] != null;
@@ -207,9 +377,11 @@ class SubscriptionScreen extends ConsumerWidget {
       elevation: isSelected ? 4 : 1,
       color: isSelected ? AppTheme.lightPink : null,
       child: InkWell(
-        onTap: () {
-          _handlePlanSelection(context, planId, planData);
-        },
+        onTap: _isPurchasing
+            ? null
+            : () {
+                _handlePlanSelection(context, planId, planData, product);
+              },
         child: Padding(
           padding: ResponsiveConfig.padding(all: 16),
           child: Column(
@@ -275,38 +447,88 @@ class SubscriptionScreen extends ConsumerWidget {
     );
   }
 
-  void _handlePlanSelection(
+  Future<void> _handlePlanSelection(
     BuildContext context,
     String planId,
     Map<String, dynamic> planData,
-  ) {
-    // TODO: Implement payment processing
-    showDialog(
+    ProductDetails product,
+  ) async {
+    final user = ref.read(currentUserStreamProvider).value;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please sign in to subscribe')),
+      );
+      return;
+    }
+
+    // Show confirmation dialog
+    final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Subscribe to Premium'),
-        content: Text(
-          'You selected ${planData['name']} plan for \$${planData['price']}.\n\n'
-          'Payment processing will be implemented with your payment provider.',
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Plan: ${planData['name']}'),
+            ResponsiveConfig.heightBox(8),
+            Text('Price: ${product.price}'),
+            ResponsiveConfig.heightBox(8),
+            Text(
+              'Your subscription will be managed through ${_getPlatformName()} and will auto-renew unless cancelled.',
+            ),
+          ],
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(context, false),
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Payment integration coming soon'),
-                ),
-              );
-            },
+            onPressed: () => Navigator.pop(context, true),
             child: const Text('Subscribe'),
           ),
         ],
       ),
     );
+
+    if (confirmed != true) return;
+
+    try {
+      setState(() => _isPurchasing = true);
+
+      // Initiate purchase
+      final success = await _iapService.purchaseProduct(product);
+
+      if (success) {
+        // Purchase flow initiated - the IAP service will handle the rest
+        // Show loading indicator
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Processing purchase...'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Purchase failed: ${e.toString()}'),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isPurchasing = false);
+      }
+    }
+  }
+
+  String _getPlatformName() {
+    // This would be determined at runtime
+    return 'App Store / Google Play';
   }
 }

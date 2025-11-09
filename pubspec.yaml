@@ -99,9 +99,8 @@ dependencies:
   flutter_local_notifications: ^18.0.1
   timezone: ^0.9.4
 
-  # Payments (will be added when implementing subscriptions)
-  # in_app_purchase: ^3.2.0
-  # flutter_stripe: ^11.1.0
+  # Payments & IAP
+  in_app_purchase: ^3.2.0
 
 dev_dependencies:
   flutter_test:
