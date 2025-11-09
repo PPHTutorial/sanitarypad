@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/config/responsive_config.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/constants/app_constants.dart';
+import '../../../core/routing/app_router.dart';
 
 /// Onboarding screen with multiple pages
 class OnboardingScreen extends StatefulWidget {
@@ -55,10 +56,41 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Future<void> _completeOnboarding() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(AppConstants.prefsKeyOnboardingComplete, true);
-    if (mounted) {
-      context.go('/login');
+    try {
+      final prefs = await SharedPreferences.getInstance();
+
+      // Save the onboarding completion flag
+      await prefs.setBool(AppConstants.prefsKeyOnboardingComplete, true);
+
+      // Clear the router cache to force a fresh check
+      AppRouter.clearOnboardingCache();
+
+      // Verify it was saved correctly
+      final saved = prefs.getBool(AppConstants.prefsKeyOnboardingComplete);
+      if (saved == true) {
+        // Small delay to ensure SharedPreferences is fully committed
+        await Future.delayed(const Duration(milliseconds: 200));
+
+        if (mounted) {
+          // Navigate to login - router will verify onboarding is complete
+          context.go('/login');
+        }
+      } else {
+        // Retry if verification failed
+        await prefs.setBool(AppConstants.prefsKeyOnboardingComplete, true);
+        AppRouter.clearOnboardingCache();
+        await Future.delayed(const Duration(milliseconds: 200));
+
+        if (mounted) {
+          context.go('/login');
+        }
+      }
+    } catch (e) {
+      // If there's an error, still try to navigate (user shouldn't be stuck)
+      AppRouter.clearOnboardingCache();
+      if (mounted) {
+        context.go('/login');
+      }
     }
   }
 

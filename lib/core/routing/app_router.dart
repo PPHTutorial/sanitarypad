@@ -39,27 +39,87 @@ import 'package:flutter/material.dart';
 
 /// App routing configuration with auth guards
 class AppRouter {
-  /// Check if onboarding is complete
+  // Cache onboarding state to avoid repeated SharedPreferences reads
+  static bool? _cachedOnboardingState;
+  static DateTime? _cacheTimestamp;
+  static const _cacheDuration = Duration(seconds: 5);
+
+  /// Check if onboarding is complete (with caching)
   static Future<bool> _isOnboardingComplete() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getBool(AppConstants.prefsKeyOnboardingComplete) ?? false;
+    // Use cache if available and not expired
+    if (_cachedOnboardingState != null &&
+        _cacheTimestamp != null &&
+        DateTime.now().difference(_cacheTimestamp!) < _cacheDuration) {
+      return _cachedOnboardingState!;
+    }
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final isComplete =
+          prefs.getBool(AppConstants.prefsKeyOnboardingComplete) ?? false;
+
+      // Update cache
+      _cachedOnboardingState = isComplete;
+      _cacheTimestamp = DateTime.now();
+
+      return isComplete;
+    } catch (e) {
+      // If there's an error reading preferences, default to false (show onboarding)
+      _cachedOnboardingState = false;
+      _cacheTimestamp = DateTime.now();
+      return false;
+    }
   }
+
+  /// Clear onboarding cache (call after completing onboarding)
+  static void clearOnboardingCache() {
+    _cachedOnboardingState = null;
+    _cacheTimestamp = null;
+  }
+
+  // Expose for RouterRefreshNotifier
+  static Future<bool> isOnboardingComplete() => _isOnboardingComplete();
 
   static final routerProvider = Provider<GoRouter>((ref) {
     final router = GoRouter(
+      // Handle back button navigation
+      errorBuilder: (context, state) => Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, size: 48, color: Colors.red),
+              const SizedBox(height: 16),
+              Text('Page not found: ${state.uri}'),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () => context.go('/home'),
+                child: const Text('Go Home'),
+              ),
+            ],
+          ),
+        ),
+      ),
       redirect: (context, state) async {
         final isOnboardingComplete = await _isOnboardingComplete();
 
-        final userAsync = ref.read(currentUserStreamProvider);
-        final user = userAsync.value;
-        final isAuthenticated = user != null;
+        // Check Firebase Auth directly for immediate auth state (persisted)
+        final authService = ref.read(authServiceProvider);
+        final firebaseUser = authService.currentUser;
+        final isAuthenticated = firebaseUser != null;
 
-        final isOnboardingRoute = state.matchedLocation == '/onboarding';
-        final isAuthRoute = state.matchedLocation == '/login' ||
-            state.matchedLocation == '/signup';
+        final currentLocation = state.matchedLocation;
+        final isOnboardingRoute = currentLocation == '/onboarding';
+        final isAuthRoute =
+            currentLocation == '/login' || currentLocation == '/signup';
         final isProtectedRoute = !isOnboardingRoute && !isAuthRoute;
 
-        // If onboarding not complete and not on onboarding route
+        // If onboarding is complete and user is on onboarding route, redirect to login
+        if (isOnboardingComplete && isOnboardingRoute) {
+          return '/login';
+        }
+
+        // If onboarding not complete and not on onboarding route, redirect to onboarding
         if (!isOnboardingComplete && !isOnboardingRoute) {
           return '/onboarding';
         }
@@ -71,6 +131,11 @@ class AppRouter {
 
         // If authenticated and on auth routes, redirect to home
         if (isAuthenticated && isAuthRoute) {
+          return '/home';
+        }
+
+        // If authenticated and on onboarding route, redirect to home
+        if (isAuthenticated && isOnboardingRoute) {
           return '/home';
         }
 

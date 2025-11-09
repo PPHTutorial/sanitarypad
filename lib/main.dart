@@ -7,6 +7,7 @@ import 'core/storage/hive_storage.dart';
 import 'core/firebase/firebase_service.dart';
 import 'core/routing/app_router.dart';
 import 'core/utils/error_handler.dart';
+import 'core/widgets/splash_background_wrapper.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -16,6 +17,16 @@ void main() async {
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
+
+  // Set system UI overlay style to match splash screen background
+  // This makes the status bar transparent so the background color shows through
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.dark, // Will be overridden by theme
+      systemNavigationBarColor: Colors.transparent,
+    ),
+  );
 
   // Set up error handling
   FlutterError.onError = (FlutterErrorDetails details) {
@@ -64,6 +75,10 @@ class MyApp extends ConsumerWidget {
         darkTheme: AppTheme.darkTheme,
         themeMode: ThemeMode.system,
         routerConfig: router,
+        builder: (context, child) {
+          // Wrap with splash background that extends behind status bar
+          return SplashBackgroundWrapper(child: child ?? const SizedBox());
+        },
       ),
     );
   }

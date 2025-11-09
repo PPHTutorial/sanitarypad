@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/config/responsive_config.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/providers/cycle_provider.dart';
+import '../../../core/widgets/femcare_bottom_nav.dart';
 
 /// Home screen - Blank dashboard for users to add their data
 class HomeScreen extends ConsumerWidget {
@@ -14,6 +15,8 @@ class HomeScreen extends ConsumerWidget {
     final activeCycle = ref.watch(activeCycleProvider);
 
     return Scaffold(
+      extendBodyBehindAppBar: false, // Keep AppBar on top but transparent
+      backgroundColor: Colors.transparent, // Use theme background
       appBar: AppBar(
         title: const Text('FemCare+'),
         actions: [
@@ -55,7 +58,7 @@ class HomeScreen extends ConsumerWidget {
           ],
         ),
       ),
-      bottomNavigationBar: _buildBottomNav(context),
+      bottomNavigationBar: const FemCareBottomNav(currentRoute: '/home'),
     );
   }
 
@@ -98,6 +101,7 @@ class HomeScreen extends ConsumerWidget {
     final cycleDay = cycle.getCycleDay(now);
 
     return Card(
+      shadowColor: Colors.transparent,
       child: Padding(
         padding: ResponsiveConfig.padding(all: 16),
         child: Column(
@@ -219,6 +223,7 @@ class HomeScreen extends ConsumerWidget {
 
   Widget _buildGetStartedSection(BuildContext context) {
     return Card(
+      shadowColor: Colors.transparent,
       child: Padding(
         padding: ResponsiveConfig.padding(all: 20),
         child: Column(
@@ -255,7 +260,7 @@ class HomeScreen extends ConsumerWidget {
               icon: const Icon(Icons.add),
               label: const Text('Log Your First Period'),
               style: ElevatedButton.styleFrom(
-                padding: ResponsiveConfig.padding(vertical: 16),
+                padding: ResponsiveConfig.padding(vertical: 16, horizontal: 24),
               ),
             ),
           ],
@@ -303,59 +308,6 @@ class HomeScreen extends ConsumerWidget {
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildBottomNav(BuildContext context) {
-    return BottomNavigationBar(
-      currentIndex: 0,
-      onTap: (index) {
-        switch (index) {
-          case 0:
-            context.go('/home');
-            break;
-          case 1:
-            context.go('/calendar');
-            break;
-          case 2:
-            context.go('/insights');
-            break;
-          case 3:
-            context.go('/wellness');
-            break;
-          case 4:
-            context.go('/profile');
-            break;
-        }
-      },
-      type: BottomNavigationBarType.fixed,
-      items: const [
-        BottomNavigationBarItem(
-          icon: Icon(Icons.home_outlined),
-          activeIcon: Icon(Icons.home),
-          label: 'Home',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.calendar_today_outlined),
-          activeIcon: Icon(Icons.calendar_today),
-          label: 'Calendar',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.insights_outlined),
-          activeIcon: Icon(Icons.insights),
-          label: 'Insights',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.favorite_outline),
-          activeIcon: Icon(Icons.favorite),
-          label: 'Wellness',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.person_outline),
-          activeIcon: Icon(Icons.person),
-          label: 'Profile',
-        ),
-      ],
     );
   }
 

@@ -6,6 +6,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/providers/auth_provider.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/data_export_service.dart';
+import '../../../core/widgets/femcare_bottom_nav.dart';
 
 /// Profile screen
 class ProfileScreen extends ConsumerWidget {
@@ -17,9 +18,11 @@ class ProfileScreen extends ConsumerWidget {
     final user = userAsync.value;
 
     return Scaffold(
+      backgroundColor: Colors.transparent, // Use theme background
       appBar: AppBar(
         title: const Text('Profile'),
       ),
+      bottomNavigationBar: const FemCareBottomNav(currentRoute: '/profile'),
       body: user == null
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(

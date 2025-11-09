@@ -25,6 +25,10 @@ class AppTheme {
   static const Color mediumGray = Color(0xFF9E9E9E); // Medium gray
   static const Color darkGray = Color(0xFF424242); // Dark gray
 
+  // Splash Screen Background Colors (matching flutter_native_splash.yaml)
+  static const Color splashLight = Color(0xFFFFF6F8); // Light pink background
+  static const Color splashDark = Color(0xFF1A1A1A); // Dark background
+
   // Accent Colors
   static const Color accentCoral = Color(0xFFFF6B9D); // Coral accent
   static const Color accentRose = Color(0xFFFFB3BA); // Rose accent
@@ -55,7 +59,7 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       colorScheme: colorScheme,
-      scaffoldBackgroundColor: warmWhite,
+      scaffoldBackgroundColor: splashLight, // Match splash screen
 
       // AppBar Theme
       appBarTheme: AppBarTheme(
@@ -63,7 +67,10 @@ class AppTheme {
         centerTitle: true,
         backgroundColor: Colors.transparent,
         foregroundColor: darkGray,
-        systemOverlayStyle: SystemUiOverlayStyle.dark,
+        systemOverlayStyle: SystemUiOverlayStyle.dark.copyWith(
+          statusBarColor: Colors.transparent, // Transparent status bar
+          statusBarIconBrightness: Brightness.dark,
+        ),
         titleTextStyle: TextStyle(
           color: darkGray,
           fontSize: 20,
@@ -392,7 +399,7 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       colorScheme: colorScheme,
-      scaffoldBackgroundColor: const Color(0xFF121212),
+      scaffoldBackgroundColor: splashDark, // Match splash screen
 
       // AppBar Theme
       appBarTheme: AppBarTheme(
@@ -400,7 +407,10 @@ class AppTheme {
         centerTitle: true,
         backgroundColor: Colors.transparent,
         foregroundColor: Colors.white,
-        systemOverlayStyle: SystemUiOverlayStyle.light,
+        systemOverlayStyle: SystemUiOverlayStyle.light.copyWith(
+          statusBarColor: Colors.transparent, // Transparent status bar
+          statusBarIconBrightness: Brightness.light,
+        ),
         titleTextStyle: GoogleFonts.redHatDisplay(
           color: Colors.white,
           fontSize: 20,

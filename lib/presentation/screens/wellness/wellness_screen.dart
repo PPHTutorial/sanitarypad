@@ -6,6 +6,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../services/wellness_content_service.dart';
 import '../../../core/providers/auth_provider.dart';
+import '../../../core/widgets/femcare_bottom_nav.dart';
 
 /// Wellness screen with content library
 class WellnessScreen extends ConsumerWidget {
@@ -21,6 +22,7 @@ class WellnessScreen extends ConsumerWidget {
     return DefaultTabController(
       length: 4,
       child: Scaffold(
+        backgroundColor: Colors.transparent, // Use theme background
         appBar: AppBar(
           title: const Text('Wellness'),
           bottom: TabBar(
@@ -32,6 +34,7 @@ class WellnessScreen extends ConsumerWidget {
             ],
           ),
         ),
+        bottomNavigationBar: const FemCareBottomNav(currentRoute: '/wellness'),
         body: TabBarView(
           children: [
             _buildContentList(context, contentService, null, isPremium),

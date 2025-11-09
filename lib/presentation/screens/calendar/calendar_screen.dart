@@ -7,6 +7,8 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/providers/cycle_provider.dart';
 import '../../../core/utils/date_utils.dart' as app_date_utils;
 import '../../../services/cycle_service.dart';
+import '../../../core/widgets/femcare_bottom_nav.dart';
+import '../../../data/models/cycle_model.dart';
 
 /// Calendar screen with cycle visualization
 class CalendarScreen extends ConsumerStatefulWidget {
@@ -30,6 +32,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     final eventMarkers = _buildEventMarkers(cycles);
 
     return Scaffold(
+      backgroundColor: Colors.transparent, // Use theme background
       appBar: AppBar(
         title: const Text('Calendar'),
         actions: [
@@ -41,6 +44,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
           ),
         ],
       ),
+      bottomNavigationBar: const FemCareBottomNav(currentRoute: '/calendar'),
       body: Column(
         children: [
           // Calendar
@@ -139,19 +143,23 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   Widget _buildSelectedDateDetails(
     BuildContext context,
     DateTime date,
-    List cycles,
+    List<CycleModel> cycles,
   ) {
     // Find cycle for this date
-    final cycleForDate = cycles.firstWhere(
-      (cycle) {
-        final periodEnd = cycle.endDate ??
-            cycle.startDate.add(Duration(days: cycle.periodLength - 1));
-        return date
-                .isAfter(cycle.startDate.subtract(const Duration(days: 1))) &&
-            date.isBefore(periodEnd.add(const Duration(days: 1)));
-      },
-      orElse: () => null,
-    );
+    CycleModel? cycleForDate;
+    try {
+      cycleForDate = cycles.firstWhere(
+        (cycle) {
+          final periodEnd = cycle.endDate ??
+              cycle.startDate.add(Duration(days: cycle.periodLength - 1));
+          return date
+                  .isAfter(cycle.startDate.subtract(const Duration(days: 1))) &&
+              date.isBefore(periodEnd.add(const Duration(days: 1)));
+        },
+      );
+    } catch (e) {
+      cycleForDate = null;
+    }
 
     return Card(
       margin: ResponsiveConfig.margin(all: 16),
@@ -249,7 +257,9 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                             ],
                           ),
                         );
-                        if (confirm == true && mounted) {
+                        if (confirm == true &&
+                            mounted &&
+                            cycleForDate != null) {
                           try {
                             final cycleService = CycleService();
                             await cycleService

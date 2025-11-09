@@ -5,6 +5,7 @@ import '../../../core/config/responsive_config.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/validators.dart';
 import '../../../services/auth_service.dart';
+import '../../../core/providers/auth_provider.dart';
 
 /// Sign up screen
 class SignUpScreen extends ConsumerStatefulWidget {
@@ -47,20 +48,92 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
 
     try {
       final authService = AuthService();
+
+      // Show loading message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Row(
+              children: [
+                SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  ),
+                ),
+                SizedBox(width: 16),
+                Text('Creating account...'),
+              ],
+            ),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+
       await authService.signUpWithEmail(
         email: _emailController.text.trim(),
         password: _passwordController.text,
         displayName: _nameController.text.trim(),
       );
 
-      // Navigate to home (router will handle redirect if needed)
+      // Wait a moment for auth state to update
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      // Refresh auth provider to ensure state is updated
+      ref.invalidate(currentUserStreamProvider);
+
+      // Show success message
+      if (mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.white),
+                SizedBox(width: 12),
+                Text('Account created successfully!'),
+              ],
+            ),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+
+      // Navigate to home after a brief delay
+      await Future.delayed(const Duration(milliseconds: 800));
+
       if (mounted) {
         context.go('/home');
       }
     } catch (e) {
       if (mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Sign up failed: ${e.toString()}')),
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.error_outline, color: Colors.white),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Sign up failed: ${e.toString().replaceAll('Exception: ', '')}',
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
+            action: SnackBarAction(
+              label: 'Dismiss',
+              textColor: Colors.white,
+              onPressed: () {
+                ScaffoldMessenger.of(context).hideCurrentSnackBar();
+              },
+            ),
+          ),
         );
       }
     } finally {
@@ -168,11 +241,26 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                 ResponsiveConfig.heightBox(24),
                 ElevatedButton(
                   onPressed: _isLoading ? null : _handleSignUp,
+                  style: ElevatedButton.styleFrom(
+                    padding: ResponsiveConfig.padding(vertical: 16),
+                    minimumSize: const Size(double.infinity, 50),
+                  ),
                   child: _isLoading
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
+                      ? Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor:
+                                    AlwaysStoppedAnimation<Color>(Colors.white),
+                              ),
+                            ),
+                            ResponsiveConfig.widthBox(12),
+                            const Text('Creating account...'),
+                          ],
                         )
                       : const Text('Sign Up'),
                 ),

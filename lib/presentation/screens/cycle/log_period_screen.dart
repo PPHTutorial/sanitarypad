@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../core/config/responsive_config.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/utils/date_utils.dart' as app_date_utils;
 import '../../../services/cycle_service.dart';
+import '../../../core/widgets/back_button_handler.dart';
 
 /// Log period screen
 class LogPeriodScreen extends ConsumerStatefulWidget {
@@ -106,7 +108,9 @@ class _LogPeriodScreenState extends ConsumerState<LogPeriodScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Period logged successfully')),
         );
-        Navigator.of(context).pop();
+        if (context.mounted) {
+          context.pop();
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -123,94 +127,97 @@ class _LogPeriodScreenState extends ConsumerState<LogPeriodScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Log Period'),
-      ),
-      body: SingleChildScrollView(
-        padding: ResponsiveConfig.padding(all: 16),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Date Selection
-              _buildDateField(
-                label: 'Start Date',
-                date: _startDate,
-                onTap: _selectStartDate,
-              ),
-              ResponsiveConfig.heightBox(16),
-              _buildDateField(
-                label: 'End Date (Optional)',
-                date: _endDate,
-                onTap: _selectEndDate,
-              ),
-              ResponsiveConfig.heightBox(24),
-
-              // Flow Intensity
-              Text(
-                'Flow Intensity',
-                style: ResponsiveConfig.textStyle(
-                  size: 16,
-                  weight: FontWeight.w600,
-                ),
-              ),
-              ResponsiveConfig.heightBox(12),
-              _buildFlowIntensitySelector(),
-              ResponsiveConfig.heightBox(24),
-
-              // Symptoms
-              Text(
-                'Symptoms',
-                style: ResponsiveConfig.textStyle(
-                  size: 16,
-                  weight: FontWeight.w600,
-                ),
-              ),
-              ResponsiveConfig.heightBox(12),
-              _buildSymptomsSelector(),
-              ResponsiveConfig.heightBox(24),
-
-              // Mood
-              Text(
-                'Mood',
-                style: ResponsiveConfig.textStyle(
-                  size: 16,
-                  weight: FontWeight.w600,
-                ),
-              ),
-              ResponsiveConfig.heightBox(12),
-              _buildMoodSelector(),
-              ResponsiveConfig.heightBox(24),
-
-              // Notes
-              TextFormField(
-                controller: _notesController,
-                decoration: const InputDecoration(
-                  labelText: 'Notes (Optional)',
-                  hintText: 'Add any additional notes...',
-                ),
-                maxLines: 3,
-              ),
-              ResponsiveConfig.heightBox(32),
-
-              // Save Button
-              ElevatedButton(
-                onPressed: _isLoading ? null : _savePeriod,
-                child: _isLoading
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Text('Save Period'),
-              ),
-            ],
+    return BackButtonHandler(
+        fallbackRoute: '/home',
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          appBar: AppBar(
+            title: const Text('Log Period'),
           ),
-        ),
-      ),
-    );
+          body: SingleChildScrollView(
+            padding: ResponsiveConfig.padding(all: 16),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Date Selection
+                  _buildDateField(
+                    label: 'Start Date',
+                    date: _startDate,
+                    onTap: _selectStartDate,
+                  ),
+                  ResponsiveConfig.heightBox(16),
+                  _buildDateField(
+                    label: 'End Date (Optional)',
+                    date: _endDate,
+                    onTap: _selectEndDate,
+                  ),
+                  ResponsiveConfig.heightBox(24),
+
+                  // Flow Intensity
+                  Text(
+                    'Flow Intensity',
+                    style: ResponsiveConfig.textStyle(
+                      size: 16,
+                      weight: FontWeight.w600,
+                    ),
+                  ),
+                  ResponsiveConfig.heightBox(12),
+                  _buildFlowIntensitySelector(),
+                  ResponsiveConfig.heightBox(24),
+
+                  // Symptoms
+                  Text(
+                    'Symptoms',
+                    style: ResponsiveConfig.textStyle(
+                      size: 16,
+                      weight: FontWeight.w600,
+                    ),
+                  ),
+                  ResponsiveConfig.heightBox(12),
+                  _buildSymptomsSelector(),
+                  ResponsiveConfig.heightBox(24),
+
+                  // Mood
+                  Text(
+                    'Mood',
+                    style: ResponsiveConfig.textStyle(
+                      size: 16,
+                      weight: FontWeight.w600,
+                    ),
+                  ),
+                  ResponsiveConfig.heightBox(12),
+                  _buildMoodSelector(),
+                  ResponsiveConfig.heightBox(24),
+
+                  // Notes
+                  TextFormField(
+                    controller: _notesController,
+                    decoration: const InputDecoration(
+                      labelText: 'Notes (Optional)',
+                      hintText: 'Add any additional notes...',
+                    ),
+                    maxLines: 3,
+                  ),
+                  ResponsiveConfig.heightBox(32),
+
+                  // Save Button
+                  ElevatedButton(
+                    onPressed: _isLoading ? null : _savePeriod,
+                    child: _isLoading
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Text('Save Period'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ));
   }
 
   Widget _buildDateField({

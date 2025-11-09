@@ -4,6 +4,7 @@ import 'package:fl_chart/fl_chart.dart';
 import '../../../core/config/responsive_config.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/providers/cycle_provider.dart';
+import '../../../core/widgets/femcare_bottom_nav.dart';
 
 /// Insights and analytics screen
 class InsightsScreen extends ConsumerWidget {
@@ -15,9 +16,11 @@ class InsightsScreen extends ConsumerWidget {
     final cycles = cyclesAsync.value ?? [];
 
     return Scaffold(
+      backgroundColor: Colors.transparent, // Use theme background
       appBar: AppBar(
         title: const Text('Insights'),
       ),
+      bottomNavigationBar: const FemCareBottomNav(currentRoute: '/insights'),
       body: cycles.isEmpty
           ? _buildEmptyState(context)
           : FutureBuilder<Map<String, dynamic>>(

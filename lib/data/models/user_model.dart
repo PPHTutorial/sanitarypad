@@ -26,8 +26,10 @@ class UserModel extends Equatable {
   /// Create from Firestore document
   factory UserModel.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
+    // Prefer userId from data, fallback to document ID (for backward compatibility)
+    final userId = data['userId'] as String? ?? doc.id;
     return UserModel(
-      userId: doc.id,
+      userId: userId,
       email: data['email'] as String,
       displayName: data['displayName'] as String?,
       createdAt: (data['createdAt'] as Timestamp).toDate(),
@@ -45,6 +47,7 @@ class UserModel extends Equatable {
   /// Convert to Firestore map
   Map<String, dynamic> toFirestore() {
     return {
+      'userId': userId, // Include userId in document data for security rules
       'email': email,
       'displayName': displayName,
       'createdAt': Timestamp.fromDate(createdAt),

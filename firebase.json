@@ -1,1 +1,29 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"sanitarypad","appId":"1:1083709001383:android:17cbdc92721b025fa4d582","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"sanitarypad","configurations":{"android":"1:1083709001383:android:17cbdc92721b025fa4d582","ios":"1:1083709001383:ios:6d29ec3f093c26e3a4d582","macos":"1:1083709001383:ios:6d29ec3f093c26e3a4d582","web":"1:1083709001383:web:2b656b30b061d972a4d582","windows":"1:1083709001383:web:e75d252a84188fdda4d582"}}}}}}
+{
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "sanitarypad",
+          "appId": "1:1083709001383:android:17cbdc92721b025fa4d582",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "sanitarypad",
+          "configurations": {
+            "android": "1:1083709001383:android:17cbdc92721b025fa4d582",
+            "ios": "1:1083709001383:ios:6d29ec3f093c26e3a4d582",
+            "macos": "1:1083709001383:ios:6d29ec3f093c26e3a4d582",
+            "web": "1:1083709001383:web:2b656b30b061d972a4d582",
+            "windows": "1:1083709001383:web:e75d252a84188fdda4d582"
+          }
+        }
+      }
+    }
+  }
+}
