@@ -28,12 +28,20 @@ class BackButtonHandler extends StatelessWidget {
         } else {
           // If we can't pop, navigate to fallback route or home
           final route = fallbackRoute ?? '/home';
-          final currentPath =
-              router.routerDelegate.currentConfiguration.uri.path;
-          if (currentPath != route) {
+          String currentPath = '/';
+          try {
+            currentPath = router.routerDelegate.currentConfiguration.uri.path;
+            if (currentPath.isEmpty) currentPath = '/';
+          } catch (e) {
+            currentPath = '/';
+          }
+
+          // Only navigate if not already on the fallback route
+          if (currentPath != route && currentPath != '/home') {
             router.go(route);
           }
-          // If already on fallback route, let DoubleBackToExit handle it
+          // If already on fallback route or home, let DoubleBackToExit handle it
+          // Don't do anything here - let the parent DoubleBackToExit widget handle exit
         }
       },
       child: child,

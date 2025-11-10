@@ -6,6 +6,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/validators.dart';
 import '../../../services/auth_service.dart';
 import '../../../core/providers/auth_provider.dart';
+import '../../../services/notification_scheduler_service.dart';
 
 /// Sign up screen
 class SignUpScreen extends ConsumerStatefulWidget {
@@ -83,6 +84,15 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
 
       // Refresh auth provider to ensure state is updated
       ref.invalidate(currentUserStreamProvider);
+
+      // Initialize notification scheduler
+      try {
+        final scheduler = NotificationSchedulerService();
+        await scheduler.initialize();
+      } catch (e) {
+        // Don't fail signup if notification initialization fails
+        print('Error initializing notifications: $e');
+      }
 
       // Show success message
       if (mounted) {

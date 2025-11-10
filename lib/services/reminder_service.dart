@@ -64,8 +64,10 @@ class ReminderService {
 
       // Schedule local notification
       if (reminder.isActive && reminder.scheduledTime.isAfter(DateTime.now())) {
+        // Use a valid 32-bit integer ID (max: 2,147,483,647)
+        final notificationId = docRef.id.hashCode.abs() % 2147483647;
         await _notificationService.scheduleNotification(
-          id: docRef.id.hashCode,
+          id: notificationId,
           title: reminder.title,
           body: reminder.description ?? '',
           scheduledDate: reminder.scheduledTime,
@@ -92,14 +94,17 @@ class ReminderService {
 
       // Update local notification
       if (reminder.isActive && reminder.scheduledTime.isAfter(DateTime.now())) {
+        // Use a valid 32-bit integer ID (max: 2,147,483,647)
+        final notificationId = reminder.id!.hashCode.abs() % 2147483647;
         await _notificationService.scheduleNotification(
-          id: reminder.id!.hashCode,
+          id: notificationId,
           title: reminder.title,
           body: reminder.description ?? '',
           scheduledDate: reminder.scheduledTime,
         );
       } else {
-        await _notificationService.cancelNotification(reminder.id!.hashCode);
+        final notificationId = reminder.id!.hashCode.abs() % 2147483647;
+        await _notificationService.cancelNotification(notificationId);
       }
     } catch (e) {
       rethrow;
@@ -115,7 +120,9 @@ class ReminderService {
           .delete();
 
       // Cancel local notification
-      await _notificationService.cancelNotification(reminderId.hashCode);
+      // Use a valid 32-bit integer ID (max: 2,147,483,647)
+      final notificationId = reminderId.hashCode.abs() % 2147483647;
+      await _notificationService.cancelNotification(notificationId);
     } catch (e) {
       rethrow;
     }

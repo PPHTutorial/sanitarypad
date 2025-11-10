@@ -49,6 +49,36 @@ class AppConstants {
   static const String collectionFertilityEntries = 'fertilityEntries';
   static const String collectionSkincareEntries = 'skincareEntries';
   static const String collectionSkincareProducts = 'skincareProducts';
+  static const String collectionKickEntries = 'kickEntries';
+  static const String collectionContractionEntries = 'contractionEntries';
+  static const String collectionPregnancyAppointments = 'pregnancyAppointments';
+  static const String collectionPregnancyMedications = 'pregnancyMedications';
+  static const String collectionPregnancyJournalEntries =
+      'pregnancyJournalEntries';
+  static const String collectionPregnancyWeightEntries =
+      'pregnancyWeightEntries';
+  static const String collectionHospitalChecklistItems =
+      'hospitalChecklistItems';
+  static const String collectionSkinTypes = 'skinTypes';
+  static const String collectionSkinJournalEntries = 'skinJournalEntries';
+  static const String collectionRoutineTemplates = 'routineTemplates';
+  static const String collectionIngredients = 'ingredients';
+  static const String collectionAcneEntries = 'acneEntries';
+  static const String collectionUVIndexEntries = 'uvIndexEntries';
+  static const String collectionSkinGoals = 'skinGoals';
+  static const String collectionHormoneCycles = 'hormoneCycles';
+  static const String collectionFertilitySymptoms = 'fertilitySymptoms';
+  static const String collectionMoodEnergyEntries = 'moodEnergyEntries';
+  static const String collectionFertilityMedications = 'fertilityMedications';
+  static const String collectionIntercourseEntries = 'intercourseEntries';
+  static const String collectionPregnancyTestEntries = 'pregnancyTestEntries';
+  static const String collectionHealthRecommendations = 'healthRecommendations';
+  static const String collectionOvulationTestReminders =
+      'ovulationTestReminders';
+  static const String collectionGroups = 'groups';
+  static const String collectionGroupMembers = 'groupMembers';
+  static const String collectionEvents = 'events';
+  static const String collectionEventAttendees = 'eventAttendees';
 
   // Subscription Tiers
   static const String tierFree = 'free';

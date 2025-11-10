@@ -1,3 +1,4 @@
+import 'dart:io' show Platform;
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -27,9 +28,24 @@ class NotificationService {
 
   /// Request notification permission
   Future<void> _requestPermission() async {
-    final status = await Permission.notification.request();
-    if (status.isDenied) {
+    // Request notification permission
+    final notificationStatus = await Permission.notification.request();
+    if (notificationStatus.isDenied) {
       // Handle denied permission
+    }
+
+    // Request exact alarm permission for Android 12+ (API 31+)
+    if (Platform.isAndroid) {
+      try {
+        // Check exact alarm permission status (Android 12+)
+        final exactAlarmStatus = await Permission.scheduleExactAlarm.status;
+        if (exactAlarmStatus.isDenied || exactAlarmStatus.isPermanentlyDenied) {
+          await Permission.scheduleExactAlarm.request();
+        }
+      } catch (e) {
+        // Permission might not be available on older Android versions
+        print('Exact alarm permission not available: $e');
+      }
     }
   }
 
@@ -109,11 +125,26 @@ class NotificationService {
       iOS: iosDetails,
     );
 
+    // Use a valid 32-bit integer ID (max: 2,147,483,647)
+    final notificationId = DateTime.now().millisecondsSinceEpoch % 2147483647;
     await _localNotifications.show(
-      DateTime.now().millisecondsSinceEpoch.remainder(100000),
+      notificationId,
       title,
       body,
       details,
+      payload: payload,
+    );
+  }
+
+  /// Show an immediate local notification (used for testing/instant alerts)
+  Future<void> showImmediateNotification({
+    required String title,
+    required String body,
+    String? payload,
+  }) async {
+    await _showLocalNotification(
+      title: title,
+      body: body,
       payload: payload,
     );
   }
@@ -145,6 +176,28 @@ class NotificationService {
       iOS: iosDetails,
     );
 
+    // Determine the appropriate scheduling mode based on permissions
+    AndroidScheduleMode scheduleMode =
+        AndroidScheduleMode.inexactAllowWhileIdle;
+
+    if (Platform.isAndroid) {
+      try {
+        // Check if exact alarm permission is granted (Android 12+)
+        final exactAlarmStatus = await Permission.scheduleExactAlarm.status;
+        if (exactAlarmStatus.isGranted) {
+          scheduleMode = AndroidScheduleMode.exactAllowWhileIdle;
+        } else {
+          // Fallback to inexact scheduling if permission not granted
+          scheduleMode = AndroidScheduleMode.inexactAllowWhileIdle;
+          print('Exact alarm permission not granted, using inexact scheduling');
+        }
+      } catch (e) {
+        // Fallback to inexact scheduling on error (e.g., on older Android versions)
+        scheduleMode = AndroidScheduleMode.inexactAllowWhileIdle;
+        print('Error checking exact alarm permission: $e');
+      }
+    }
+
     await _localNotifications.zonedSchedule(
       id,
       title,
@@ -152,7 +205,7 @@ class NotificationService {
       _convertToTZDateTime(scheduledDate),
       details,
       payload: payload,
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      androidScheduleMode: scheduleMode,
       uiLocalNotificationDateInterpretation:
           UILocalNotificationDateInterpretation.absoluteTime,
     );

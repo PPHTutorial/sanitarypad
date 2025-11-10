@@ -110,24 +110,49 @@ class _LogPeriodScreenState extends ConsumerState<LogPeriodScreen> {
           ? _endDate!.difference(_startDate!).inDays + 1
           : AppConstants.defaultPeriodLength;
 
-      await cycleService.createCycle(
-        startDate: _startDate!,
-        endDate: _endDate,
-        cycleLength: cycleLength,
-        periodLength: periodLength,
-        flowIntensity: _flowIntensity,
-        symptoms: _selectedSymptoms,
-        mood: _mood,
-        notes: _notesController.text.isEmpty ? null : _notesController.text,
-      );
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Period logged successfully')),
+      if (widget.cycle != null) {
+        // Update existing cycle
+        final updatedCycle = widget.cycle!.copyWith(
+          startDate: _startDate!,
+          endDate: _endDate,
+          cycleLength: cycleLength,
+          periodLength: periodLength,
+          flowIntensity: _flowIntensity,
+          symptoms: _selectedSymptoms,
+          mood: _mood,
+          notes: _notesController.text.isEmpty ? null : _notesController.text,
+          createdAt: widget.cycle!.createdAt, // Preserve original creation date
+          updatedAt: DateTime.now(),
         );
-        if (context.mounted) {
-          context.pop();
+        await cycleService.updateCycle(updatedCycle);
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Period updated successfully')),
+          );
         }
+      } else {
+        // Create new cycle
+        await cycleService.createCycle(
+          startDate: _startDate!,
+          endDate: _endDate,
+          cycleLength: cycleLength,
+          periodLength: periodLength,
+          flowIntensity: _flowIntensity,
+          symptoms: _selectedSymptoms,
+          mood: _mood,
+          notes: _notesController.text.isEmpty ? null : _notesController.text,
+        );
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Period logged successfully')),
+          );
+        }
+      }
+
+      if (mounted && context.mounted) {
+        context.pop();
       }
     } catch (e) {
       if (mounted) {

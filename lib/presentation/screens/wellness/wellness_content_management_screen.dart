@@ -43,7 +43,7 @@ class _WellnessContentManagementScreenState
         body: Column(
           children: [
             // Filter Tabs
-            Container(
+            /* Container(
               margin: ResponsiveConfig.margin(all: 16),
               decoration: BoxDecoration(
                 color: Theme.of(context).brightness == Brightness.dark
@@ -69,7 +69,7 @@ class _WellnessContentManagementScreenState
                   ],
                 ),
               ),
-            ),
+            ), */
             // Content List
             Expanded(
               child: _buildContentList(),

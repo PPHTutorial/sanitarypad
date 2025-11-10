@@ -93,7 +93,9 @@ service cloud.firestore {
     match /wellnessContent/{contentId} {
       allow list: if request.auth != null;
       allow read: if request.auth != null;
-      allow create, update, delete: if request.auth != null; // Authenticated users can manage content
+      allow create: if request.auth != null; // Authenticated users can create content
+      allow update: if request.auth != null; // Authenticated users can update content
+      allow delete: if request.auth != null; // Authenticated users can delete content
     }
     
     // ============================================

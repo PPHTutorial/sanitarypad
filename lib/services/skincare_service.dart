@@ -215,6 +215,174 @@ extension SkincareProductExtension on SkincareProduct {
   }
 }
 
+// ===== Enhanced feature helpers =====
+
+class SkincareEnhancedService {
+  SkincareEnhancedService(this._firestore);
+
+  final FirebaseFirestore _firestore;
+
+  // Skin type
+  Future<void> saveSkinType(SkinType skinType) async {
+    await _firestore
+        .collection(AppConstants.collectionSkinTypes)
+        .doc(skinType.userId)
+        .set(skinType.toFirestore());
+  }
+
+  Future<SkinType?> getSkinType(String userId) async {
+    final doc = await _firestore
+        .collection(AppConstants.collectionSkinTypes)
+        .doc(userId)
+        .get();
+    if (!doc.exists) return null;
+    return SkinType.fromFirestore(doc);
+  }
+
+  // Skin journal
+  Stream<List<SkinJournalEntry>> getSkinJournalEntries(
+    String userId, {
+    DateTime? startDate,
+    DateTime? endDate,
+  }) {
+    Query query = _firestore
+        .collection(AppConstants.collectionSkinJournalEntries)
+        .where('userId', isEqualTo: userId)
+        .orderBy('date', descending: true);
+
+    if (startDate != null) {
+      query = query.where(
+        'date',
+        isGreaterThanOrEqualTo: Timestamp.fromDate(startDate),
+      );
+    }
+    if (endDate != null) {
+      query = query.where(
+        'date',
+        isLessThanOrEqualTo: Timestamp.fromDate(endDate),
+      );
+    }
+
+    return query.snapshots().map(
+          (snapshot) => snapshot.docs
+              .map((doc) => SkinJournalEntry.fromFirestore(doc))
+              .toList(),
+        );
+  }
+
+  Future<void> logSkinJournal(SkinJournalEntry entry) async {
+    await _firestore
+        .collection(AppConstants.collectionSkinJournalEntries)
+        .add(entry.toFirestore());
+  }
+
+  // Routine templates
+  Stream<List<RoutineTemplate>> getRoutineTemplates(String userId) {
+    return _firestore
+        .collection(AppConstants.collectionRoutineTemplates)
+        .where('userId', isEqualTo: userId)
+        .where('isActive', isEqualTo: true)
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map(
+          (snapshot) => snapshot.docs
+              .map((doc) => RoutineTemplate.fromFirestore(doc))
+              .toList(),
+        );
+  }
+
+  Future<void> saveRoutineTemplate(RoutineTemplate template) async {
+    await _firestore
+        .collection(AppConstants.collectionRoutineTemplates)
+        .add(template.toFirestore());
+  }
+
+  // Ingredients
+  Stream<List<Ingredient>> getIngredients({String? searchTerm}) {
+    Query query = _firestore
+        .collection(AppConstants.collectionIngredients)
+        .orderBy('name');
+
+    if (searchTerm != null && searchTerm.trim().isNotEmpty) {
+      query = query
+          .where('name', isGreaterThanOrEqualTo: searchTerm)
+          .where('name', isLessThanOrEqualTo: '$searchTerm\uf8ff');
+    }
+
+    return query.snapshots().map(
+          (snapshot) => snapshot.docs
+              .map((doc) => Ingredient.fromFirestore(doc))
+              .toList(),
+        );
+  }
+
+  // Acne tracker
+  Stream<List<AcneEntry>> getAcneEntries(String userId) {
+    return _firestore
+        .collection(AppConstants.collectionAcneEntries)
+        .where('userId', isEqualTo: userId)
+        .orderBy('date', descending: true)
+        .snapshots()
+        .map(
+          (snapshot) =>
+              snapshot.docs.map((doc) => AcneEntry.fromFirestore(doc)).toList(),
+        );
+  }
+
+  Future<void> logAcneEntry(AcneEntry entry) async {
+    await _firestore
+        .collection(AppConstants.collectionAcneEntries)
+        .add(entry.toFirestore());
+  }
+
+  // UV index
+  Future<void> logUVIndex(UVIndexEntry entry) async {
+    await _firestore
+        .collection(AppConstants.collectionUVIndexEntries)
+        .add(entry.toFirestore());
+  }
+
+  Stream<List<UVIndexEntry>> getUVIndexEntries(String userId) {
+    return _firestore
+        .collection(AppConstants.collectionUVIndexEntries)
+        .where('userId', isEqualTo: userId)
+        .orderBy('date', descending: true)
+        .snapshots()
+        .map(
+          (snapshot) => snapshot.docs
+              .map((doc) => UVIndexEntry.fromFirestore(doc))
+              .toList(),
+        );
+  }
+
+  // Skin goals
+  Stream<List<SkinGoal>> getSkinGoals(String userId) {
+    return _firestore
+        .collection(AppConstants.collectionSkinGoals)
+        .where('userId', isEqualTo: userId)
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map(
+          (snapshot) =>
+              snapshot.docs.map((doc) => SkinGoal.fromFirestore(doc)).toList(),
+        );
+  }
+
+  Future<void> createSkinGoal(SkinGoal goal) async {
+    await _firestore
+        .collection(AppConstants.collectionSkinGoals)
+        .add(goal.toFirestore());
+  }
+
+  Future<void> updateSkinGoal(SkinGoal goal) async {
+    if (goal.id == null) throw Exception('Goal ID required');
+    await _firestore
+        .collection(AppConstants.collectionSkinGoals)
+        .doc(goal.id)
+        .update(goal.toFirestore());
+  }
+}
+
 extension SkincareEntryExtension on SkincareEntry {
   SkincareEntry copyWith({
     DateTime? date,

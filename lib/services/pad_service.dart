@@ -3,6 +3,7 @@ import '../data/models/pad_model.dart';
 import '../core/constants/app_constants.dart';
 import 'storage_service.dart';
 import 'auth_service.dart';
+import 'notification_scheduler_service.dart';
 
 /// Pad management service
 class PadService {
@@ -53,6 +54,15 @@ class PadService {
 
     // Update inventory if needed
     await _decrementInventory(padType);
+
+    // Schedule pad change reminder
+    try {
+      final scheduler = NotificationSchedulerService();
+      await scheduler.onPadChanged(user.uid);
+    } catch (e) {
+      // Don't fail pad logging if notification scheduling fails
+      print('Error scheduling notifications: $e');
+    }
 
     return pad;
   }

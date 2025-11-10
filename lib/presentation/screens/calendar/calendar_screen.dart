@@ -37,10 +37,18 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
         title: const Text('Calendar'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.list),
+            onPressed: () {
+              context.push('/cycles-list');
+            },
+            tooltip: 'View All Cycles',
+          ),
+          IconButton(
             icon: const Icon(Icons.add),
             onPressed: () {
               context.go('/log-period');
             },
+            tooltip: 'Add Cycle',
           ),
         ],
       ),

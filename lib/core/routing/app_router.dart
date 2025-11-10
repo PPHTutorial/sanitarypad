@@ -12,6 +12,7 @@ import '../../presentation/screens/insights/insights_screen.dart';
 import '../../presentation/screens/wellness/wellness_screen.dart';
 import '../../presentation/screens/profile/profile_screen.dart';
 import '../../presentation/screens/cycle/log_period_screen.dart';
+import '../../presentation/screens/cycle/cycles_list_screen.dart';
 import '../../presentation/screens/pads/pad_management_screen.dart';
 import '../../presentation/screens/wellness/wellness_journal_screen.dart';
 import '../../presentation/screens/wellness/wellness_journal_list_screen.dart';
@@ -39,6 +40,12 @@ import '../../presentation/screens/skincare/skincare_routine_form_screen.dart';
 import '../../data/models/skincare_model.dart';
 import '../../presentation/screens/alerts/red_flag_alerts_screen.dart';
 import '../../presentation/screens/reports/health_report_screen.dart';
+import '../../presentation/screens/community/groups_list_screen.dart';
+import '../../presentation/screens/community/group_detail_screen.dart';
+import '../../presentation/screens/community/group_form_screen.dart';
+import '../../presentation/screens/community/events_list_screen.dart';
+import '../../presentation/screens/community/event_detail_screen.dart';
+import '../../presentation/screens/community/event_form_screen.dart';
 import '../../core/providers/auth_provider.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
@@ -206,6 +213,11 @@ class AppRouter {
           },
         ),
         GoRoute(
+          path: '/cycles-list',
+          name: 'cycles-list',
+          builder: (context, state) => const CyclesListScreen(),
+        ),
+        GoRoute(
           path: '/pad-management',
           name: 'pad-management',
           builder: (context, state) => const PadManagementScreen(),
@@ -352,6 +364,58 @@ class AppRouter {
           builder: (context, state) {
             final entry = state.extra as SkincareEntry?;
             return SkincareRoutineFormScreen(entry: entry);
+          },
+        ),
+
+        // Community - Groups - Protected routes
+        GoRoute(
+          path: '/groups',
+          name: 'groups',
+          builder: (context, state) {
+            final category = state.extra as String? ?? 'all';
+            return GroupsListScreen(category: category);
+          },
+        ),
+        GoRoute(
+          path: '/groups/:id',
+          name: 'group-detail',
+          builder: (context, state) {
+            final id = state.pathParameters['id']!;
+            return GroupDetailScreen(groupId: id);
+          },
+        ),
+        GoRoute(
+          path: '/groups/create',
+          name: 'group-create',
+          builder: (context, state) {
+            final category = state.extra as String?;
+            return GroupFormScreen(category: category);
+          },
+        ),
+
+        // Community - Events - Protected routes
+        GoRoute(
+          path: '/events',
+          name: 'events',
+          builder: (context, state) {
+            final category = state.extra as String? ?? 'all';
+            return EventsListScreen(category: category);
+          },
+        ),
+        GoRoute(
+          path: '/events/:id',
+          name: 'event-detail',
+          builder: (context, state) {
+            final id = state.pathParameters['id']!;
+            return EventDetailScreen(eventId: id);
+          },
+        ),
+        GoRoute(
+          path: '/events/create',
+          name: 'event-create',
+          builder: (context, state) {
+            final category = state.extra as String?;
+            return EventFormScreen(category: category);
           },
         ),
       ],

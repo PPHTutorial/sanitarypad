@@ -28,14 +28,33 @@ class _DoubleBackToExitState extends State<DoubleBackToExit> {
     final now = DateTime.now();
     final router = GoRouter.of(context);
 
-    // Check if we can pop the navigation stack
-    if (router.canPop()) {
-      // If we can pop, just pop (normal navigation)
+    // Get current location more reliably
+    String currentLocation = '/';
+    try {
+      final location = router.routerDelegate.currentConfiguration.uri.path;
+      currentLocation = location.isEmpty ? '/' : location;
+    } catch (e) {
+      currentLocation = '/';
+    }
+
+    // Always require double-back on home screen or root
+    final isOnHome = currentLocation == '/home' || currentLocation == '/';
+
+    // Check if we can pop the navigation stack (and not on home)
+    if (router.canPop() && !isOnHome) {
+      // If we can pop and not on home, just pop (normal navigation)
       router.pop();
       return;
     }
 
-    // If we can't pop (at root), implement double-back-to-exit
+    // If we can't pop (at root) or on home, implement double-back-to-exit
+    if (_isShowingSnackBar) {
+      // Snackbar is already showing - exit immediately
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      SystemNavigator.pop();
+      return;
+    }
+
     if (_lastBackPressTime == null ||
         now.difference(_lastBackPressTime!) > widget.timeout) {
       // First back press or timeout expired - show message
@@ -56,12 +75,16 @@ class _DoubleBackToExitState extends State<DoubleBackToExit> {
           SnackBar(
             content: Row(
               children: [
-                const Icon(Icons.info_outline, color: Colors.white),
+                const Icon(Icons.info_outline, color: Colors.white, size: 20),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     widget.message ?? 'Press back again to exit',
-                    style: const TextStyle(color: Colors.white),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ),
               ],
@@ -73,6 +96,13 @@ class _DoubleBackToExitState extends State<DoubleBackToExit> {
               borderRadius: BorderRadius.circular(12),
             ),
             backgroundColor: Colors.black87,
+            action: SnackBarAction(
+              label: 'EXIT',
+              textColor: Colors.white,
+              onPressed: () {
+                SystemNavigator.pop();
+              },
+            ),
           ),
         )
         .closed
@@ -80,6 +110,7 @@ class _DoubleBackToExitState extends State<DoubleBackToExit> {
       if (mounted) {
         setState(() {
           _isShowingSnackBar = false;
+          _lastBackPressTime = null; // Reset timer when snackbar closes
         });
       }
     });

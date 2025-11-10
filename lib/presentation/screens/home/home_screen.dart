@@ -121,7 +121,10 @@ class HomeScreen extends ConsumerWidget {
                 ),
                 IconButton(
                   icon: const Icon(Icons.edit_outlined),
-                  onPressed: () => context.go('/log-period'),
+                  onPressed: () {
+                    // Navigate to edit current cycle
+                    context.push('/log-period', extra: cycle);
+                  },
                 ),
               ],
             ),

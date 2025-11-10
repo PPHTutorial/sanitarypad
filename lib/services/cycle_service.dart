@@ -3,6 +3,7 @@ import '../data/models/cycle_model.dart';
 import '../core/constants/app_constants.dart';
 import 'storage_service.dart';
 import 'auth_service.dart';
+import 'notification_scheduler_service.dart';
 
 /// Cycle tracking service
 class CycleService {
@@ -49,6 +50,15 @@ class CycleService {
       documentId: cycleId,
       data: cycle.toFirestore(),
     );
+
+    // Schedule notifications based on new cycle
+    try {
+      final scheduler = NotificationSchedulerService();
+      await scheduler.onCycleCreated(user.uid);
+    } catch (e) {
+      // Don't fail cycle creation if notification scheduling fails
+      print('Error scheduling notifications: $e');
+    }
 
     return cycle;
   }

@@ -152,18 +152,14 @@ class _NotificationSettingsScreenState
                 ElevatedButton.icon(
                   onPressed: () async {
                     try {
-                      await _notificationService.scheduleNotification(
-                        id: DateTime.now().millisecondsSinceEpoch,
+                      await _notificationService.showImmediateNotification(
                         title: 'Test Notification',
                         body: 'This is a test notification from FemCare+',
-                        scheduledDate:
-                            DateTime.now().add(const Duration(seconds: 2)),
                       );
                       if (mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content: Text(
-                                'Test notification will appear in 2 seconds'),
+                            content: Text('Test notification sent'),
                           ),
                         );
                       }
