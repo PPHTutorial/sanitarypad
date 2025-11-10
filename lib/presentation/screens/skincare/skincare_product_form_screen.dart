@@ -1,10 +1,14 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../../core/config/responsive_config.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../core/providers/auth_provider.dart';
 import '../../../services/skincare_service.dart';
 import '../../../data/models/skincare_model.dart';
+import '../../../services/storage_service.dart';
 
 /// Skincare product form screen
 class SkincareProductFormScreen extends ConsumerStatefulWidget {
@@ -21,6 +25,8 @@ class _SkincareProductFormScreenState
     extends ConsumerState<SkincareProductFormScreen> {
   final _formKey = GlobalKey<FormState>();
   final _skincareService = SkincareService();
+  final _storageService = StorageService();
+  final _imagePicker = ImagePicker();
   final _nameController = TextEditingController();
   final _brandController = TextEditingController();
   final _priceController = TextEditingController();
@@ -28,6 +34,7 @@ class _SkincareProductFormScreenState
   String _selectedCategory = 'cleanser';
   DateTime? _purchaseDate;
   DateTime? _expirationDate;
+  String? _imageUrl;
   bool _isLoading = false;
 
   final List<String> _categories = [
@@ -54,6 +61,49 @@ class _SkincareProductFormScreenState
       _selectedCategory = widget.product!.category;
       _purchaseDate = widget.product!.purchaseDate;
       _expirationDate = widget.product!.expirationDate;
+      _imageUrl = widget.product!.imageUrl;
+    }
+  }
+
+  Future<void> _pickImage() async {
+    try {
+      final image = await _imagePicker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 80,
+      );
+
+      if (image != null) {
+        setState(() => _isLoading = true);
+        try {
+          // Upload image to Firebase Storage
+          final user = ref.read(currentUserStreamProvider).value;
+          if (user != null) {
+            final file = File(image.path);
+            final url = await _storageService.uploadFile(
+              file: file,
+              path:
+                  'skincare/products/${user.userId}/${DateTime.now().millisecondsSinceEpoch}.jpg',
+            );
+            setState(() {
+              _imageUrl = url;
+              _isLoading = false;
+            });
+          }
+        } catch (e) {
+          setState(() => _isLoading = false);
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Error uploading image: ${e.toString()}')),
+            );
+          }
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error picking image: ${e.toString()}')),
+        );
+      }
     }
   }
 
@@ -97,6 +147,7 @@ class _SkincareProductFormScreenState
           purchaseDate: _purchaseDate,
           expirationDate: _expirationDate,
           price: price,
+          imageUrl: _imageUrl,
           notes: _notesController.text.trim().isEmpty
               ? null
               : _notesController.text.trim(),
@@ -115,6 +166,7 @@ class _SkincareProductFormScreenState
           purchaseDate: _purchaseDate,
           expirationDate: _expirationDate,
           price: price,
+          imageUrl: _imageUrl,
           notes: _notesController.text.trim().isEmpty
               ? null
               : _notesController.text.trim(),
@@ -278,6 +330,67 @@ class _SkincareProductFormScreenState
                 ),
                 onTap: _selectExpirationDate,
               ),
+              ResponsiveConfig.heightBox(16),
+
+              // Product Image
+              Text(
+                'Product Image (Optional)',
+                style: ResponsiveConfig.textStyle(
+                  size: 16,
+                  weight: FontWeight.bold,
+                ),
+              ),
+              ResponsiveConfig.heightBox(8),
+              GestureDetector(
+                onTap: _pickImage,
+                child: Container(
+                  width: double.infinity,
+                  height: 200,
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                      color: AppTheme.mediumGray,
+                      style: BorderStyle.solid,
+                    ),
+                    borderRadius: ResponsiveConfig.borderRadius(12),
+                  ),
+                  child: _imageUrl != null
+                      ? ClipRRect(
+                          borderRadius: ResponsiveConfig.borderRadius(12),
+                          child: Image.network(
+                            _imageUrl!,
+                            fit: BoxFit.cover,
+                          ),
+                        )
+                      : Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.add_photo_alternate,
+                              size: 48,
+                              color: AppTheme.mediumGray,
+                            ),
+                            ResponsiveConfig.heightBox(8),
+                            Text(
+                              'Tap to add product image',
+                              style: ResponsiveConfig.textStyle(
+                                size: 14,
+                                color: AppTheme.mediumGray,
+                              ),
+                            ),
+                          ],
+                        ),
+                ),
+              ),
+              if (_imageUrl != null) ...[
+                ResponsiveConfig.heightBox(8),
+                TextButton.icon(
+                  onPressed: () {
+                    setState(() => _imageUrl = null);
+                  },
+                  icon: const Icon(Icons.delete_outline),
+                  label: const Text('Remove Image'),
+                ),
+              ],
               ResponsiveConfig.heightBox(16),
 
               // Price

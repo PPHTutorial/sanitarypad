@@ -7,10 +7,13 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/utils/date_utils.dart' as app_date_utils;
 import '../../../services/cycle_service.dart';
 import '../../../core/widgets/back_button_handler.dart';
+import '../../../data/models/cycle_model.dart';
 
 /// Log period screen
 class LogPeriodScreen extends ConsumerStatefulWidget {
-  const LogPeriodScreen({super.key});
+  final CycleModel? cycle; // For editing existing cycle
+
+  const LogPeriodScreen({super.key, this.cycle});
 
   @override
   ConsumerState<LogPeriodScreen> createState() => _LogPeriodScreenState();
@@ -25,6 +28,20 @@ class _LogPeriodScreenState extends ConsumerState<LogPeriodScreen> {
   String? _mood;
   final _notesController = TextEditingController();
   bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // If editing, populate form with existing cycle data
+    if (widget.cycle != null) {
+      _startDate = widget.cycle!.startDate;
+      _endDate = widget.cycle!.endDate;
+      _flowIntensity = widget.cycle!.flowIntensity;
+      _selectedSymptoms.addAll(widget.cycle!.symptoms);
+      _mood = widget.cycle!.mood;
+      _notesController.text = widget.cycle!.notes ?? '';
+    }
+  }
 
   @override
   void dispose() {
@@ -132,7 +149,7 @@ class _LogPeriodScreenState extends ConsumerState<LogPeriodScreen> {
         child: Scaffold(
           backgroundColor: Colors.transparent,
           appBar: AppBar(
-            title: const Text('Log Period'),
+            title: Text(widget.cycle != null ? 'Edit Period' : 'Log Period'),
           ),
           body: SingleChildScrollView(
             padding: ResponsiveConfig.padding(all: 16),

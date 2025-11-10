@@ -53,53 +53,56 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
               borderRadius: BorderRadius.circular(ResponsiveConfig.radius(16)),
             ),
             shadowColor: Colors.black.withValues(alpha: 0.08),
-            margin: const EdgeInsets.only(bottom: 0),
-            child: TableCalendar(
-              firstDay: DateTime.utc(2020, 1, 1),
-              lastDay: DateTime.utc(2030, 12, 31),
-              focusedDay: _focusedDay,
-              selectedDayPredicate: (day) =>
-                  app_date_utils.DateUtils.isToday(day),
-              calendarFormat: _calendarFormat,
-              eventLoader: (day) => eventMarkers[day] ?? [],
-              startingDayOfWeek: StartingDayOfWeek.monday,
-              calendarStyle: const CalendarStyle(
-                todayDecoration: BoxDecoration(
-                  color: AppTheme.lightPink,
-                  shape: BoxShape.circle,
+            margin: ResponsiveConfig.margin(all: 16),
+            child: Padding(
+              padding: ResponsiveConfig.padding(all: 20),
+              child: TableCalendar(
+                firstDay: DateTime.utc(2020, 1, 1),
+                lastDay: DateTime.utc(2030, 12, 31),
+                focusedDay: _focusedDay,
+                selectedDayPredicate: (day) =>
+                    app_date_utils.DateUtils.isToday(day),
+                calendarFormat: _calendarFormat,
+                eventLoader: (day) => eventMarkers[day] ?? [],
+                startingDayOfWeek: StartingDayOfWeek.monday,
+                calendarStyle: const CalendarStyle(
+                  todayDecoration: BoxDecoration(
+                    color: AppTheme.lightPink,
+                    shape: BoxShape.circle,
+                  ),
+                  selectedDecoration: BoxDecoration(
+                    color: AppTheme.primaryPink,
+                    shape: BoxShape.circle,
+                  ),
+                  markerDecoration: BoxDecoration(
+                    color: AppTheme.primaryPink,
+                    shape: BoxShape.circle,
+                  ),
+                  outsideDaysVisible: false,
                 ),
-                selectedDecoration: BoxDecoration(
-                  color: AppTheme.primaryPink,
-                  shape: BoxShape.circle,
+                headerStyle: HeaderStyle(
+                  formatButtonVisible: true,
+                  titleCentered: true,
+                  formatButtonShowsNext: false,
+                  formatButtonDecoration: BoxDecoration(
+                    color: AppTheme.primaryPink,
+                    borderRadius: ResponsiveConfig.borderRadius(8),
+                  ),
+                  formatButtonTextStyle: const TextStyle(color: Colors.white),
                 ),
-                markerDecoration: BoxDecoration(
-                  color: AppTheme.primaryPink,
-                  shape: BoxShape.circle,
-                ),
-                outsideDaysVisible: false,
+                onDaySelected: (selectedDay, focusedDay) {
+                  setState(() {
+                    _selectedDay = selectedDay;
+                    _focusedDay = focusedDay;
+                  });
+                },
+                onFormatChanged: (format) {
+                  setState(() => _calendarFormat = format);
+                },
+                onPageChanged: (focusedDay) {
+                  setState(() => _focusedDay = focusedDay);
+                },
               ),
-              headerStyle: HeaderStyle(
-                formatButtonVisible: true,
-                titleCentered: true,
-                formatButtonShowsNext: false,
-                formatButtonDecoration: BoxDecoration(
-                  color: AppTheme.primaryPink,
-                  borderRadius: ResponsiveConfig.borderRadius(8),
-                ),
-                formatButtonTextStyle: const TextStyle(color: Colors.white),
-              ),
-              onDaySelected: (selectedDay, focusedDay) {
-                setState(() {
-                  _selectedDay = selectedDay;
-                  _focusedDay = focusedDay;
-                });
-              },
-              onFormatChanged: (format) {
-                setState(() => _calendarFormat = format);
-              },
-              onPageChanged: (focusedDay) {
-                setState(() => _focusedDay = focusedDay);
-              },
             ),
           ),
 
@@ -169,7 +172,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
         width: double.infinity,
         child: Card(
           shadowColor: Colors.black.withValues(alpha: 0.08),
-          margin: const EdgeInsets.only(bottom: 0),
+          margin: ResponsiveConfig.margin(all: 16),
           child: Padding(
             padding: ResponsiveConfig.padding(all: 20),
             child: Column(
@@ -231,8 +234,8 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                       Expanded(
                         child: OutlinedButton.icon(
                           onPressed: () {
-                            // TODO: Navigate to edit cycle screen
-                            context.go('/log-period');
+                            // Navigate to edit cycle screen with cycle data
+                            context.push('/log-period', extra: cycleForDate);
                           },
                           icon: const Icon(Icons.edit),
                           label: const Text('Edit'),

@@ -25,6 +25,15 @@ class WellnessScreen extends ConsumerWidget {
         backgroundColor: Colors.transparent, // Use theme background
         appBar: AppBar(
           title: const Text('Wellness'),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.add),
+              onPressed: () {
+                context.push('/wellness-content-management');
+              },
+              tooltip: 'Manage Content',
+            ),
+          ],
           bottom: PreferredSize(
             preferredSize: const Size.fromHeight(48),
             child: Container(

@@ -27,6 +27,9 @@ class _SkincareTrackingScreenState extends ConsumerState<SkincareTrackingScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(() {
+      setState(() {}); // Rebuild to update FAB
+    });
   }
 
   @override
@@ -49,24 +52,89 @@ class _SkincareTrackingScreenState extends ConsumerState<SkincareTrackingScreen>
     return BackButtonHandler(
       fallbackRoute: '/home',
       child: Scaffold(
+        backgroundColor: Colors.transparent,
         appBar: AppBar(
           title: const Text('Skincare Tracker'),
-        bottom: TabBar(
+          bottom: PreferredSize(
+            preferredSize: const Size.fromHeight(60),
+            child: Container(
+              margin: ResponsiveConfig.margin(horizontal: 16, bottom: 8),
+              decoration: BoxDecoration(
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.grey[800]
+                    : Colors.grey[200],
+                borderRadius: BorderRadius.circular(30),
+              ),
+              child: TabBar(
+                controller: _tabController,
+                indicator: BoxDecoration(
+                  color: AppTheme.primaryPink,
+                  borderRadius: BorderRadius.circular(30),
+                ),
+                indicatorSize: TabBarIndicatorSize.tab,
+                dividerColor: Colors.transparent,
+                labelColor: Colors.white,
+                unselectedLabelColor:
+                    Theme.of(context).brightness == Brightness.dark
+                        ? Colors.grey[400]
+                        : Colors.grey[700],
+                labelStyle: ResponsiveConfig.textStyle(
+                  size: 14,
+                  weight: FontWeight.w600,
+                ),
+                unselectedLabelStyle: ResponsiveConfig.textStyle(
+                  size: 14,
+                  weight: FontWeight.w400,
+                ),
+                tabs: const [
+                  Tab(
+                    icon: Icon(Icons.face, size: 20),
+                    text: 'Routine',
+                  ),
+                  Tab(
+                    icon: Icon(Icons.inventory_2, size: 20),
+                    text: 'Products',
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        body: TabBarView(
           controller: _tabController,
-          tabs: const [
-            Tab(text: 'Routine', icon: Icon(Icons.face)),
-            Tab(text: 'Products', icon: Icon(Icons.inventory)),
+          children: [
+            _buildRoutineTab(context, user.userId),
+            _buildProductsTab(context, user.userId),
           ],
         ),
+        floatingActionButton: _buildFloatingActionButton(context),
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildRoutineTab(context, user.userId),
-          _buildProductsTab(context, user.userId),
-        ],
+    );
+  }
+
+  Widget _buildFloatingActionButton(BuildContext context) {
+    return FloatingActionButton.extended(
+      onPressed: () {
+        if (_tabController.index == 0) {
+          context.push('/skincare-routine-form');
+        } else {
+          context.push('/skincare-product-form');
+        }
+      },
+      backgroundColor: AppTheme.primaryPink,
+      icon: Icon(
+        _tabController.index == 0 ? Icons.add : Icons.inventory_2,
+        color: Colors.white,
       ),
-    ));
+      label: Text(
+        _tabController.index == 0 ? 'Log Routine' : 'Add Product',
+        style: ResponsiveConfig.textStyle(
+          size: 14,
+          weight: FontWeight.w600,
+          color: Colors.white,
+        ),
+      ),
+    );
   }
 
   Widget _buildRoutineTab(BuildContext context, String userId) {
@@ -82,55 +150,54 @@ class _SkincareTrackingScreenState extends ConsumerState<SkincareTrackingScreen>
 
         final entries = snapshot.data ?? [];
 
-        return Column(
-          children: [
-            // Add Entry Button
-            Padding(
-              padding: ResponsiveConfig.padding(all: 16),
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  context.push('/skincare-routine-form');
-                },
-                icon: const Icon(Icons.add),
-                label: const Text('Log Skincare Routine'),
-                style: ElevatedButton.styleFrom(
-                  padding: ResponsiveConfig.padding(vertical: 16),
-                ),
+        if (entries.isEmpty) {
+          return Center(
+            child: Padding(
+              padding: ResponsiveConfig.padding(all: 24),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    padding: ResponsiveConfig.padding(all: 24),
+                    decoration: BoxDecoration(
+                      color: AppTheme.lightPink.withValues(alpha: 0.3),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.face_outlined,
+                      size: ResponsiveConfig.iconSize(64),
+                      color: AppTheme.primaryPink,
+                    ),
+                  ),
+                  ResponsiveConfig.heightBox(24),
+                  Text(
+                    'No Routine Logged Yet',
+                    style: ResponsiveConfig.textStyle(
+                      size: 20,
+                      weight: FontWeight.bold,
+                    ),
+                  ),
+                  ResponsiveConfig.heightBox(8),
+                  Text(
+                    'Start tracking your skincare routine to see your progress',
+                    style: ResponsiveConfig.textStyle(
+                      size: 14,
+                      color: AppTheme.mediumGray,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
               ),
             ),
+          );
+        }
 
-            // Entries List
-            Expanded(
-              child: entries.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.face_outlined,
-                            size: ResponsiveConfig.iconSize(64),
-                            color: AppTheme.mediumGray,
-                          ),
-                          ResponsiveConfig.heightBox(16),
-                          Text(
-                            'No skincare entries yet',
-                            style: ResponsiveConfig.textStyle(
-                              size: 16,
-                              color: AppTheme.mediumGray,
-                            ),
-                          ),
-                        ],
-                      ),
-                    )
-                  : ListView.builder(
-                      padding: ResponsiveConfig.padding(horizontal: 16),
-                      itemCount: entries.length,
-                      itemBuilder: (context, index) {
-                        return _buildEntryCard(context, entries[index]);
-                      },
-                    ),
-            ),
-          ],
+        return ListView.builder(
+          padding: ResponsiveConfig.padding(all: 16),
+          itemCount: entries.length,
+          itemBuilder: (context, index) {
+            return _buildEntryCard(context, entries[index]);
+          },
         );
       },
     );
@@ -148,21 +215,6 @@ class _SkincareTrackingScreenState extends ConsumerState<SkincareTrackingScreen>
 
         return Column(
           children: [
-            // Add Product Button
-            Padding(
-              padding: ResponsiveConfig.padding(all: 16),
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  context.push('/skincare-product-form');
-                },
-                icon: const Icon(Icons.add),
-                label: const Text('Add Product'),
-                style: ElevatedButton.styleFrom(
-                  padding: ResponsiveConfig.padding(vertical: 16),
-                ),
-              ),
-            ),
-
             // Expiring Products Alert
             StreamBuilder<List<SkincareProduct>>(
               stream: _skincareService.getExpiringProducts(userId),
@@ -171,27 +223,57 @@ class _SkincareTrackingScreenState extends ConsumerState<SkincareTrackingScreen>
                 if (expiring.isEmpty) return const SizedBox.shrink();
 
                 return Container(
-                  margin: ResponsiveConfig.margin(horizontal: 16, bottom: 16),
-                  padding: ResponsiveConfig.padding(all: 12),
+                  margin: ResponsiveConfig.margin(all: 16),
+                  padding: ResponsiveConfig.padding(all: 16),
                   decoration: BoxDecoration(
-                    color: AppTheme.warningOrange.withOpacity(0.1),
-                    borderRadius: ResponsiveConfig.borderRadius(8),
-                    border: Border.all(color: AppTheme.warningOrange),
+                    gradient: LinearGradient(
+                      colors: [
+                        AppTheme.warningOrange.withValues(alpha: 0.15),
+                        AppTheme.warningOrange.withValues(alpha: 0.05),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: AppTheme.warningOrange.withValues(alpha: 0.3),
+                      width: 1,
+                    ),
                   ),
                   child: Row(
                     children: [
-                      Icon(
-                        Icons.warning,
-                        color: AppTheme.warningOrange,
+                      Container(
+                        padding: ResponsiveConfig.padding(all: 8),
+                        decoration: BoxDecoration(
+                          color: AppTheme.warningOrange.withValues(alpha: 0.2),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.warning_rounded,
+                          color: AppTheme.warningOrange,
+                          size: 24,
+                        ),
                       ),
-                      ResponsiveConfig.widthBox(8),
+                      ResponsiveConfig.widthBox(12),
                       Expanded(
-                        child: Text(
-                          '${expiring.length} product(s) expiring soon',
-                          style: ResponsiveConfig.textStyle(
-                            size: 14,
-                            color: AppTheme.warningOrange,
-                          ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Expiring Soon',
+                              style: ResponsiveConfig.textStyle(
+                                size: 14,
+                                weight: FontWeight.w600,
+                                color: AppTheme.warningOrange,
+                              ),
+                            ),
+                            ResponsiveConfig.heightBox(2),
+                            Text(
+                              '${expiring.length} product${expiring.length > 1 ? 's' : ''} need attention',
+                              style: ResponsiveConfig.textStyle(
+                                size: 12,
+                                color: AppTheme.mediumGray,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
@@ -204,27 +286,47 @@ class _SkincareTrackingScreenState extends ConsumerState<SkincareTrackingScreen>
             Expanded(
               child: products.isEmpty
                   ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.inventory_2_outlined,
-                            size: ResponsiveConfig.iconSize(64),
-                            color: AppTheme.mediumGray,
-                          ),
-                          ResponsiveConfig.heightBox(16),
-                          Text(
-                            'No products yet',
-                            style: ResponsiveConfig.textStyle(
-                              size: 16,
-                              color: AppTheme.mediumGray,
+                      child: Padding(
+                        padding: ResponsiveConfig.padding(all: 24),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                              padding: ResponsiveConfig.padding(all: 24),
+                              decoration: BoxDecoration(
+                                color:
+                                    AppTheme.lightPink.withValues(alpha: 0.3),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                Icons.inventory_2_outlined,
+                                size: ResponsiveConfig.iconSize(64),
+                                color: AppTheme.primaryPink,
+                              ),
                             ),
-                          ),
-                        ],
+                            ResponsiveConfig.heightBox(24),
+                            Text(
+                              'No Products Yet',
+                              style: ResponsiveConfig.textStyle(
+                                size: 20,
+                                weight: FontWeight.bold,
+                              ),
+                            ),
+                            ResponsiveConfig.heightBox(8),
+                            Text(
+                              'Add your skincare products to track them',
+                              style: ResponsiveConfig.textStyle(
+                                size: 14,
+                                color: AppTheme.mediumGray,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
                       ),
                     )
                   : ListView.builder(
-                      padding: ResponsiveConfig.padding(horizontal: 16),
+                      padding: ResponsiveConfig.padding(all: 16),
                       itemCount: products.length,
                       itemBuilder: (context, index) {
                         return _buildProductCard(context, products[index]);
@@ -238,133 +340,357 @@ class _SkincareTrackingScreenState extends ConsumerState<SkincareTrackingScreen>
   }
 
   Widget _buildEntryCard(BuildContext context, SkincareEntry entry) {
+    final isToday = entry.date.year == DateTime.now().year &&
+        entry.date.month == DateTime.now().month &&
+        entry.date.day == DateTime.now().day;
+
     return Card(
+      shadowColor: Colors.black.withValues(alpha: 0.08),
       margin: ResponsiveConfig.margin(bottom: 12),
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: AppTheme.lightPink,
-          child: Text(
-            DateFormat('d').format(entry.date),
-            style: ResponsiveConfig.textStyle(
-              size: 14,
-              weight: FontWeight.bold,
-              color: AppTheme.primaryPink,
-            ),
-          ),
-        ),
-        title: Text(
-          DateFormat('MMM dd, yyyy').format(entry.date),
-          style: ResponsiveConfig.textStyle(
-            size: 16,
-            weight: FontWeight.bold,
-          ),
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ResponsiveConfig.heightBox(4),
-            Text(
-              'Time: ${entry.timeOfDay}',
-              style: ResponsiveConfig.textStyle(size: 14),
-            ),
-            if (entry.skinCondition != null)
-              Text(
-                'Condition: ${entry.skinCondition}',
-                style: ResponsiveConfig.textStyle(size: 12),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: InkWell(
+        onTap: () {
+          context.push('/skincare-routine-form', extra: entry);
+        },
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: ResponsiveConfig.padding(all: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header Row
+              Row(
+                children: [
+                  // Date Badge
+                  Container(
+                    padding: ResponsiveConfig.padding(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: isToday
+                          ? AppTheme.primaryPink
+                          : AppTheme.lightPink.withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.calendar_today,
+                          size: 14,
+                          color: isToday ? Colors.white : AppTheme.primaryPink,
+                        ),
+                        ResponsiveConfig.widthBox(6),
+                        Text(
+                          isToday
+                              ? 'Today'
+                              : DateFormat('MMM dd').format(entry.date),
+                          style: ResponsiveConfig.textStyle(
+                            size: 12,
+                            weight: FontWeight.w600,
+                            color:
+                                isToday ? Colors.white : AppTheme.primaryPink,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Spacer(),
+                  // Time Badge
+                  Container(
+                    padding: ResponsiveConfig.padding(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppTheme.palePink,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          entry.timeOfDay == 'morning'
+                              ? Icons.wb_sunny
+                              : entry.timeOfDay == 'evening'
+                                  ? Icons.nightlight_round
+                                  : Icons.all_inclusive,
+                          size: 14,
+                          color: AppTheme.primaryPink,
+                        ),
+                        ResponsiveConfig.widthBox(4),
+                        Text(
+                          entry.timeOfDay.toUpperCase(),
+                          style: ResponsiveConfig.textStyle(
+                            size: 11,
+                            weight: FontWeight.w600,
+                            color: AppTheme.primaryPink,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  ResponsiveConfig.widthBox(8),
+                  // Edit Button
+                  IconButton(
+                    icon: const Icon(Icons.edit_outlined),
+                    iconSize: 20,
+                    color: AppTheme.mediumGray,
+                    onPressed: () {
+                      context.push('/skincare-routine-form', extra: entry);
+                    },
+                  ),
+                ],
               ),
-            if (entry.productsUsed.isNotEmpty)
-              Text(
-                '${entry.productsUsed.length} product(s) used',
-                style: ResponsiveConfig.textStyle(
-                  size: 12,
-                  color: AppTheme.mediumGray,
+              ResponsiveConfig.heightBox(12),
+              // Skin Condition
+              if (entry.skinCondition != null) ...[
+                Row(
+                  children: [
+                    Icon(
+                      Icons.face,
+                      size: 16,
+                      color: AppTheme.primaryPink,
+                    ),
+                    ResponsiveConfig.widthBox(8),
+                    Text(
+                      'Skin: ${entry.skinCondition!.toUpperCase()}',
+                      style: ResponsiveConfig.textStyle(
+                        size: 14,
+                        weight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-          ],
-        ),
-        trailing: IconButton(
-          icon: const Icon(Icons.edit),
-          onPressed: () {
-            context.push('/skincare-routine-form', extra: entry);
-          },
+                ResponsiveConfig.heightBox(8),
+              ],
+              // Products Used
+              if (entry.productsUsed.isNotEmpty) ...[
+                Row(
+                  children: [
+                    Icon(
+                      Icons.inventory_2,
+                      size: 16,
+                      color: AppTheme.primaryPink,
+                    ),
+                    ResponsiveConfig.widthBox(8),
+                    Expanded(
+                      child: Text(
+                        '${entry.productsUsed.length} product${entry.productsUsed.length > 1 ? 's' : ''} used',
+                        style: ResponsiveConfig.textStyle(
+                          size: 14,
+                          color: AppTheme.mediumGray,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                ResponsiveConfig.heightBox(8),
+              ],
+              // Photos Preview
+              if (entry.photoUrls != null && entry.photoUrls!.isNotEmpty) ...[
+                ResponsiveConfig.heightBox(8),
+                SizedBox(
+                  height: 60,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: entry.photoUrls!.length > 3
+                        ? 3
+                        : entry.photoUrls!.length,
+                    itemBuilder: (context, index) {
+                      return Container(
+                        margin: ResponsiveConfig.margin(right: 8),
+                        width: 60,
+                        height: 60,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(8),
+                          image: DecorationImage(
+                            image: NetworkImage(entry.photoUrls![index]),
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                        child: entry.photoUrls!.length > 3 && index == 2
+                            ? Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withValues(alpha: 0.5),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    '+${entry.photoUrls!.length - 3}',
+                                    style: ResponsiveConfig.textStyle(
+                                      size: 14,
+                                      weight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              )
+                            : null,
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ],
+          ),
         ),
       ),
     );
   }
 
   Widget _buildProductCard(BuildContext context, SkincareProduct product) {
+    final isExpired = product.isExpired;
+    final isExpiringSoon = product.isExpiringSoon;
+
     return Card(
+      shadowColor: Colors.black.withValues(alpha: 0.08),
       margin: ResponsiveConfig.margin(bottom: 12),
-      child: ListTile(
-        leading: product.imageUrl != null
-            ? CircleAvatar(
-                backgroundImage: NetworkImage(product.imageUrl!),
-              )
-            : CircleAvatar(
-                backgroundColor: AppTheme.lightPink,
-                child: Text(
-                  product.name.substring(0, 1).toUpperCase(),
-                  style: ResponsiveConfig.textStyle(
-                    size: 18,
-                    weight: FontWeight.bold,
-                    color: AppTheme.primaryPink,
-                  ),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: InkWell(
+        onTap: () {
+          context.push('/skincare-product-form', extra: product);
+        },
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: ResponsiveConfig.padding(all: 16),
+          child: Row(
+            children: [
+              // Product Image
+              Container(
+                width: 70,
+                height: 70,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  color: AppTheme.lightPink.withValues(alpha: 0.3),
+                  image: product.imageUrl != null
+                      ? DecorationImage(
+                          image: NetworkImage(product.imageUrl!),
+                          fit: BoxFit.cover,
+                        )
+                      : null,
+                ),
+                child: product.imageUrl == null
+                    ? Center(
+                        child: Text(
+                          product.name.substring(0, 1).toUpperCase(),
+                          style: ResponsiveConfig.textStyle(
+                            size: 24,
+                            weight: FontWeight.bold,
+                            color: AppTheme.primaryPink,
+                          ),
+                        ),
+                      )
+                    : null,
+              ),
+              ResponsiveConfig.widthBox(12),
+              // Product Info
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Product Name
+                    Text(
+                      product.name,
+                      style: ResponsiveConfig.textStyle(
+                        size: 16,
+                        weight: FontWeight.bold,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    ResponsiveConfig.heightBox(4),
+                    // Brand
+                    if (product.brand != null)
+                      Text(
+                        product.brand!,
+                        style: ResponsiveConfig.textStyle(
+                          size: 13,
+                          color: AppTheme.mediumGray,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ResponsiveConfig.heightBox(6),
+                    // Category Badge
+                    Row(
+                      children: [
+                        Container(
+                          padding: ResponsiveConfig.padding(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppTheme.primaryPink.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            product.category.toUpperCase(),
+                            style: ResponsiveConfig.textStyle(
+                              size: 10,
+                              weight: FontWeight.w600,
+                              color: AppTheme.primaryPink,
+                            ),
+                          ),
+                        ),
+                        // Expiry Status
+                        if (isExpired || isExpiringSoon) ...[
+                          ResponsiveConfig.widthBox(8),
+                          Container(
+                            padding: ResponsiveConfig.padding(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isExpired
+                                  ? AppTheme.errorRed
+                                  : AppTheme.warningOrange,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  isExpired ? Icons.error : Icons.warning,
+                                  size: 12,
+                                  color: Colors.white,
+                                ),
+                                ResponsiveConfig.widthBox(4),
+                                Text(
+                                  isExpired ? 'EXPIRED' : 'EXPIRING',
+                                  style: ResponsiveConfig.textStyle(
+                                    size: 10,
+                                    weight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ],
                 ),
               ),
-        title: Text(
-          product.name,
-          style: ResponsiveConfig.textStyle(
-            size: 16,
-            weight: FontWeight.bold,
+              // Edit Button
+              IconButton(
+                icon: const Icon(Icons.edit_outlined),
+                iconSize: 20,
+                color: AppTheme.mediumGray,
+                onPressed: () {
+                  context.push('/skincare-product-form', extra: product);
+                },
+              ),
+            ],
           ),
         ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (product.brand != null)
-              Text(
-                product.brand!,
-                style: ResponsiveConfig.textStyle(size: 14),
-              ),
-            Text(
-              product.category.toUpperCase(),
-              style: ResponsiveConfig.textStyle(
-                size: 12,
-                color: AppTheme.primaryPink,
-              ),
-            ),
-            if (product.isExpiringSoon || product.isExpired)
-              Container(
-                margin: ResponsiveConfig.margin(top: 4),
-                padding: ResponsiveConfig.padding(
-                  horizontal: 8,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: product.isExpired
-                      ? AppTheme.errorRed
-                      : AppTheme.warningOrange,
-                  borderRadius: ResponsiveConfig.borderRadius(4),
-                ),
-                child: Text(
-                  product.isExpired ? 'EXPIRED' : 'EXPIRING SOON',
-                  style: ResponsiveConfig.textStyle(
-                    size: 10,
-                    weight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-          ],
-        ),
-        trailing: IconButton(
-          icon: const Icon(Icons.edit),
-          onPressed: () {
-            context.push('/skincare-product-form', extra: product);
-          },
-        ),
       ),
-      
     );
   }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sanitarypad/data/models/cycle_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/constants/app_constants.dart';
 import '../../presentation/screens/onboarding/onboarding_screen.dart';
@@ -13,10 +14,15 @@ import '../../presentation/screens/profile/profile_screen.dart';
 import '../../presentation/screens/cycle/log_period_screen.dart';
 import '../../presentation/screens/pads/pad_management_screen.dart';
 import '../../presentation/screens/wellness/wellness_journal_screen.dart';
+import '../../presentation/screens/wellness/wellness_journal_list_screen.dart';
+import '../../data/models/wellness_model.dart';
 import '../../presentation/screens/profile/settings/pin_setup_screen.dart';
 import '../../presentation/screens/profile/settings/biometric_setup_screen.dart';
 import '../../presentation/screens/subscription/subscription_screen.dart';
 import '../../presentation/screens/wellness/wellness_content_detail_screen.dart';
+import '../../presentation/screens/wellness/wellness_content_management_screen.dart';
+import '../../presentation/screens/wellness/wellness_content_form_screen.dart';
+import '../../services/wellness_content_service.dart';
 import '../../presentation/screens/profile/emergency_contacts_screen.dart';
 import '../../presentation/screens/profile/emergency_contact_form_screen.dart';
 import '../../data/models/emergency_contact_model.dart';
@@ -194,7 +200,10 @@ class AppRouter {
         GoRoute(
           path: '/log-period',
           name: 'log-period',
-          builder: (context, state) => const LogPeriodScreen(),
+          builder: (context, state) {
+            final cycle = state.extra as CycleModel?;
+            return LogPeriodScreen(cycle: cycle);
+          },
         ),
         GoRoute(
           path: '/pad-management',
@@ -204,7 +213,15 @@ class AppRouter {
         GoRoute(
           path: '/wellness-journal',
           name: 'wellness-journal',
-          builder: (context, state) => const WellnessJournalScreen(),
+          builder: (context, state) {
+            final entry = state.extra as WellnessModel?;
+            return WellnessJournalScreen(entry: entry);
+          },
+        ),
+        GoRoute(
+          path: '/wellness-journal-list',
+          name: 'wellness-journal-list',
+          builder: (context, state) => const WellnessJournalListScreen(),
         ),
 
         // Settings - Protected routes
@@ -226,13 +243,26 @@ class AppRouter {
           builder: (context, state) => const SubscriptionScreen(),
         ),
 
-        // Wellness Content - Protected route
+        // Wellness Content - Protected routes
         GoRoute(
           path: '/wellness-content/:id',
           name: 'wellness-content',
           builder: (context, state) {
             final id = state.pathParameters['id']!;
             return WellnessContentDetailScreen(contentId: id);
+          },
+        ),
+        GoRoute(
+          path: '/wellness-content-management',
+          name: 'wellness-content-management',
+          builder: (context, state) => const WellnessContentManagementScreen(),
+        ),
+        GoRoute(
+          path: '/wellness-content-form',
+          name: 'wellness-content-form',
+          builder: (context, state) {
+            final content = state.extra as WellnessContent?;
+            return WellnessContentFormScreen(content: content);
           },
         ),
 

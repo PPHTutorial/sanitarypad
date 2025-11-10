@@ -203,7 +203,7 @@ class _FertilityTrackingScreenState
                       method.replaceAll('_', ' ').toUpperCase(),
                       style: ResponsiveConfig.textStyle(size: 10),
                     ),
-                    backgroundColor: AppTheme.palePink,
+                    backgroundColor: AppTheme.accentCoral,
                   );
                 }).toList(),
               ),

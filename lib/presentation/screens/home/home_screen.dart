@@ -207,7 +207,7 @@ class HomeScreen extends ConsumerWidget {
                 context,
                 icon: Icons.favorite_outline,
                 label: 'Wellness',
-                onTap: () => context.go('/wellness-journal'),
+                onTap: () => context.go('/wellness-journal-list'),
               ),
             ),
             ResponsiveConfig.widthBox(12),

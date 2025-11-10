@@ -223,6 +223,15 @@ class ProfileScreen extends ConsumerWidget {
           const Divider(),
           _buildSettingsTile(
             context,
+            icon: Icons.article_outlined,
+            title: 'Manage Wellness Content',
+            onTap: () {
+              context.push('/wellness-content-management');
+            },
+          ),
+          const Divider(),
+          _buildSettingsTile(
+            context,
             icon: Icons.help_outline,
             title: 'Help & Support',
             onTap: () {

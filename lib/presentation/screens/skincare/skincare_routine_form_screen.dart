@@ -279,7 +279,7 @@ class _SkincareRoutineFormScreenState
                         ResponsiveConfig.heightBox(8),
                         if (products.isEmpty)
                           Card(
-                            color: AppTheme.palePink,
+                            // color: AppTheme.palePink,
                             child: Padding(
                               padding: ResponsiveConfig.padding(all: 12),
                               child: Text(

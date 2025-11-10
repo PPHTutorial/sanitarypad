@@ -47,7 +47,8 @@ class _FertilityEntryFormScreenState
   @override
   void initState() {
     super.initState();
-    if (widget.entry != null) {
+    // Only populate if entry exists AND has an id (meaning it's saved in database)
+    if (widget.entry != null && widget.entry!.id != null) {
       _selectedDate = widget.entry!.date;
       _bbtController.text =
           widget.entry!.basalBodyTemperature?.toStringAsFixed(1) ?? '';
@@ -57,7 +58,16 @@ class _FertilityEntryFormScreenState
       _intercourse = widget.entry!.intercourse;
       _notesController.text = widget.entry!.notes ?? '';
     } else {
-      _selectedDate = DateTime.now();
+      // For new entries, use provided date or default to today
+      _selectedDate = widget.entry?.date ?? DateTime.now();
+      // If entry exists but has no id, it's a new entry with pre-filled date
+      if (widget.entry != null && widget.entry!.id == null) {
+        // Optionally pre-fill some fields if provided
+        _selectedCervicalMucus = widget.entry!.cervicalMucus;
+        _selectedCervicalPosition = widget.entry!.cervicalPosition;
+        _lhTestPositive = widget.entry!.lhTestPositive;
+        _intercourse = widget.entry!.intercourse;
+      }
     }
   }
 
@@ -95,8 +105,9 @@ class _FertilityEntryFormScreenState
           ? null
           : double.tryParse(_bbtController.text.trim());
 
-      if (widget.entry != null) {
-        // Update existing
+      // Check if entry has an id to determine if it's an update or create
+      if (widget.entry != null && widget.entry!.id != null) {
+        // Update existing entry (has id)
         final updated = widget.entry!.copyWith(
           date: _selectedDate,
           basalBodyTemperature: bbt,
@@ -133,7 +144,9 @@ class _FertilityEntryFormScreenState
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              widget.entry != null ? 'Entry updated' : 'Entry added',
+              (widget.entry != null && widget.entry!.id != null)
+                  ? 'Entry updated'
+                  : 'Entry added',
             ),
           ),
         );
@@ -168,7 +181,11 @@ class _FertilityEntryFormScreenState
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.entry != null ? 'Edit Entry' : 'Add Entry'),
+        title: Text(
+          (widget.entry != null && widget.entry!.id != null)
+              ? 'Edit Entry'
+              : 'Add Entry',
+        ),
       ),
       body: SingleChildScrollView(
         padding: ResponsiveConfig.padding(all: 16),
@@ -338,7 +355,9 @@ class _FertilityEntryFormScreenState
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : Text(
-                        widget.entry != null ? 'Update Entry' : 'Save Entry',
+                        (widget.entry != null && widget.entry!.id != null)
+                            ? 'Update Entry'
+                            : 'Save Entry',
                         style: ResponsiveConfig.textStyle(
                           size: 16,
                           weight: FontWeight.bold,

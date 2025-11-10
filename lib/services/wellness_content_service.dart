@@ -173,4 +173,45 @@ class WellnessContentService {
       return [];
     }
   }
+
+  /// Create wellness content
+  Future<void> createContent(WellnessContent content) async {
+    try {
+      await _firestore
+          .collection(AppConstants.collectionWellnessContent)
+          .add(content.toMap());
+    } catch (e) {
+      throw Exception('Failed to create content: ${e.toString()}');
+    }
+  }
+
+  /// Update wellness content
+  Future<void> updateContent(WellnessContent content) async {
+    if (content.id == null) {
+      throw Exception('Content ID is required for update');
+    }
+    try {
+      await _firestore
+          .collection(AppConstants.collectionWellnessContent)
+          .doc(content.id)
+          .update(content.toMap());
+    } catch (e) {
+      throw Exception('Failed to update content: ${e.toString()}');
+    }
+  }
+
+  /// Delete wellness content
+  Future<void> deleteContent(String? contentId) async {
+    if (contentId == null) {
+      throw Exception('Content ID is required for deletion');
+    }
+    try {
+      await _firestore
+          .collection(AppConstants.collectionWellnessContent)
+          .doc(contentId)
+          .delete();
+    } catch (e) {
+      throw Exception('Failed to delete content: ${e.toString()}');
+    }
+  }
 }

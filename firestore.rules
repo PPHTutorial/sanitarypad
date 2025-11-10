@@ -88,11 +88,12 @@ service cloud.firestore {
     }
     
     // ============================================
-    // WELLNESS CONTENT COLLECTION (Public Read)
+    // WELLNESS CONTENT COLLECTION (Public Read, Authenticated Write)
     // ============================================
     match /wellnessContent/{contentId} {
+      allow list: if request.auth != null;
       allow read: if request.auth != null;
-      allow create, update, delete: if false; // Admin only
+      allow create, update, delete: if request.auth != null; // Authenticated users can manage content
     }
     
     // ============================================

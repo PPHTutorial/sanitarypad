@@ -13,7 +13,9 @@ import '../../../core/widgets/back_button_handler.dart';
 
 /// Wellness journal screen
 class WellnessJournalScreen extends ConsumerStatefulWidget {
-  const WellnessJournalScreen({super.key});
+  final WellnessModel? entry; // For editing existing entry
+
+  const WellnessJournalScreen({super.key, this.entry});
 
   @override
   ConsumerState<WellnessJournalScreen> createState() =>
@@ -22,7 +24,10 @@ class WellnessJournalScreen extends ConsumerStatefulWidget {
 
 class _WellnessJournalScreenState extends ConsumerState<WellnessJournalScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _wellnessService = WellnessService();
   DateTime _selectedDate = DateTime.now();
+  WellnessModel? _existingEntry;
+  bool _isLoadingEntry = false;
 
   // Hydration
   int _waterGlasses = 0;
@@ -58,6 +63,64 @@ class _WellnessJournalScreenState extends ConsumerState<WellnessJournalScreen> {
   List<String> _photoUrls = [];
 
   bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // If editing, populate form with existing entry data
+    // Check if entry has entryId to determine if it's an existing entry
+    if (widget.entry != null && widget.entry!.entryId.isNotEmpty) {
+      _existingEntry = widget.entry;
+      _selectedDate = widget.entry!.date;
+      _loadEntryData(widget.entry!);
+    } else {
+      // Check if entry exists for selected date
+      _checkExistingEntry();
+    }
+  }
+
+  Future<void> _checkExistingEntry() async {
+    setState(() => _isLoadingEntry = true);
+    try {
+      final entry =
+          await _wellnessService.getWellnessEntryForDate(_selectedDate);
+      if (entry != null && mounted) {
+        setState(() {
+          _existingEntry = entry;
+          _loadEntryData(entry);
+        });
+      }
+    } catch (e) {
+      // Entry doesn't exist, continue with create
+    } finally {
+      if (mounted) {
+        setState(() => _isLoadingEntry = false);
+      }
+    }
+  }
+
+  void _loadEntryData(WellnessModel entry) {
+    _waterGlasses = entry.hydration.waterGlasses;
+    _sleepHours = entry.sleep.hours;
+    _sleepQuality = entry.sleep.quality;
+    _appetiteLevel = entry.appetite.level;
+    _moodEmoji = entry.mood.emoji;
+    _energyLevel = entry.mood.energyLevel;
+    _moodDescriptionController.text = entry.mood.description ?? '';
+    _selectedEmotions = List.from(entry.mood.emotions);
+    _stressLevel = entry.mood.stressLevel;
+    _anxietyLevel = entry.mood.anxietyLevel;
+    _depressionLevel = entry.mood.depressionLevel;
+    _mentalHealthNotesController.text = entry.mood.mentalHealthNotes ?? '';
+    _pmsRelated = entry.mood.pmsRelated;
+    if (entry.exercise != null) {
+      _exerciseType = entry.exercise!.type;
+      _exerciseDuration = entry.exercise!.duration;
+      _exerciseIntensity = entry.exercise!.intensity;
+    }
+    _journalController.text = entry.journal ?? '';
+    _photoUrls = List.from(entry.photoUrls ?? []);
+  }
 
   @override
   void dispose() {
@@ -116,7 +179,31 @@ class _WellnessJournalScreenState extends ConsumerState<WellnessJournalScreen> {
       lastDate: DateTime.now(),
     );
     if (picked != null) {
-      setState(() => _selectedDate = picked);
+      setState(() {
+        _selectedDate = picked;
+        _existingEntry = null; // Reset existing entry
+        // Clear form data
+        _waterGlasses = 0;
+        _sleepHours = 7.0;
+        _sleepQuality = 3;
+        _appetiteLevel = 'normal';
+        _moodEmoji = '😊';
+        _energyLevel = 3;
+        _moodDescriptionController.clear();
+        _selectedEmotions = [];
+        _stressLevel = null;
+        _anxietyLevel = null;
+        _depressionLevel = null;
+        _mentalHealthNotesController.clear();
+        _pmsRelated = null;
+        _exerciseType = null;
+        _exerciseDuration = null;
+        _exerciseIntensity = null;
+        _journalController.clear();
+        _photoUrls = [];
+      });
+      // Check if entry exists for new date
+      await _checkExistingEntry();
     }
   }
 
@@ -126,8 +213,6 @@ class _WellnessJournalScreenState extends ConsumerState<WellnessJournalScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final wellnessService = WellnessService();
-
       final hydration = WellnessHydration(
         waterGlasses: _waterGlasses,
         goal: _hydrationGoal,
@@ -167,22 +252,53 @@ class _WellnessJournalScreenState extends ConsumerState<WellnessJournalScreen> {
         );
       }
 
-      await wellnessService.createWellnessEntry(
-        date: _selectedDate,
-        hydration: hydration,
-        sleep: sleep,
-        appetite: appetite,
-        mood: mood,
-        exercise: exercise,
-        journal:
-            _journalController.text.isEmpty ? null : _journalController.text,
-        photoUrls: _photoUrls.isEmpty ? null : _photoUrls,
-      );
+      // Check if entry has an entryId to determine if it's an update or create
+      if (_existingEntry != null && _existingEntry!.entryId.isNotEmpty) {
+        // Update existing entry (has entryId)
+        final updated = WellnessModel(
+          entryId: _existingEntry!.entryId,
+          userId: _existingEntry!.userId,
+          date: _selectedDate,
+          hydration: hydration,
+          sleep: sleep,
+          appetite: appetite,
+          mood: mood,
+          exercise: exercise,
+          journal:
+              _journalController.text.isEmpty ? null : _journalController.text,
+          photoUrls: _photoUrls.isEmpty ? null : _photoUrls,
+          createdAt: _existingEntry!.createdAt,
+        );
+        await _wellnessService.updateWellnessEntry(updated);
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+                content: Text('Wellness entry updated successfully')),
+          );
+        }
+      } else {
+        // Create new entry
+        await _wellnessService.createWellnessEntry(
+          date: _selectedDate,
+          hydration: hydration,
+          sleep: sleep,
+          appetite: appetite,
+          mood: mood,
+          exercise: exercise,
+          journal:
+              _journalController.text.isEmpty ? null : _journalController.text,
+          photoUrls: _photoUrls.isEmpty ? null : _photoUrls,
+        );
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Wellness entry saved successfully')),
+          );
+        }
+      }
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Wellness entry saved successfully')),
-        );
         Navigator.of(context).pop();
       }
     } catch (e) {
@@ -201,84 +317,89 @@ class _WellnessJournalScreenState extends ConsumerState<WellnessJournalScreen> {
   @override
   Widget build(BuildContext context) {
     return BackButtonHandler(
-      fallbackRoute: '/home',
-      child: Scaffold(
-      appBar: AppBar(
-        title: const Text('Wellness Journal'),
-      ),
-      body: SingleChildScrollView(
-        padding: ResponsiveConfig.padding(all: 16),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Date Selector
-              InkWell(
-                onTap: _selectDate,
-                child: InputDecorator(
-                  decoration: const InputDecoration(
-                    labelText: 'Date',
-                    suffixIcon: Icon(Icons.calendar_today),
-                  ),
-                  child: Text(
-                    app_date_utils.DateUtils.formatDate(_selectedDate),
-                  ),
-                ),
-              ),
-              ResponsiveConfig.heightBox(24),
-
-              // Mood Tracker
-              _buildMoodSection(),
-              ResponsiveConfig.heightBox(24),
-
-              // Hydration
-              _buildHydrationSection(),
-              ResponsiveConfig.heightBox(24),
-
-              // Sleep
-              _buildSleepSection(),
-              ResponsiveConfig.heightBox(24),
-
-              // Appetite
-              _buildAppetiteSection(),
-              ResponsiveConfig.heightBox(24),
-
-              // Exercise (Optional)
-              _buildExerciseSection(),
-              ResponsiveConfig.heightBox(24),
-
-              // Photo Diary
-              _buildPhotoDiarySection(),
-              ResponsiveConfig.heightBox(24),
-
-              // Journal Entry
-              TextFormField(
-                controller: _journalController,
-                decoration: const InputDecoration(
-                  labelText: 'Journal Entry (Optional)',
-                  hintText: 'How are you feeling today?',
-                ),
-                maxLines: 5,
-              ),
-              ResponsiveConfig.heightBox(32),
-
-              // Save Button
-              ElevatedButton(
-                onPressed: _isLoading ? null : _saveEntry,
-                child: _isLoading
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Text('Save Entry'),
-              ),
-            ],
+        fallbackRoute: '/home',
+        child: Scaffold(
+          appBar: AppBar(
+            title: Text(_existingEntry != null
+                ? 'Edit Wellness Entry'
+                : 'Wellness Journal'),
           ),
-        ),
-      ),
-    ));
+          body: SingleChildScrollView(
+            padding: ResponsiveConfig.padding(all: 16),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Date Selector
+                  InkWell(
+                    onTap: _selectDate,
+                    child: InputDecorator(
+                      decoration: const InputDecoration(
+                        labelText: 'Date',
+                        suffixIcon: Icon(Icons.calendar_today),
+                      ),
+                      child: Text(
+                        app_date_utils.DateUtils.formatDate(_selectedDate),
+                      ),
+                    ),
+                  ),
+                  ResponsiveConfig.heightBox(24),
+
+                  // Mood Tracker
+                  _buildMoodSection(),
+                  ResponsiveConfig.heightBox(24),
+
+                  // Hydration
+                  _buildHydrationSection(),
+                  ResponsiveConfig.heightBox(24),
+
+                  // Sleep
+                  _buildSleepSection(),
+                  ResponsiveConfig.heightBox(24),
+
+                  // Appetite
+                  _buildAppetiteSection(),
+                  ResponsiveConfig.heightBox(24),
+
+                  // Exercise (Optional)
+                  _buildExerciseSection(),
+                  ResponsiveConfig.heightBox(24),
+
+                  // Photo Diary
+                  _buildPhotoDiarySection(),
+                  ResponsiveConfig.heightBox(24),
+
+                  // Journal Entry
+                  TextFormField(
+                    controller: _journalController,
+                    decoration: const InputDecoration(
+                      labelText: 'Journal Entry (Optional)',
+                      hintText: 'How are you feeling today?',
+                    ),
+                    maxLines: 5,
+                  ),
+                  ResponsiveConfig.heightBox(32),
+
+                  // Save Button
+                  ElevatedButton(
+                    onPressed:
+                        (_isLoading || _isLoadingEntry) ? null : _saveEntry,
+                    child: (_isLoading || _isLoadingEntry)
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : Text(_existingEntry != null
+                            ? 'Update Entry'
+                            : 'Save Entry'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ));
   }
 
   Widget _buildMoodSection() {
@@ -870,7 +991,6 @@ class _WellnessJournalScreenState extends ConsumerState<WellnessJournalScreen> {
           ],
         ),
       ),
-      
     );
   }
 }
