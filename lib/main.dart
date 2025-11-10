@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'core/theme/app_theme.dart';
 import 'core/config/responsive_config.dart';
 import 'core/storage/hive_storage.dart';
@@ -14,6 +15,31 @@ import 'services/notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Load environment variables from .env file
+  // Note: .env file must be in the project root and listed in pubspec.yaml assets
+  try {
+    await dotenv.load();
+    debugPrint('✓ Environment variables loaded successfully');
+    if (dotenv.env['OPENAI_API_KEY'] == null ||
+        dotenv.env['OPENAI_API_KEY']!.isEmpty ||
+        dotenv.env['OPENAI_API_KEY'] == 'sk-your-api-key-here') {
+      debugPrint(
+          '⚠ Warning: OPENAI_API_KEY is not set or is using placeholder value');
+    }
+  } catch (e) {
+    // .env file not found or error loading - app will still run but AI features won't work
+    debugPrint('⚠ Warning: Could not load .env file: $e');
+    debugPrint(
+        '⚠ AI Assistant features will not be available without .env configuration.');
+    debugPrint('⚠ Steps to fix:');
+    debugPrint(
+        '   1. Create .env file in project root (same directory as pubspec.yaml)');
+    debugPrint('   2. Add: OPENAI_API_KEY=sk-your-actual-api-key-here');
+    debugPrint('   3. Ensure .env is listed in pubspec.yaml assets section');
+    debugPrint('   4. Run: flutter pub get');
+    debugPrint('   5. Restart the app');
+  }
 
   // Set preferred orientations
   SystemChrome.setPreferredOrientations([

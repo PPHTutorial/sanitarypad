@@ -2,14 +2,29 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
+    // Helper function to check if user owns the document
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Helper function to check if user owns the resource
+    function isResourceOwner() {
+      return request.auth != null && resource.data.userId == request.auth.uid;
+    }
+    
+    // Helper function to check if user owns the new resource
+    function isNewResourceOwner() {
+      return request.auth != null && request.resource.data.userId == request.auth.uid;
+    }
+    
     // ============================================
     // USERS COLLECTION
     // ============================================
     match /users/{userId} {
-      allow read: if request.auth != null && request.auth.uid == userId;
-      allow create: if request.auth != null && request.auth.uid == userId;
-      allow update: if request.auth != null && request.auth.uid == userId;
-      allow delete: if request.auth != null && request.auth.uid == userId;
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId);
+      allow delete: if isOwner(userId);
     }
     
     // ============================================
@@ -17,30 +32,30 @@ service cloud.firestore {
     // ============================================
     match /cycles/{cycleId} {
       allow list: if request.auth != null;
-      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
-      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      allow update: if request.auth != null && resource.data.userId == request.auth.uid;
-      allow delete: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow read: if isResourceOwner();
+      allow create: if isNewResourceOwner();
+      allow update: if isResourceOwner();
+      allow delete: if isResourceOwner();
     }
     
     // ============================================
     // CYCLE PREDICTIONS COLLECTION
     // ============================================
     match /cyclePredictions/{predictionId} {
-      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
-      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      allow update: if request.auth != null && resource.data.userId == request.auth.uid;
-      allow delete: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow read: if isResourceOwner();
+      allow create: if isNewResourceOwner();
+      allow update: if isResourceOwner();
+      allow delete: if isResourceOwner();
     }
     
     // ============================================
     // SYMPTOMS COLLECTION
     // ============================================
     match /symptoms/{symptomId} {
-      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
-      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      allow update: if request.auth != null && resource.data.userId == request.auth.uid;
-      allow delete: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow read: if isResourceOwner();
+      allow create: if isNewResourceOwner();
+      allow update: if isResourceOwner();
+      allow delete: if isResourceOwner();
     }
     
     // ============================================
@@ -48,10 +63,10 @@ service cloud.firestore {
     // ============================================
     match /wellnessEntries/{entryId} {
       allow list: if request.auth != null;
-      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
-      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      allow update: if request.auth != null && resource.data.userId == request.auth.uid;
-      allow delete: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow read: if isResourceOwner();
+      allow create: if isNewResourceOwner();
+      allow update: if isResourceOwner();
+      allow delete: if isResourceOwner();
     }
     
     // ============================================
@@ -59,10 +74,10 @@ service cloud.firestore {
     // ============================================
     match /pads/{padId} {
       allow list: if request.auth != null;
-      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
-      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      allow update: if request.auth != null && resource.data.userId == request.auth.uid;
-      allow delete: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow read: if isResourceOwner();
+      allow create: if isNewResourceOwner();
+      allow update: if isResourceOwner();
+      allow delete: if isResourceOwner();
     }
     
     // ============================================
@@ -70,10 +85,10 @@ service cloud.firestore {
     // ============================================
     match /padInventory/{inventoryId} {
       allow list: if request.auth != null;
-      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
-      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      allow update: if request.auth != null && resource.data.userId == request.auth.uid;
-      allow delete: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow read: if isResourceOwner();
+      allow create: if isNewResourceOwner();
+      allow update: if isResourceOwner();
+      allow delete: if isResourceOwner();
     }
     
     // ============================================
@@ -81,10 +96,10 @@ service cloud.firestore {
     // ============================================
     match /reminders/{reminderId} {
       allow list: if request.auth != null;
-      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
-      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      allow update: if request.auth != null && resource.data.userId == request.auth.uid;
-      allow delete: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow read: if isResourceOwner();
+      allow create: if isNewResourceOwner();
+      allow update: if isResourceOwner();
+      allow delete: if isResourceOwner();
     }
     
     // ============================================
@@ -93,28 +108,28 @@ service cloud.firestore {
     match /wellnessContent/{contentId} {
       allow list: if request.auth != null;
       allow read: if request.auth != null;
-      allow create: if request.auth != null; // Authenticated users can create content
-      allow update: if request.auth != null; // Authenticated users can update content
-      allow delete: if request.auth != null; // Authenticated users can delete content
+      allow create: if request.auth != null;
+      allow update: if request.auth != null;
+      allow delete: if request.auth != null;
     }
     
     // ============================================
     // ANALYTICS COLLECTION
     // ============================================
     match /analytics/{analyticsId} {
-      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
-      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      allow update: if request.auth != null && resource.data.userId == request.auth.uid;
-      allow delete: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow read: if isResourceOwner();
+      allow create: if isNewResourceOwner();
+      allow update: if isResourceOwner();
+      allow delete: if isResourceOwner();
     }
     
     // ============================================
     // SUBSCRIPTIONS COLLECTION
     // ============================================
     match /subscriptions/{subscriptionId} {
-      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
-      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      allow update: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow read: if isResourceOwner();
+      allow create: if isNewResourceOwner();
+      allow update: if isResourceOwner();
       allow delete: if false; // Keep audit trail
     }
     
@@ -123,19 +138,19 @@ service cloud.firestore {
     // ============================================
     match /supportContacts/{contactId} {
       allow list: if request.auth != null;
-      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
-      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      allow update: if request.auth != null && resource.data.userId == request.auth.uid;
-      allow delete: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow read: if isResourceOwner();
+      allow create: if isNewResourceOwner();
+      allow update: if isResourceOwner();
+      allow delete: if isResourceOwner();
     }
     
     // ============================================
     // RED FLAG ALERTS COLLECTION
     // ============================================
     match /redFlagAlerts/{alertId} {
-      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
-      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      allow update: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow read: if isResourceOwner();
+      allow create: if isNewResourceOwner();
+      allow update: if isResourceOwner();
       allow delete: if false; // Keep records
     }
     
@@ -143,40 +158,285 @@ service cloud.firestore {
     // PREGNANCIES COLLECTION
     // ============================================
     match /pregnancies/{pregnancyId} {
-      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
-      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      allow update: if request.auth != null && resource.data.userId == request.auth.uid;
-      allow delete: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow list: if request.auth != null;
+      allow read: if isResourceOwner();
+      allow create: if isNewResourceOwner();
+      allow update: if isResourceOwner();
+      allow delete: if isResourceOwner();
+    }
+    
+    // ============================================
+    // PREGNANCY ENHANCED COLLECTIONS
+    // ============================================
+    match /kickEntries/{entryId} {
+      allow list: if request.auth != null;
+      allow read: if isResourceOwner();
+      allow create: if isNewResourceOwner();
+      allow update: if isResourceOwner();
+      allow delete: if isResourceOwner();
+    }
+    
+    match /contractionEntries/{entryId} {
+      allow list: if request.auth != null;
+      allow read: if isResourceOwner();
+      allow create: if isNewResourceOwner();
+      allow update: if isResourceOwner();
+      allow delete: if isResourceOwner();
+    }
+    
+    match /pregnancyAppointments/{appointmentId} {
+      allow list: if request.auth != null;
+      allow read: if isResourceOwner();
+      allow create: if isNewResourceOwner();
+      allow update: if isResourceOwner();
+      allow delete: if isResourceOwner();
+    }
+    
+    match /pregnancyMedications/{medicationId} {
+      allow list: if request.auth != null;
+      allow read: if isResourceOwner();
+      allow create: if isNewResourceOwner();
+      allow update: if isResourceOwner();
+      allow delete: if isResourceOwner();
+    }
+    
+    match /pregnancyJournalEntries/{entryId} {
+      allow list: if request.auth != null;
+      allow read: if isResourceOwner();
+      allow create: if isNewResourceOwner();
+      allow update: if isResourceOwner();
+      allow delete: if isResourceOwner();
+    }
+    
+    match /pregnancyWeightEntries/{entryId} {
+      allow list: if request.auth != null;
+      allow read: if isResourceOwner();
+      allow create: if isNewResourceOwner();
+      allow update: if isResourceOwner();
+      allow delete: if isResourceOwner();
+    }
+    
+    match /hospitalChecklistItems/{itemId} {
+      allow list: if request.auth != null;
+      allow read: if isResourceOwner();
+      allow create: if isNewResourceOwner();
+      allow update: if isResourceOwner();
+      allow delete: if isResourceOwner();
     }
     
     // ============================================
     // FERTILITY ENTRIES COLLECTION
     // ============================================
     match /fertilityEntries/{entryId} {
-      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
-      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      allow update: if request.auth != null && resource.data.userId == request.auth.uid;
-      allow delete: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow list: if request.auth != null;
+      allow read: if isResourceOwner();
+      allow create: if isNewResourceOwner();
+      allow update: if isResourceOwner();
+      allow delete: if isResourceOwner();
+    }
+    
+    // ============================================
+    // FERTILITY ENHANCED COLLECTIONS
+    // ============================================
+    match /hormoneCycles/{cycleId} {
+      allow list: if request.auth != null;
+      allow read: if isResourceOwner();
+      allow create: if isNewResourceOwner();
+      allow update: if isResourceOwner();
+      allow delete: if isResourceOwner();
+    }
+    
+    match /fertilitySymptoms/{symptomId} {
+      allow list: if request.auth != null;
+      allow read: if isResourceOwner();
+      allow create: if isNewResourceOwner();
+      allow update: if isResourceOwner();
+      allow delete: if isResourceOwner();
+    }
+    
+    match /moodEnergyEntries/{entryId} {
+      allow list: if request.auth != null;
+      allow read: if isResourceOwner();
+      allow create: if isNewResourceOwner();
+      allow update: if isResourceOwner();
+      allow delete: if isResourceOwner();
+    }
+    
+    match /fertilityMedications/{medicationId} {
+      allow list: if request.auth != null;
+      allow read: if isResourceOwner();
+      allow create: if isNewResourceOwner();
+      allow update: if isResourceOwner();
+      allow delete: if isResourceOwner();
+    }
+    
+    match /intercourseEntries/{entryId} {
+      allow list: if request.auth != null;
+      allow read: if isResourceOwner();
+      allow create: if isNewResourceOwner();
+      allow update: if isResourceOwner();
+      allow delete: if isResourceOwner();
+    }
+    
+    match /pregnancyTestEntries/{entryId} {
+      allow list: if request.auth != null;
+      allow read: if isResourceOwner();
+      allow create: if isNewResourceOwner();
+      allow update: if isResourceOwner();
+      allow delete: if isResourceOwner();
+    }
+    
+    match /healthRecommendations/{recommendationId} {
+      allow list: if request.auth != null;
+      allow read: if isResourceOwner();
+      allow create: if isNewResourceOwner();
+      allow update: if isResourceOwner();
+      allow delete: if isResourceOwner();
+    }
+    
+    match /ovulationTestReminders/{reminderId} {
+      allow list: if request.auth != null;
+      allow read: if isResourceOwner();
+      allow create: if isNewResourceOwner();
+      allow update: if isResourceOwner();
+      allow delete: if isResourceOwner();
     }
     
     // ============================================
     // SKINCARE ENTRIES COLLECTION
     // ============================================
     match /skincareEntries/{entryId} {
-      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
-      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      allow update: if request.auth != null && resource.data.userId == request.auth.uid;
-      allow delete: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow list: if request.auth != null;
+      allow read: if isResourceOwner();
+      allow create: if isNewResourceOwner();
+      allow update: if isResourceOwner();
+      allow delete: if isResourceOwner();
     }
     
     // ============================================
     // SKINCARE PRODUCTS COLLECTION
     // ============================================
     match /skincareProducts/{productId} {
-      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
-      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      allow update: if request.auth != null && resource.data.userId == request.auth.uid;
-      allow delete: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow list: if request.auth != null;
+      allow read: if isResourceOwner();
+      allow create: if isNewResourceOwner();
+      allow update: if isResourceOwner();
+      allow delete: if isResourceOwner();
+    }
+    
+    // ============================================
+    // SKINCARE ENHANCED COLLECTIONS
+    // ============================================
+    match /skinTypes/{typeId} {
+      allow list: if request.auth != null;
+      allow read: if isResourceOwner();
+      allow create: if isNewResourceOwner();
+      allow update: if isResourceOwner();
+      allow delete: if isResourceOwner();
+    }
+    
+    match /skinJournalEntries/{entryId} {
+      allow list: if request.auth != null;
+      allow read: if isResourceOwner();
+      allow create: if isNewResourceOwner();
+      allow update: if isResourceOwner();
+      allow delete: if isResourceOwner();
+    }
+    
+    match /routineTemplates/{templateId} {
+      allow list: if request.auth != null;
+      allow read: if isResourceOwner();
+      allow create: if isNewResourceOwner();
+      allow update: if isResourceOwner();
+      allow delete: if isResourceOwner();
+    }
+    
+    match /ingredients/{ingredientId} {
+      allow list: if request.auth != null;
+      allow read: if request.auth != null; // Ingredients can be shared/read by all authenticated users
+      allow create: if request.auth != null; // Any authenticated user can add ingredients
+      allow update: if request.auth != null;
+      allow delete: if request.auth != null;
+    }
+    
+    match /acneEntries/{entryId} {
+      allow list: if request.auth != null;
+      allow read: if isResourceOwner();
+      allow create: if isNewResourceOwner();
+      allow update: if isResourceOwner();
+      allow delete: if isResourceOwner();
+    }
+    
+    match /uvIndexEntries/{entryId} {
+      allow list: if request.auth != null;
+      allow read: if isResourceOwner();
+      allow create: if isNewResourceOwner();
+      allow update: if isResourceOwner();
+      allow delete: if isResourceOwner();
+    }
+    
+    match /skinGoals/{goalId} {
+      allow list: if request.auth != null;
+      allow read: if isResourceOwner();
+      allow create: if isNewResourceOwner();
+      allow update: if isResourceOwner();
+      allow delete: if isResourceOwner();
+    }
+    
+    // ============================================
+    // COMMUNITY COLLECTIONS (GROUPS & EVENTS)
+    // ============================================
+    match /groups/{groupId} {
+      allow list: if request.auth != null;
+      allow read: if request.auth != null; // All authenticated users can read groups
+      allow create: if request.auth != null; // Any authenticated user can create groups
+      allow update: if request.auth != null && 
+        (resource.data.adminId == request.auth.uid || request.resource.data.adminId == request.auth.uid);
+      allow delete: if request.auth != null && resource.data.adminId == request.auth.uid;
+    }
+    
+    match /groupMembers/{memberId} {
+      allow list: if request.auth != null;
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+      allow update: if request.auth != null;
+      allow delete: if request.auth != null;
+    }
+    
+    match /events/{eventId} {
+      allow list: if request.auth != null;
+      allow read: if request.auth != null; // All authenticated users can read events
+      allow create: if request.auth != null; // Any authenticated user can create events
+      allow update: if request.auth != null && 
+        (resource.data.organizerId == request.auth.uid || request.resource.data.organizerId == request.auth.uid);
+      allow delete: if request.auth != null && resource.data.organizerId == request.auth.uid;
+    }
+    
+    match /eventAttendees/{attendeeId} {
+      allow list: if request.auth != null;
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+      allow update: if request.auth != null;
+      allow delete: if request.auth != null;
+    }
+    
+    // ============================================
+    // AI CHAT COLLECTIONS
+    // ============================================
+    match /aiChatMessages/{messageId} {
+      allow list: if request.auth != null;
+      allow read: if isResourceOwner();
+      allow create: if isNewResourceOwner();
+      allow update: if isResourceOwner();
+      allow delete: if isResourceOwner();
+    }
+    
+    match /aiConversations/{conversationId} {
+      allow list: if request.auth != null;
+      allow read: if isResourceOwner();
+      allow create: if isNewResourceOwner();
+      allow update: if isResourceOwner();
+      allow delete: if isResourceOwner();
     }
     
     // ============================================

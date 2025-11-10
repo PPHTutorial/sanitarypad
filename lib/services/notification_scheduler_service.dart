@@ -46,7 +46,10 @@ class NotificationSchedulerService {
   Future<void> _schedulePeriodPredictions(String userId) async {
     try {
       final cycles = await _cycleService.getCycles();
-      if (cycles.isEmpty) return;
+      if (cycles.isEmpty) {
+        print('⚠️ No cycles found for period prediction');
+        return;
+      }
 
       // Get the most recent cycle
       final lastCycle = cycles.first;
@@ -60,13 +63,24 @@ class NotificationSchedulerService {
             userId, AppConstants.reminderPeriodPrediction);
 
         // Create new reminder (scheduled 1 day before predicted period)
-        await _reminderService.createPeriodPredictionReminder(
-          userId: userId,
-          predictedDate: nextPeriodStart,
-        );
+        final reminderDate = nextPeriodStart.subtract(const Duration(days: 1));
+        if (reminderDate.isAfter(DateTime.now())) {
+          await _reminderService.createPeriodPredictionReminder(
+            userId: userId,
+            predictedDate: nextPeriodStart,
+          );
+          print(
+              '✅ Period prediction scheduled for: $nextPeriodStart (reminder: $reminderDate)');
+        } else {
+          print(
+              '⚠️ Period prediction reminder date is in the past: $reminderDate');
+        }
+      } else {
+        print('⚠️ Next period start is in the past: $nextPeriodStart');
       }
     } catch (e) {
-      print('Error scheduling period predictions: $e');
+      print('❌ Error scheduling period predictions: $e');
+      print(e.toString());
     }
   }
 
@@ -74,7 +88,10 @@ class NotificationSchedulerService {
   Future<void> _schedulePadChangeReminders(String userId) async {
     try {
       final pads = await _padService.getPadChanges(limit: 1);
-      if (pads.isEmpty) return;
+      if (pads.isEmpty) {
+        print('⚠️ No pad changes found for reminder scheduling');
+        return;
+      }
 
       final lastPad = pads.first;
       final hoursSinceChange =
@@ -91,16 +108,23 @@ class NotificationSchedulerService {
         reminderTime = DateTime.now().add(Duration(hours: hoursUntilReminder));
       }
 
-      // Cancel existing pad change reminders
-      await _cancelRemindersByType(userId, AppConstants.reminderPadChange);
+      // Only schedule if reminder time is in the future
+      if (reminderTime.isAfter(DateTime.now())) {
+        // Cancel existing pad change reminders
+        await _cancelRemindersByType(userId, AppConstants.reminderPadChange);
 
-      // Create new reminder
-      await _reminderService.createPadChangeReminder(
-        userId: userId,
-        scheduledTime: reminderTime,
-      );
+        // Create new reminder
+        await _reminderService.createPadChangeReminder(
+          userId: userId,
+          scheduledTime: reminderTime,
+        );
+        print('✅ Pad change reminder scheduled for: $reminderTime');
+      } else {
+        print('⚠️ Pad change reminder time is in the past: $reminderTime');
+      }
     } catch (e) {
-      print('Error scheduling pad change reminders: $e');
+      print('❌ Error scheduling pad change reminders: $e');
+      print(e.toString());
     }
   }
 
@@ -111,16 +135,24 @@ class NotificationSchedulerService {
       final now = DateTime.now();
       final tomorrow = DateTime(now.year, now.month, now.day + 1, 9, 0);
 
-      // Cancel existing wellness reminders
-      await _cancelRemindersByType(userId, AppConstants.reminderWellnessCheck);
+      // Only schedule if tomorrow is in the future (should always be, but check anyway)
+      if (tomorrow.isAfter(DateTime.now())) {
+        // Cancel existing wellness reminders
+        await _cancelRemindersByType(
+            userId, AppConstants.reminderWellnessCheck);
 
-      // Create new reminder
-      await _reminderService.createWellnessCheckReminder(
-        userId: userId,
-        scheduledTime: tomorrow,
-      );
+        // Create new reminder
+        await _reminderService.createWellnessCheckReminder(
+          userId: userId,
+          scheduledTime: tomorrow,
+        );
+        print('✅ Wellness reminder scheduled for: $tomorrow');
+      } else {
+        print('⚠️ Wellness reminder time is in the past: $tomorrow');
+      }
     } catch (e) {
-      print('Error scheduling wellness reminders: $e');
+      print('❌ Error scheduling wellness reminders: $e');
+      print(e.toString());
     }
   }
 
@@ -153,24 +185,33 @@ class NotificationSchedulerService {
         final reminderDate =
             prediction.fertileWindowStart.subtract(const Duration(days: 1));
 
-        // Cancel existing fertility reminders
-        await _cancelRemindersByType(userId, 'fertility_window');
+        // Only schedule if reminder date is in the future
+        if (reminderDate.isAfter(DateTime.now())) {
+          // Cancel existing fertility reminders
+          await _cancelRemindersByType(userId, 'fertility_window');
 
-        // Create reminder
-        await _reminderService.createCustomReminder(
-          userId: userId,
-          title: 'Fertile Window Approaching',
-          description:
-              'Your fertile window starts on ${_formatDate(prediction.fertileWindowStart)}',
-          scheduledTime: reminderDate,
-          metadata: {
-            'type': 'fertility_window',
-            'ovulationDate': prediction.predictedOvulation.toIso8601String(),
-            'fertileWindowStart':
-                prediction.fertileWindowStart.toIso8601String(),
-            'fertileWindowEnd': prediction.fertileWindowEnd.toIso8601String(),
-          },
-        );
+          // Create reminder
+          await _reminderService.createCustomReminder(
+            userId: userId,
+            title: 'Fertile Window Approaching',
+            description:
+                'Your fertile window starts on ${_formatDate(prediction.fertileWindowStart)}',
+            scheduledTime: reminderDate,
+            metadata: {
+              'type': 'fertility_window',
+              'ovulationDate': prediction.predictedOvulation.toIso8601String(),
+              'fertileWindowStart':
+                  prediction.fertileWindowStart.toIso8601String(),
+              'fertileWindowEnd': prediction.fertileWindowEnd.toIso8601String(),
+            },
+          );
+          print('✅ Fertility reminder scheduled for: $reminderDate');
+        } else {
+          print('⚠️ Fertility reminder date is in the past: $reminderDate');
+        }
+      } else {
+        print(
+            '⚠️ Predicted ovulation is in the past: ${prediction.predictedOvulation}');
       }
     } catch (e) {
       print('Error scheduling fertility notifications: $e');

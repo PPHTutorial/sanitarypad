@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import 'package:go_router/go_router.dart';
 import '../../../core/config/responsive_config.dart';
 import '../../../core/providers/auth_provider.dart';
 import '../../../core/theme/app_theme.dart';
@@ -12,6 +13,7 @@ import '../../../core/widgets/back_button_handler.dart';
 import '../../../data/models/pregnancy_model.dart';
 import '../../../services/pregnancy_service.dart';
 import '../../../services/reminder_service.dart';
+import '../reminders/create_reminder_dialog.dart';
 
 class PregnancyTrackingScreen extends ConsumerStatefulWidget {
   const PregnancyTrackingScreen({super.key});
@@ -120,6 +122,10 @@ class _PregnancyTrackingScreenState
                   medicationStream: medicationStream,
                   onScheduleKickReminder: () =>
                       _scheduleReminder(user.userId, 'kick_check'),
+                  onAddAppointment: () =>
+                      _showAppointmentSheet(context, user.userId, pregnancyId),
+                  onAddMedication: () =>
+                      _showMedicationSheet(context, user.userId, pregnancyId),
                 ),
                 _JournalTab(
                   pregnancy: pregnancy,
@@ -163,6 +169,7 @@ class _PregnancyTrackingScreenState
 
   Widget _buildModernTabSwitcher(BuildContext context) {
     return TabBar(
+      dividerColor: AppTheme.darkGray.withOpacity(0.2),
       controller: _tabController,
       labelStyle: ResponsiveConfig.textStyle(
         size: 14,
@@ -198,7 +205,9 @@ class _PregnancyTrackingScreenState
         top: 24,
         bottom: MediaQuery.of(context).viewInsets.bottom + 24,
       ),
-      child: child,
+      child: SingleChildScrollView(
+        child: child,
+      ),
     );
   }
 
@@ -207,53 +216,124 @@ class _PregnancyTrackingScreenState
     String pregnancyId,
     Pregnancy pregnancy,
   ) {
-    switch (_tabController.index) {
-      case 0:
-        return FloatingActionButton.extended(
-          onPressed: () => _showKickSheet(context, userId, pregnancyId),
-          icon: const Icon(Icons.favorite_outlined),
-          label: const Text('Log kicks'),
+    return FloatingActionButton.extended(
+      onPressed: () => _showQuickActionsMenu(context, userId, pregnancyId),
+      icon: const Icon(Icons.add_circle_outline),
+      label: const Text('Quick Actions'),
+    );
+  }
+
+  Future<void> _showQuickActionsMenu(
+    BuildContext context,
+    String userId,
+    String pregnancyId,
+  ) async {
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Padding(
+                  padding: ResponsiveConfig.padding(all: 16),
+                  child: Text(
+                    'Quick Actions',
+                    style: ResponsiveConfig.textStyle(
+                      size: 18,
+                      weight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.favorite_outlined),
+                  title: const Text('Log Kick'),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    _showKickSheet(context, userId, pregnancyId);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.timer_outlined),
+                  title: const Text('Log Contraction'),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    _showContractionSheet(context, userId, pregnancyId);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.edit_note_outlined),
+                  title: const Text('Log Journal Entry'),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    _showJournalSheet(context, userId, pregnancyId);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.monitor_weight_outlined),
+                  title: const Text('Log Weight'),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    _showWeightSheet(context, userId, pregnancyId);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.event_available_outlined),
+                  title: const Text('Add Appointment'),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    _showAppointmentSheet(context, userId, pregnancyId);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.medication_liquid_outlined),
+                  title: const Text('Add Medication'),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    _showMedicationSheet(context, userId, pregnancyId);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.checklist_outlined),
+                  title: const Text('Add Checklist Item'),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    _showChecklistSheet(context, userId, pregnancyId);
+                  },
+                ),
+              ],
+            ),
+          ),
         );
-      case 1:
-        return FloatingActionButton.extended(
-          onPressed: () => _showJournalSheet(context, userId, pregnancyId),
-          icon: const Icon(Icons.edit_note_outlined),
-          label: const Text('New journal'),
-        );
-      case 2:
-        return FloatingActionButton.extended(
-          onPressed: () => _showAppointmentSheet(context, userId, pregnancyId),
-          icon: const Icon(Icons.event_available_outlined),
-          label: const Text('Add appointment'),
-        );
-      case 3:
-        return FloatingActionButton.extended(
-          onPressed: () => _showContractionSheet(context, userId, pregnancyId),
-          icon: const Icon(Icons.timer_outlined),
-          label: const Text('Log contraction'),
-        );
-      default:
-        return null;
-    }
+      },
+    );
   }
 
   Future<void> _scheduleReminder(String userId, String type) async {
-    final reminder = Reminder(
-      userId: userId,
-      type: type,
-      title:
-          type == 'kick_check' ? 'Kick counter reminder' : 'Pregnancy reminder',
-      description: type == 'kick_check'
-          ? 'Take a moment to count baby kicks.'
-          : 'FemCare+ reminder',
-      scheduledTime: DateTime.now().add(const Duration(minutes: 1)),
-      metadata: const {'repeat': 'daily'},
+    final result = await showDialog(
+      context: context,
+      builder: (context) => CreateReminderDialog(
+        userId: userId,
+        defaultType: type,
+        defaultTitle: type == 'kick_check'
+            ? 'Kick Counter Reminder'
+            : 'Pregnancy Reminder',
+        defaultDescription: type == 'kick_check'
+            ? 'Take a moment to count baby kicks.'
+            : 'FemCare+ reminder',
+      ),
     );
-    await _reminderService.createReminder(reminder);
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Reminder scheduled.')),
-    );
+
+    if (result == true && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Reminder scheduled.')),
+      );
+    }
   }
 
   Future<void> _showKickSheet(
@@ -614,24 +694,32 @@ class _PregnancyTrackingScreenState
                       ),
                     ),
                     ResponsiveConfig.heightBox(16),
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: const Icon(Icons.calendar_today_outlined),
-                      title: Text(
-                          DateFormat('EEE, MMM d, y').format(selectedDate)),
-                      onTap: () async {
-                        final picked = await showDatePicker(
-                          context: context,
-                          initialDate: selectedDate,
-                          firstDate: DateTime.now()
-                              .subtract(const Duration(days: 280)),
-                          lastDate: DateTime.now(),
-                        );
-                        if (picked != null) {
-                          selectedDate = picked;
-                          setState(() {});
-                        }
-                      },
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            leading: const Icon(Icons.calendar_today_outlined),
+                            title: Text(DateFormat('EEE, MMM d, y')
+                                .format(selectedDate)),
+                            onTap: () async {
+                              final picked = await showDatePicker(
+                                context: context,
+                                initialDate: selectedDate,
+                                firstDate: DateTime.now()
+                                    .subtract(const Duration(days: 280)),
+                                lastDate: DateTime.now(),
+                              );
+                              if (picked != null) {
+                                selectedDate = picked;
+                                setState(() {});
+                              }
+                            },
+                          ),
+                        ),
+                        const Icon(Icons.edit_outlined, size: 24),
+                      ],
                     ),
                     ResponsiveConfig.heightBox(16),
                     TextFormField(
@@ -647,6 +735,7 @@ class _PregnancyTrackingScreenState
                         return null;
                       },
                     ),
+                    ResponsiveConfig.heightBox(16),
                     TextField(
                       controller: notesController,
                       decoration:
@@ -1135,6 +1224,8 @@ class _OverviewTab extends StatelessWidget {
     required this.appointmentStream,
     required this.medicationStream,
     required this.onScheduleKickReminder,
+    required this.onAddAppointment,
+    required this.onAddMedication,
   });
 
   final Pregnancy pregnancy;
@@ -1142,6 +1233,8 @@ class _OverviewTab extends StatelessWidget {
   final Stream<List<PregnancyAppointment>> appointmentStream;
   final Stream<List<PregnancyMedication>> medicationStream;
   final VoidCallback onScheduleKickReminder;
+  final VoidCallback onAddAppointment;
+  final VoidCallback onAddMedication;
 
   @override
   Widget build(BuildContext context) {
@@ -1173,14 +1266,19 @@ class _OverviewTab extends StatelessWidget {
             stream: appointmentStream,
             builder: (context, snapshot) {
               return _UpcomingAppointmentsCard(
-                  appointments: snapshot.data ?? []);
+                appointments: snapshot.data ?? [],
+                onAddAppointment: onAddAppointment,
+              );
             },
           ),
           ResponsiveConfig.heightBox(16),
           StreamBuilder<List<PregnancyMedication>>(
             stream: medicationStream,
             builder: (context, snapshot) {
-              return _MedicationReminderCard(medications: snapshot.data ?? []);
+              return _MedicationReminderCard(
+                medications: snapshot.data ?? [],
+                onAddMedication: onAddMedication,
+              );
             },
           ),
           ResponsiveConfig.heightBox(16),
@@ -1423,9 +1521,13 @@ class _KickSummaryCard extends StatelessWidget {
 }
 
 class _UpcomingAppointmentsCard extends StatelessWidget {
-  const _UpcomingAppointmentsCard({required this.appointments});
+  const _UpcomingAppointmentsCard({
+    required this.appointments,
+    required this.onAddAppointment,
+  });
 
   final List<PregnancyAppointment> appointments;
+  final VoidCallback onAddAppointment;
 
   @override
   Widget build(BuildContext context) {
@@ -1441,17 +1543,28 @@ class _UpcomingAppointmentsCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Next appointments',
-              style: ResponsiveConfig.textStyle(
-                size: 18,
-                weight: FontWeight.bold,
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Next appointments',
+                  style: ResponsiveConfig.textStyle(
+                    size: 18,
+                    weight: FontWeight.bold,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.event_outlined),
+                  color: AppTheme.lightPink,
+                  tooltip: 'Add Appointment',
+                  onPressed: onAddAppointment,
+                ),
+              ],
             ),
             ResponsiveConfig.heightBox(12),
             if (upcoming.isEmpty)
               Text(
-                'No upcoming appointments logged. Add your prenatal visits to stay organized.',
+                'No upcoming appointments logged. Add your prenatal visits to stay organized.\n\nTap the icon to add an appointment.',
                 style: ResponsiveConfig.textStyle(
                   size: 14,
                   color: AppTheme.mediumGray,
@@ -1477,9 +1590,13 @@ class _UpcomingAppointmentsCard extends StatelessWidget {
 }
 
 class _MedicationReminderCard extends StatelessWidget {
-  const _MedicationReminderCard({required this.medications});
+  const _MedicationReminderCard({
+    required this.medications,
+    required this.onAddMedication,
+  });
 
   final List<PregnancyMedication> medications;
+  final VoidCallback onAddMedication;
 
   @override
   Widget build(BuildContext context) {
@@ -1490,17 +1607,28 @@ class _MedicationReminderCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Medications & supplements',
-              style: ResponsiveConfig.textStyle(
-                size: 18,
-                weight: FontWeight.bold,
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Medications & supplements',
+                  style: ResponsiveConfig.textStyle(
+                    size: 18,
+                    weight: FontWeight.bold,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.medication_liquid_outlined),
+                  color: AppTheme.lightPink,
+                  tooltip: 'Add Medication',
+                  onPressed: onAddMedication,
+                ),
+              ],
             ),
             ResponsiveConfig.heightBox(12),
             if (active.isEmpty)
               Text(
-                'Log prenatal vitamins or prescriptions to receive reminders.',
+                'Log prenatal vitamins or prescriptions to receive reminders.\n\nTap the icon to add a medication or supplement.',
                 style: ResponsiveConfig.textStyle(
                   size: 14,
                   color: AppTheme.mediumGray,
@@ -1783,9 +1911,9 @@ class _JournalHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       child: Padding(
-        padding: ResponsiveConfig.padding(all: 16),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        padding: ResponsiveConfig.padding(all: 20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1807,6 +1935,7 @@ class _JournalHeader extends StatelessWidget {
                 ),
               ],
             ),
+            ResponsiveConfig.heightBox(12),
             ElevatedButton.icon(
               onPressed: onLogJournal,
               icon: const Icon(Icons.edit_outlined),
@@ -2086,15 +2215,17 @@ class _PlannerHeader extends StatelessWidget {
                 color: AppTheme.mediumGray,
               ),
             ),
-            ResponsiveConfig.heightBox(12),
-            Wrap(
-              spacing: 12,
+            ResponsiveConfig.heightBox(16),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 ElevatedButton.icon(
                   onPressed: onAddAppointment,
                   icon: const Icon(Icons.event_note_outlined),
                   label: const Text('New appointment'),
                 ),
+                ResponsiveConfig.heightBox(12),
                 OutlinedButton.icon(
                   onPressed: onAddMedication,
                   icon: const Icon(Icons.medication_outlined),
@@ -2373,7 +2504,7 @@ class _InsightsTab extends StatelessWidget {
             },
           ),
           ResponsiveConfig.heightBox(16),
-          const _AIPregnancyAssistantCard(),
+          _AIPregnancyAssistantCard(pregnancy: pregnancy),
           ResponsiveConfig.heightBox(16),
           const _BirthPrepResourcesCard(),
         ],
@@ -2394,8 +2525,8 @@ class _InsightsHeader extends StatelessWidget {
     return Card(
       child: Padding(
         padding: ResponsiveConfig.padding(all: 16),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -2409,6 +2540,8 @@ class _InsightsHeader extends StatelessWidget {
                 ),
                 Text(
                   'Log kicks and contractions to monitor active labor signs.',
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 5,
                   style: ResponsiveConfig.textStyle(
                     size: 14,
                     color: AppTheme.mediumGray,
@@ -2416,7 +2549,9 @@ class _InsightsHeader extends StatelessWidget {
                 ),
               ],
             ),
+            ResponsiveConfig.heightBox(24),
             Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 ElevatedButton.icon(
                   onPressed: onLogKick,
@@ -2712,7 +2847,17 @@ class _SleepPatternCard extends StatelessWidget {
 }
 
 class _AIPregnancyAssistantCard extends StatelessWidget {
-  const _AIPregnancyAssistantCard();
+  const _AIPregnancyAssistantCard({required this.pregnancy});
+
+  final Pregnancy pregnancy;
+
+  int _calculatePregnancyWeek() {
+    if (pregnancy.dueDate == null) return 0;
+    final now = DateTime.now();
+    final dueDate = pregnancy.dueDate!;
+    final weeksSinceLMP = 40 - ((dueDate.difference(now).inDays) / 7).ceil();
+    return weeksSinceLMP.clamp(0, 40);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -2730,12 +2875,20 @@ class _AIPregnancyAssistantCard extends StatelessWidget {
               ),
             ),
             ResponsiveConfig.heightBox(8),
-            Text(
+            const Text(
               'Chat with FemCare+ AI (beta) to interpret logs, plan prenatal visits, and get mindful prompts tailored to you.',
             ),
             ResponsiveConfig.heightBox(12),
             ElevatedButton.icon(
-              onPressed: () {},
+              onPressed: () {
+                final chatContext = {
+                  'pregnancyWeek': _calculatePregnancyWeek(),
+                  'dueDate': pregnancy.dueDate?.toIso8601String(),
+                  'currentWeek': pregnancy.currentWeek,
+                  'trimester': pregnancy.trimester,
+                };
+                context.push('/ai-chat/pregnancy', extra: chatContext);
+              },
               icon: const Icon(Icons.chat_bubble_outline),
               label: const Text('Open AI assistant'),
             ),

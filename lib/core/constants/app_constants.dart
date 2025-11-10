@@ -79,6 +79,8 @@ class AppConstants {
   static const String collectionGroupMembers = 'groupMembers';
   static const String collectionEvents = 'events';
   static const String collectionEventAttendees = 'eventAttendees';
+  static const String collectionAIChatMessages = 'aiChatMessages';
+  static const String collectionAIConversations = 'aiConversations';
 
   // Subscription Tiers
   static const String tierFree = 'free';

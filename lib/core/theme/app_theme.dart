@@ -342,15 +342,18 @@ class AppTheme {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
         ),
-        titleTextStyle: const TextStyle(
+        titleTextStyle: GoogleFonts.redHatDisplay(
           fontSize: 20,
           fontWeight: FontWeight.w600,
           color: darkGray,
         ),
-        contentTextStyle: const TextStyle(
+        contentTextStyle: GoogleFonts.redHatDisplay(
           fontSize: 16,
           color: darkGray,
         ),
+        // Set insetPadding to ensure dialogs are wider (10% margin on each side = 90% width)
+        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+        alignment: Alignment.center,
       ),
 
       // Snackbar Theme
@@ -697,6 +700,9 @@ class AppTheme {
           fontSize: 16,
           color: Colors.white,
         ),
+        // Set insetPadding to ensure dialogs are wider (10% margin on each side = 90% width)
+        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+        alignment: Alignment.center,
       ),
 
       // Snackbar Theme

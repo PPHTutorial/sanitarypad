@@ -126,6 +126,7 @@ class _FertilityTrackingScreenState
 
   Widget _buildModernTabSwitcher(BuildContext context) {
     return TabBar(
+      dividerColor: AppTheme.darkGray.withOpacity(0.2),
       controller: _tabController,
       labelStyle: ResponsiveConfig.textStyle(
         size: 14,
@@ -149,34 +150,115 @@ class _FertilityTrackingScreenState
   }
 
   FloatingActionButton? _buildFloatingActionButton(String userId) {
-    switch (_tabController.index) {
-      case 0:
-        return FloatingActionButton.extended(
-          onPressed: () => _showAddFertilityEntrySheet(context, userId),
-          icon: const Icon(Icons.add),
-          label: const Text('Log Fertility'),
+    return FloatingActionButton.extended(
+      onPressed: () => _showQuickActionsMenu(context, userId),
+      icon: const Icon(Icons.add_circle_outline),
+      label: const Text('Quick Actions'),
+    );
+  }
+
+  Future<void> _showQuickActionsMenu(
+      BuildContext context, String userId) async {
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Padding(
+                  padding: ResponsiveConfig.padding(all: 16),
+                  child: Text(
+                    'Quick Actions',
+                    style: ResponsiveConfig.textStyle(
+                      size: 18,
+                      weight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.add_circle_outline),
+                  title: const Text('Log Fertility Entry'),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    _showAddFertilityEntrySheet(context, userId);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.spa_outlined),
+                  title: const Text('Log Hormone Levels'),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    _showLogHormoneDialog(context, userId);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.sentiment_satisfied_alt_outlined),
+                  title: const Text('Log Mood & Energy'),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    _showLogMoodDialog(context, userId);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.healing_outlined),
+                  title: const Text('Log Symptoms'),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    _showLogSymptomDialog(context, userId);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.medical_services_outlined),
+                  title: const Text('Log Medication/Supplement'),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    _showLogMedicationDialog(context, userId);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.favorite_border),
+                  title: const Text('Log Intercourse Activity'),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    _showLogIntercourseDialog(context, userId);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.pregnant_woman_outlined),
+                  title: const Text('Log Pregnancy Test'),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    _showLogPregnancyTestDialog(context, userId);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.alarm_add_outlined),
+                  title: const Text('Schedule Ovulation Test'),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    _showScheduleOvulationTestDialog(context, userId);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.tips_and_updates_outlined),
+                  title: const Text('Add Health Recommendation'),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    _showAddHealthRecommendationDialog(context, userId);
+                  },
+                ),
+              ],
+            ),
+          ),
         );
-      case 1:
-        return FloatingActionButton.extended(
-          onPressed: () => _showScheduleOvulationTestDialog(context, userId),
-          icon: const Icon(Icons.alarm_add),
-          label: const Text('Ovulation Test'),
-        );
-      case 2:
-        return FloatingActionButton.extended(
-          onPressed: () => _showQuickLogMenu(context, userId),
-          icon: const Icon(Icons.playlist_add),
-          label: const Text('Quick Log'),
-        );
-      case 3:
-        return FloatingActionButton.extended(
-          onPressed: () => _showAddHealthRecommendationDialog(context, userId),
-          icon: const Icon(Icons.tips_and_updates),
-          label: const Text('Add Tip'),
-        );
-      default:
-        return null;
-    }
+      },
+    );
   }
 
   Widget _buildOverviewTab(
@@ -686,7 +768,7 @@ class _FertilityTrackingScreenState
                 ResponsiveConfig.heightBox(12),
                 if (reminders.isEmpty)
                   Text(
-                    'No ovulation test reminders scheduled. Tap the bell icon to create one.',
+                    'No ovulation test reminders scheduled. Tap the bell icon to create one.\n\nTap the icon to log an ovulation test.',
                     style: ResponsiveConfig.textStyle(
                       size: 14,
                       color: AppTheme.mediumGray,
@@ -817,7 +899,7 @@ class _FertilityTrackingScreenState
                 ResponsiveConfig.heightBox(12),
                 if (recommendations.isEmpty)
                   Text(
-                    'Log hydration, nutrition, sleep, and stress tips tailored to your goals.',
+                    'Log hydration, nutrition, sleep, and stress tips tailored to your goals.\n\nTap the icon to log a recommendation.',
                     style: ResponsiveConfig.textStyle(
                       size: 14,
                       color: AppTheme.mediumGray,
@@ -1091,7 +1173,7 @@ class _FertilityTrackingScreenState
             ResponsiveConfig.heightBox(12),
             if (recentEntries.isEmpty)
               Text(
-                'Log cervical mucus observations to identify fertile patterns.',
+                'Log cervical mucus observations to identify fertile patterns.\n\nTap the icon to log cervical mucus.',
                 style: ResponsiveConfig.textStyle(
                   size: 14,
                   color: AppTheme.mediumGray,
@@ -1144,7 +1226,7 @@ class _FertilityTrackingScreenState
                 ResponsiveConfig.heightBox(12),
                 if (cycles.isEmpty)
                   Text(
-                    'Track estrogen, progesterone, LH and FSH trends to improve prediction accuracy.',
+                    'Track estrogen, progesterone, LH and FSH trends to improve prediction accuracy.\n\nTap the icon to log hormone levels.',
                     style: ResponsiveConfig.textStyle(
                       size: 14,
                       color: AppTheme.mediumGray,
@@ -1208,7 +1290,7 @@ class _FertilityTrackingScreenState
                 ResponsiveConfig.heightBox(12),
                 if (moods.isEmpty)
                   Text(
-                    'Track how you feel each day to discover hormonal patterns impacting mood, energy, or libido.',
+                    'Track how you feel each day to discover hormonal patterns impacting mood, energy, or libido.\n\nTap the icon to log mood and energy.',
                     style: ResponsiveConfig.textStyle(
                       size: 14,
                       color: AppTheme.mediumGray,
@@ -1265,7 +1347,7 @@ class _FertilityTrackingScreenState
                 ResponsiveConfig.heightBox(12),
                 if (symptoms.isEmpty)
                   Text(
-                    'Log cramps, bloating, headaches, and more to correlate with cycle phases.',
+                    'Log cramps, bloating, headaches, and more to correlate with cycle phases.\n\nTap the icon to log symptoms.',
                     style: ResponsiveConfig.textStyle(
                       size: 14,
                       color: AppTheme.mediumGray,
@@ -1323,7 +1405,7 @@ class _FertilityTrackingScreenState
                 ResponsiveConfig.heightBox(12),
                 if (entries.isEmpty)
                   Text(
-                    'Logging intercourse without protection within the fertile window increases prediction accuracy.',
+                    'Logging intercourse without protection within the fertile window increases prediction accuracy.\n\nTap the icon to log intercourse activity.',
                     style: ResponsiveConfig.textStyle(
                       size: 14,
                       color: AppTheme.mediumGray,
@@ -1387,7 +1469,7 @@ class _FertilityTrackingScreenState
                 ResponsiveConfig.heightBox(12),
                 if (tests.isEmpty)
                   Text(
-                    'Log pregnancy tests (positive, negative, invalid) to monitor testing history.',
+                    'Log pregnancy tests (positive, negative, invalid) to monitor testing history.\n\nTap the icon to log a pregnancy test.',
                     style: ResponsiveConfig.textStyle(
                       size: 14,
                       color: AppTheme.mediumGray,
@@ -1434,9 +1516,9 @@ class _FertilityTrackingScreenState
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Medication & Supplement Reminders',
+                      'Set Reminders',
                       style: ResponsiveConfig.textStyle(
-                        size: 18,
+                        size: 22,
                         weight: FontWeight.bold,
                       ),
                     ),
@@ -1448,10 +1530,18 @@ class _FertilityTrackingScreenState
                     ),
                   ],
                 ),
+                ResponsiveConfig.heightBox(8),
+                Text(
+                  'Medication & Supplement',
+                  style: ResponsiveConfig.textStyle(
+                    size: 18,
+                    weight: FontWeight.bold,
+                  ),
+                ),
                 ResponsiveConfig.heightBox(12),
                 if (meds.isEmpty)
                   Text(
-                    'Track prescribed medications and fertility supplements including dosage and frequency.',
+                    'Track prescribed medications and fertility supplements including dosage and frequency.\n\nTap the pill icon to log a medication or supplement.',
                     style: ResponsiveConfig.textStyle(
                       size: 14,
                       color: AppTheme.mediumGray,
@@ -1702,15 +1792,15 @@ class _FertilityTrackingScreenState
               ),
             ),
             ResponsiveConfig.heightBox(12),
-            Wrap(
-              spacing: 8,
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 ElevatedButton.icon(
                   onPressed: () => context.push('/groups', extra: 'fertility'),
                   icon: const Icon(Icons.groups),
                   label: const Text('Join Forum'),
                 ),
-                ResponsiveConfig.widthBox(8),
+                ResponsiveConfig.heightBox(8),
                 OutlinedButton.icon(
                   onPressed: () => context.push('/events', extra: 'fertility'),
                   icon: const Icon(Icons.event_outlined),
@@ -2031,6 +2121,7 @@ class _FertilityTrackingScreenState
                     }
                   },
                 ),
+                ResponsiveConfig.heightBox(16),
                 TextFormField(
                   controller: notesController,
                   decoration: const InputDecoration(
@@ -2092,69 +2183,6 @@ class _FertilityTrackingScreenState
     }
   }
 
-  Future<void> _showQuickLogMenu(BuildContext context, String userId) async {
-    await showModalBottomSheet(
-      context: context,
-      builder: (context) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: const Icon(Icons.spa_outlined),
-                title: const Text('Log Hormone Levels'),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  _showLogHormoneDialog(context, userId);
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.sentiment_satisfied_alt_outlined),
-                title: const Text('Log Mood & Energy'),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  _showLogMoodDialog(context, userId);
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.healing_outlined),
-                title: const Text('Log Symptoms'),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  _showLogSymptomDialog(context, userId);
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.medical_services_outlined),
-                title: const Text('Log Medication/Supplement'),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  _showLogMedicationDialog(context, userId);
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.favorite_border),
-                title: const Text('Log Intercourse Activity'),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  _showLogIntercourseDialog(context, userId);
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.biotech_outlined),
-                title: const Text('Log Pregnancy Test'),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  _showLogPregnancyTestDialog(context, userId);
-                },
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
   Future<void> _showLogHormoneDialog(
       BuildContext context, String userId) async {
     final formKey = GlobalKey<FormState>();
@@ -2182,6 +2210,7 @@ class _FertilityTrackingScreenState
                     decoration:
                         const InputDecoration(labelText: 'Estrogen (relative)'),
                   ),
+                  ResponsiveConfig.heightBox(16),
                   TextFormField(
                     controller: progesteroneController,
                     keyboardType:
@@ -2189,6 +2218,7 @@ class _FertilityTrackingScreenState
                     decoration: const InputDecoration(
                         labelText: 'Progesterone (relative)'),
                   ),
+                  ResponsiveConfig.heightBox(16),
                   TextFormField(
                     controller: lhController,
                     keyboardType:
@@ -2196,6 +2226,7 @@ class _FertilityTrackingScreenState
                     decoration:
                         const InputDecoration(labelText: 'LH (relative)'),
                   ),
+                  ResponsiveConfig.heightBox(16),
                   TextFormField(
                     controller: fshController,
                     keyboardType:
@@ -2203,6 +2234,7 @@ class _FertilityTrackingScreenState
                     decoration:
                         const InputDecoration(labelText: 'FSH (relative)'),
                   ),
+                  ResponsiveConfig.heightBox(16),
                   DropdownButtonFormField<String>(
                     value: phase,
                     decoration: const InputDecoration(labelText: 'Cycle Phase'),
@@ -2277,12 +2309,14 @@ class _FertilityTrackingScreenState
                       ? 'Enter at least one symptom'
                       : null,
                 ),
+                ResponsiveConfig.heightBox(16),
                 TextFormField(
                   controller: painController,
                   keyboardType: TextInputType.number,
                   decoration:
                       const InputDecoration(labelText: 'Pain level (1-10)'),
                 ),
+                ResponsiveConfig.heightBox(16),
                 TextFormField(
                   controller: locationController,
                   decoration:
@@ -2364,18 +2398,21 @@ class _FertilityTrackingScreenState
                     decoration:
                         const InputDecoration(labelText: 'Energy level (1-10)'),
                   ),
+                  ResponsiveConfig.heightBox(16),
                   TextFormField(
                     controller: stressController,
                     keyboardType: TextInputType.number,
                     decoration:
                         const InputDecoration(labelText: 'Stress level (1-10)'),
                   ),
+                  ResponsiveConfig.heightBox(16),
                   TextFormField(
                     controller: libidoController,
                     keyboardType: TextInputType.number,
                     decoration:
                         const InputDecoration(labelText: 'Libido level (1-10)'),
                   ),
+                  ResponsiveConfig.heightBox(16),
                   TextFormField(
                     controller: notesController,
                     decoration: const InputDecoration(labelText: 'Notes'),
@@ -2441,20 +2478,24 @@ class _FertilityTrackingScreenState
                       ? 'Enter a name'
                       : null,
                 ),
+                ResponsiveConfig.heightBox(16),
                 TextFormField(
                   controller: dosageController,
                   decoration: const InputDecoration(labelText: 'Dosage'),
                 ),
+                ResponsiveConfig.heightBox(16),
                 TextFormField(
                   controller: frequencyController,
                   decoration: const InputDecoration(
                       labelText: 'Frequency (e.g. daily)'),
                 ),
+                ResponsiveConfig.heightBox(16),
                 TextFormField(
                   controller: purposeController,
                   decoration:
                       const InputDecoration(labelText: 'Purpose (optional)'),
                 ),
+                ResponsiveConfig.heightBox(16),
                 TextFormField(
                   controller: notesController,
                   decoration: const InputDecoration(labelText: 'Notes'),
@@ -2518,6 +2559,7 @@ class _FertilityTrackingScreenState
                 value: usedProtection,
                 onChanged: (value) => setState(() => usedProtection = value),
               ),
+              ResponsiveConfig.heightBox(16),
               TextField(
                 controller: notesController,
                 decoration:
@@ -2578,16 +2620,19 @@ class _FertilityTrackingScreenState
                 ],
                 onChanged: (value) => result = value ?? 'negative',
               ),
+              ResponsiveConfig.heightBox(16),
               TextField(
                 controller: brandController,
                 decoration: const InputDecoration(labelText: 'Test brand'),
               ),
+              ResponsiveConfig.heightBox(16),
               TextField(
                 controller: dpoController,
                 keyboardType: TextInputType.number,
                 decoration:
                     const InputDecoration(labelText: 'Days past ovulation'),
               ),
+              ResponsiveConfig.heightBox(16),
               TextField(
                 controller: notesController,
                 decoration:
@@ -2653,6 +2698,7 @@ class _FertilityTrackingScreenState
                       ? 'Enter a title'
                       : null,
                 ),
+                ResponsiveConfig.heightBox(16),
                 TextFormField(
                   controller: descriptionController,
                   maxLines: 2,
@@ -2661,11 +2707,13 @@ class _FertilityTrackingScreenState
                       ? 'Enter a description'
                       : null,
                 ),
+                ResponsiveConfig.heightBox(16),
                 TextFormField(
                   controller: categoryController,
                   decoration:
                       const InputDecoration(labelText: 'Category (eg. diet)'),
                 ),
+                ResponsiveConfig.heightBox(16),
               ],
             ),
           ),

@@ -14,6 +14,7 @@ import '../../../core/widgets/back_button_handler.dart';
 import '../../../data/models/skincare_model.dart';
 import '../../../services/reminder_service.dart';
 import '../../../services/skincare_service.dart';
+import '../reminders/create_reminder_dialog.dart';
 
 class SkincareTrackingScreen extends ConsumerStatefulWidget {
   const SkincareTrackingScreen({super.key});
@@ -86,6 +87,10 @@ class _SkincareTrackingScreenState extends ConsumerState<SkincareTrackingScreen>
               goalStream: goalStream,
               reminderService: _reminderService,
               onAnalyzeSkin: () => _showSkinTypeSheet(context, user.userId),
+              onLogAcne: () => _showAcneSheet(context, user.userId),
+              onLogUV: () => _showUVSheet(context, user.userId),
+              onAddGoal: () => _showGoalSheet(context, user.userId),
+              onAddProduct: () => context.push('/skincare/products/create'),
             ),
             _JournalTab(
               userId: user.userId,
@@ -125,6 +130,7 @@ class _SkincareTrackingScreenState extends ConsumerState<SkincareTrackingScreen>
 
   Widget _buildModernTabSwitcher(BuildContext context) {
     return TabBar(
+      dividerColor: AppTheme.darkGray.withOpacity(0.2),
       controller: _tabController,
       labelStyle: ResponsiveConfig.textStyle(
         size: 14,
@@ -151,9 +157,9 @@ class _SkincareTrackingScreenState extends ConsumerState<SkincareTrackingScreen>
     switch (_tabController.index) {
       case 0:
         return FloatingActionButton.extended(
-          onPressed: () => _showSkinTypeSheet(context, userId),
-          icon: const Icon(Icons.science_outlined),
-          label: const Text('Analyze Skin'),
+          onPressed: () => _showQuickActionsSheet(context, userId),
+          icon: const Icon(Icons.add_circle_outline),
+          label: const Text('Quick Actions'),
         );
       case 1:
         return FloatingActionButton.extended(
@@ -179,37 +185,39 @@ class _SkincareTrackingScreenState extends ConsumerState<SkincareTrackingScreen>
   }
 
   Future<void> _scheduleHydrationReminder(String userId) async {
-    await _reminderService.createReminder(
-      Reminder(
+    final result = await showDialog(
+      context: context,
+      builder: (context) => CreateReminderDialog(
         userId: userId,
-        type: 'hydration',
-        title: 'Hydration reminder',
-        description: 'Drink water to keep your skin plump and healthy!',
-        scheduledTime: DateTime.now().add(const Duration(minutes: 1)),
-        metadata: const {'repeat': 'daily'},
+        defaultType: 'hydration',
+        defaultTitle: 'Hydration Reminder',
+        defaultDescription: 'Drink water to keep your skin plump and healthy!',
       ),
     );
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Hydration reminder scheduled.')),
-    );
+
+    if (result == true && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Hydration reminder scheduled.')),
+      );
+    }
   }
 
   Future<void> _scheduleRoutineReminder(String userId) async {
-    await _reminderService.createReminder(
-      Reminder(
+    final result = await showDialog(
+      context: context,
+      builder: (context) => CreateReminderDialog(
         userId: userId,
-        type: 'skincare_routine',
-        title: 'Skincare routine',
-        description: 'Time for your FemCare+ routine.',
-        scheduledTime: DateTime.now().add(const Duration(minutes: 2)),
-        metadata: const {'repeat': 'daily'},
+        defaultType: 'skincare_routine',
+        defaultTitle: 'Skincare Routine',
+        defaultDescription: 'Time for your FemCare+ routine.',
       ),
     );
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Routine reminder scheduled.')),
-    );
+
+    if (result == true && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Routine reminder scheduled.')),
+      );
+    }
   }
 
   Future<void> _showSkinTypeSheet(BuildContext context, String userId) async {
@@ -238,93 +246,97 @@ class _SkincareTrackingScreenState extends ConsumerState<SkincareTrackingScreen>
           ),
           child: StatefulBuilder(
             builder: (context, setState) {
-              return Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Skin Type Analyzer',
-                    style: ResponsiveConfig.textStyle(
-                      size: 18,
-                      weight: FontWeight.bold,
+              return SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Skin Type Analyzer',
+                      style: ResponsiveConfig.textStyle(
+                        size: 18,
+                        weight: FontWeight.bold,
+                      ),
                     ),
-                  ),
-                  ResponsiveConfig.heightBox(12),
-                  DropdownButtonFormField<String>(
-                    value: primaryType,
-                    decoration:
-                        const InputDecoration(labelText: 'Primary skin type'),
-                    items: const [
-                      DropdownMenuItem(value: 'normal', child: Text('Normal')),
-                      DropdownMenuItem(value: 'dry', child: Text('Dry')),
-                      DropdownMenuItem(value: 'oily', child: Text('Oily')),
-                      DropdownMenuItem(
-                          value: 'combination', child: Text('Combination')),
-                      DropdownMenuItem(
-                          value: 'sensitive', child: Text('Sensitive')),
-                    ],
-                    onChanged: (value) =>
-                        setState(() => primaryType = value ?? 'combination'),
-                  ),
-                  ResponsiveConfig.heightBox(12),
-                  _SliderInput(
-                    label: 'Dry score',
-                    initialValue: dry,
-                    onChanged: (value) => setState(() => dry = value),
-                  ),
-                  _SliderInput(
-                    label: 'Oily score',
-                    initialValue: oily,
-                    onChanged: (value) => setState(() => oily = value),
-                  ),
-                  _SliderInput(
-                    label: 'Combination score',
-                    initialValue: combo,
-                    onChanged: (value) => setState(() => combo = value),
-                  ),
-                  _SliderInput(
-                    label: 'Sensitive score',
-                    initialValue: sensitive,
-                    onChanged: (value) => setState(() => sensitive = value),
-                  ),
-                  TextField(
-                    controller: concernsController,
-                    decoration: const InputDecoration(
-                      labelText: 'Key concerns (comma separated)',
+                    ResponsiveConfig.heightBox(38),
+                    DropdownButtonFormField<String>(
+                      value: primaryType,
+                      decoration:
+                          const InputDecoration(labelText: 'Primary skin type'),
+                      items: const [
+                        DropdownMenuItem(
+                            value: 'normal', child: Text('Normal')),
+                        DropdownMenuItem(value: 'dry', child: Text('Dry')),
+                        DropdownMenuItem(value: 'oily', child: Text('Oily')),
+                        DropdownMenuItem(
+                            value: 'combination', child: Text('Combination')),
+                        DropdownMenuItem(
+                            value: 'sensitive', child: Text('Sensitive')),
+                      ],
+                      onChanged: (value) =>
+                          setState(() => primaryType = value ?? 'combination'),
                     ),
-                  ),
-                  TextField(
-                    controller: notesController,
-                    decoration:
-                        const InputDecoration(labelText: 'Analysis notes'),
-                    maxLines: 2,
-                  ),
-                  ResponsiveConfig.heightBox(20),
-                  ElevatedButton(
-                    onPressed: () async {
-                      final skinType = SkinType(
-                        userId: userId,
-                        primaryType: primaryType,
-                        typeScores: {
-                          'dry': dry,
-                          'oily': oily,
-                          'combination': combo,
-                          'sensitive': sensitive,
-                        },
-                        concerns: concernsController.text.trim().isEmpty
-                            ? null
-                            : concernsController.text.trim(),
-                        analysisNotes: notesController.text.trim().isEmpty
-                            ? null
-                            : notesController.text.trim(),
-                        analyzedAt: DateTime.now(),
-                      );
-                      await _enhancedService.saveSkinType(skinType);
-                      if (mounted) Navigator.of(context).pop();
-                    },
-                    child: const Text('Save skin profile'),
-                  ),
-                ],
+                    ResponsiveConfig.heightBox(12),
+                    _SliderInput(
+                      label: 'Dry score',
+                      initialValue: dry,
+                      onChanged: (value) => setState(() => dry = value),
+                    ),
+                    _SliderInput(
+                      label: 'Oily score',
+                      initialValue: oily,
+                      onChanged: (value) => setState(() => oily = value),
+                    ),
+                    _SliderInput(
+                      label: 'Combination score',
+                      initialValue: combo,
+                      onChanged: (value) => setState(() => combo = value),
+                    ),
+                    _SliderInput(
+                      label: 'Sensitive score',
+                      initialValue: sensitive,
+                      onChanged: (value) => setState(() => sensitive = value),
+                    ),
+                    TextField(
+                      controller: concernsController,
+                      decoration: const InputDecoration(
+                        labelText: 'Key concerns (comma separated)',
+                      ),
+                    ),
+                    ResponsiveConfig.heightBox(12),
+                    TextField(
+                      controller: notesController,
+                      decoration:
+                          const InputDecoration(labelText: 'Analysis notes'),
+                      maxLines: 2,
+                    ),
+                    ResponsiveConfig.heightBox(20),
+                    ElevatedButton(
+                      onPressed: () async {
+                        final skinType = SkinType(
+                          userId: userId,
+                          primaryType: primaryType,
+                          typeScores: {
+                            'dry': dry,
+                            'oily': oily,
+                            'combination': combo,
+                            'sensitive': sensitive,
+                          },
+                          concerns: concernsController.text.trim().isEmpty
+                              ? null
+                              : concernsController.text.trim(),
+                          analysisNotes: notesController.text.trim().isEmpty
+                              ? null
+                              : notesController.text.trim(),
+                          analyzedAt: DateTime.now(),
+                        );
+                        await _enhancedService.saveSkinType(skinType);
+                        if (mounted) Navigator.of(context).pop();
+                      },
+                      child: const Text('Save skin profile'),
+                    ),
+                  ],
+                ),
               );
             },
           ),
@@ -357,106 +369,115 @@ class _SkincareTrackingScreenState extends ConsumerState<SkincareTrackingScreen>
             top: 24,
             bottom: MediaQuery.of(context).viewInsets.bottom + 24,
           ),
-          child: Form(
-            key: formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'New journal entry',
-                  style: ResponsiveConfig.textStyle(
-                    size: 18,
-                    weight: FontWeight.bold,
+          child: SingleChildScrollView(
+            child: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'New journal entry',
+                    style: ResponsiveConfig.textStyle(
+                      size: 18,
+                      weight: FontWeight.bold,
+                    ),
                   ),
-                ),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.calendar_month_outlined),
-                  title:
-                      Text(DateFormat('EEEE, MMM d, y').format(selectedDate)),
-                  onTap: () async {
-                    final picked = await showDatePicker(
-                      context: context,
-                      initialDate: selectedDate,
-                      firstDate:
-                          DateTime.now().subtract(const Duration(days: 365)),
-                      lastDate: DateTime.now(),
-                    );
-                    if (picked != null) {
-                      selectedDate = picked;
-                      setState(() {});
-                    }
-                  },
-                ),
-                DropdownButtonFormField<String>(
-                  value: condition,
-                  decoration: const InputDecoration(labelText: 'Skin feel'),
-                  items: const [
-                    DropdownMenuItem(
-                        value: 'balanced', child: Text('Balanced')),
-                    DropdownMenuItem(value: 'dry', child: Text('Dry')),
-                    DropdownMenuItem(value: 'oily', child: Text('Oily')),
-                    DropdownMenuItem(
-                        value: 'sensitive', child: Text('Sensitive/Red')),
-                  ],
-                  onChanged: (value) => condition = value,
-                ),
-                _SliderInput(
-                  label: 'Hydration level',
-                  initialValue: hydration,
-                  onChanged: (value) => hydration = value,
-                ),
-                _SliderInput(
-                  label: 'Oiliness level',
-                  initialValue: oiliness,
-                  onChanged: (value) => oiliness = value,
-                ),
-                TextField(
-                  controller: sleepController,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: 'Sleep hours'),
-                ),
-                TextField(
-                  controller: concernsController,
-                  decoration: const InputDecoration(
-                    labelText: 'Concerns (comma separated)',
+                  ResponsiveConfig.heightBox(38),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.calendar_month_outlined),
+                    title:
+                        Text(DateFormat('EEEE, MMM d, y').format(selectedDate)),
+                    onTap: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: selectedDate,
+                        firstDate:
+                            DateTime.now().subtract(const Duration(days: 365)),
+                        lastDate: DateTime.now(),
+                      );
+                      if (picked != null) {
+                        selectedDate = picked;
+                        setState(() {});
+                      }
+                    },
                   ),
-                ),
-                TextField(
-                  controller: notesController,
-                  decoration: const InputDecoration(labelText: 'Notes'),
-                  maxLines: 3,
-                ),
-                ResponsiveConfig.heightBox(20),
-                ElevatedButton(
-                  onPressed: () async {
-                    if (!formKey.currentState!.validate()) return;
-                    final entry = SkinJournalEntry(
-                      userId: userId,
-                      date: selectedDate,
-                      skinCondition: condition,
-                      hydrationLevel: hydration.round(),
-                      oilinessLevel: oiliness.round(),
-                      concerns: concernsController.text
-                          .split(',')
-                          .map((e) => e.trim())
-                          .where((e) => e.isNotEmpty)
-                          .toList(),
-                      notes: notesController.text.trim().isEmpty
-                          ? null
-                          : notesController.text.trim(),
-                      sleepHours: sleepController.text.trim().isEmpty
-                          ? null
-                          : int.tryParse(sleepController.text.trim()),
-                      createdAt: DateTime.now(),
-                    );
-                    await _enhancedService.logSkinJournal(entry);
-                    if (mounted) Navigator.of(context).pop();
-                  },
-                  child: const Text('Save entry'),
-                ),
-              ],
+                  ResponsiveConfig.heightBox(12),
+                  DropdownButtonFormField<String>(
+                    value: condition,
+                    decoration: const InputDecoration(labelText: 'Skin feel'),
+                    items: const [
+                      DropdownMenuItem(
+                          value: 'balanced', child: Text('Balanced')),
+                      DropdownMenuItem(value: 'dry', child: Text('Dry')),
+                      DropdownMenuItem(value: 'oily', child: Text('Oily')),
+                      DropdownMenuItem(
+                          value: 'sensitive', child: Text('Sensitive/Red')),
+                    ],
+                    onChanged: (value) => condition = value,
+                  ),
+                  ResponsiveConfig.heightBox(12),
+                  _SliderInput(
+                    label: 'Hydration level',
+                    initialValue: hydration,
+                    onChanged: (value) => hydration = value,
+                  ),
+                  ResponsiveConfig.heightBox(12),
+                  _SliderInput(
+                    label: 'Oiliness level',
+                    initialValue: oiliness,
+                    onChanged: (value) => oiliness = value,
+                  ),
+                  ResponsiveConfig.heightBox(12),
+                  TextField(
+                    controller: sleepController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(labelText: 'Sleep hours'),
+                  ),
+                  ResponsiveConfig.heightBox(12),
+                  TextField(
+                    controller: concernsController,
+                    decoration: const InputDecoration(
+                      labelText: 'Concerns (comma separated)',
+                    ),
+                  ),
+                  ResponsiveConfig.heightBox(12),
+                  TextField(
+                    controller: notesController,
+                    decoration: const InputDecoration(labelText: 'Notes'),
+                    maxLines: 3,
+                  ),
+                  ResponsiveConfig.heightBox(20),
+                  ElevatedButton(
+                    onPressed: () async {
+                      if (!formKey.currentState!.validate()) return;
+                      final entry = SkinJournalEntry(
+                        userId: userId,
+                        date: selectedDate,
+                        skinCondition: condition,
+                        hydrationLevel: hydration.round(),
+                        oilinessLevel: oiliness.round(),
+                        concerns: concernsController.text
+                            .split(',')
+                            .map((e) => e.trim())
+                            .where((e) => e.isNotEmpty)
+                            .toList(),
+                        notes: notesController.text.trim().isEmpty
+                            ? null
+                            : notesController.text.trim(),
+                        sleepHours: sleepController.text.trim().isEmpty
+                            ? null
+                            : int.tryParse(sleepController.text.trim()),
+                        createdAt: DateTime.now(),
+                      );
+                      await _enhancedService.logSkinJournal(entry);
+                      if (mounted) Navigator.of(context).pop();
+                    },
+                    child: const Text('Save entry'),
+                  ),
+                ],
+              ),
             ),
           ),
         );
@@ -484,99 +505,112 @@ class _SkincareTrackingScreenState extends ConsumerState<SkincareTrackingScreen>
       ),
       builder: (context) {
         return Padding(
-          padding: EdgeInsets.only(
-            left: 16,
-            right: 16,
-            top: 24,
-            bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-          ),
-          child: Form(
-            key: formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Create routine template',
-                  style: ResponsiveConfig.textStyle(
-                    size: 18,
-                    weight: FontWeight.bold,
-                  ),
-                ),
-                TextFormField(
-                  controller: nameController,
-                  decoration: const InputDecoration(labelText: 'Routine name'),
-                  validator: (value) =>
-                      value == null || value.trim().isEmpty ? 'Required' : null,
-                ),
-                DropdownButtonFormField<String>(
-                  value: routineType,
-                  decoration: const InputDecoration(labelText: 'Routine time'),
-                  items: const [
-                    DropdownMenuItem(value: 'morning', child: Text('Morning')),
-                    DropdownMenuItem(value: 'evening', child: Text('Evening')),
-                    DropdownMenuItem(
-                        value: 'weekly', child: Text('Weekly treatment')),
-                  ],
-                  onChanged: (value) => routineType = value ?? 'morning',
-                ),
-                TextFormField(
-                  controller: skinTypeController,
-                  decoration:
-                      const InputDecoration(labelText: 'Target skin type'),
-                ),
-                TextField(
-                  controller: concernsController,
-                  decoration: const InputDecoration(
-                    labelText: 'Target concerns (comma separated)',
-                  ),
-                ),
-                TextField(
-                  controller: productsController,
-                  decoration: const InputDecoration(
-                    labelText: 'Product IDs or names (comma separated)',
-                  ),
-                ),
-                TextField(
-                  controller: notesController,
-                  decoration: const InputDecoration(labelText: 'Notes'),
-                  maxLines: 2,
-                ),
-                ResponsiveConfig.heightBox(20),
-                ElevatedButton(
-                  onPressed: () async {
-                    if (!formKey.currentState!.validate()) return;
-                    final template = RoutineTemplate(
-                      userId: userId,
-                      name: nameController.text.trim(),
-                      skinType: skinTypeController.text.trim().isEmpty
-                          ? 'all'
-                          : skinTypeController.text.trim(),
-                      concerns: concernsController.text
-                          .split(',')
-                          .map((e) => e.trim())
-                          .where((e) => e.isNotEmpty)
-                          .toList(),
-                      routineType: routineType,
-                      productIds: productsController.text
-                          .split(',')
-                          .map((e) => e.trim())
-                          .where((e) => e.isNotEmpty)
-                          .toList(),
-                      notes: notesController.text.trim().isEmpty
-                          ? null
-                          : notesController.text.trim(),
-                      createdAt: DateTime.now(),
-                    );
-                    await _enhancedService.saveRoutineTemplate(template);
-                    if (mounted) Navigator.of(context).pop();
-                  },
-                  child: const Text('Save routine'),
-                ),
-              ],
+            padding: EdgeInsets.only(
+              left: 16,
+              right: 16,
+              top: 24,
+              bottom: MediaQuery.of(context).viewInsets.bottom + 24,
             ),
-          ),
-        );
+            child: SingleChildScrollView(
+              child: Form(
+                key: formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Create routine template',
+                      style: ResponsiveConfig.textStyle(
+                        size: 18,
+                        weight: FontWeight.bold,
+                      ),
+                    ),
+                    ResponsiveConfig.heightBox(38),
+                    TextFormField(
+                      controller: nameController,
+                      decoration:
+                          const InputDecoration(labelText: 'Routine name'),
+                      validator: (value) =>
+                          value == null || value.trim().isEmpty
+                              ? 'Required'
+                              : null,
+                    ),
+                    ResponsiveConfig.heightBox(12),
+                    DropdownButtonFormField<String>(
+                      value: routineType,
+                      decoration:
+                          const InputDecoration(labelText: 'Routine time'),
+                      items: const [
+                        DropdownMenuItem(
+                            value: 'morning', child: Text('Morning')),
+                        DropdownMenuItem(
+                            value: 'evening', child: Text('Evening')),
+                        DropdownMenuItem(
+                            value: 'weekly', child: Text('Weekly treatment')),
+                      ],
+                      onChanged: (value) => routineType = value ?? 'morning',
+                    ),
+                    ResponsiveConfig.heightBox(12),
+                    TextFormField(
+                      controller: skinTypeController,
+                      decoration:
+                          const InputDecoration(labelText: 'Target skin type'),
+                    ),
+                    ResponsiveConfig.heightBox(12),
+                    TextField(
+                      controller: concernsController,
+                      decoration: const InputDecoration(
+                        labelText: 'Target concerns (comma separated)',
+                      ),
+                    ),
+                    ResponsiveConfig.heightBox(12),
+                    TextField(
+                      controller: productsController,
+                      decoration: const InputDecoration(
+                        labelText: 'Product IDs or names (comma separated)',
+                      ),
+                    ),
+                    ResponsiveConfig.heightBox(12),
+                    TextField(
+                      controller: notesController,
+                      decoration: const InputDecoration(labelText: 'Notes'),
+                      maxLines: 2,
+                    ),
+                    ResponsiveConfig.heightBox(20),
+                    ElevatedButton(
+                      onPressed: () async {
+                        if (!formKey.currentState!.validate()) return;
+                        final template = RoutineTemplate(
+                          userId: userId,
+                          name: nameController.text.trim(),
+                          skinType: skinTypeController.text.trim().isEmpty
+                              ? 'all'
+                              : skinTypeController.text.trim(),
+                          concerns: concernsController.text
+                              .split(',')
+                              .map((e) => e.trim())
+                              .where((e) => e.isNotEmpty)
+                              .toList(),
+                          routineType: routineType,
+                          productIds: productsController.text
+                              .split(',')
+                              .map((e) => e.trim())
+                              .where((e) => e.isNotEmpty)
+                              .toList(),
+                          notes: notesController.text.trim().isEmpty
+                              ? null
+                              : notesController.text.trim(),
+                          createdAt: DateTime.now(),
+                        );
+                        await _enhancedService.saveRoutineTemplate(template);
+                        if (mounted) Navigator.of(context).pop();
+                      },
+                      child: const Text('Save routine'),
+                    ),
+                  ],
+                ),
+              ),
+            ));
       },
     );
   }
@@ -587,47 +621,84 @@ class _SkincareTrackingScreenState extends ConsumerState<SkincareTrackingScreen>
   ) async {
     await showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (context) {
         return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: const Icon(Icons.water_drop_outlined),
-                title: const Text('Schedule hydration reminder'),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  _scheduleHydrationReminder(userId);
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.healing_outlined),
-                title: const Text('Log acne breakout'),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  _showAcneSheet(context, userId);
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.sunny_snowing),
-                title: const Text('Log UV index'),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  _showUVSheet(context, userId);
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.flag_outlined),
-                title: const Text('Add skin goal'),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  _showGoalSheet(context, userId);
-                },
-              ),
-            ],
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Padding(
+                  padding: ResponsiveConfig.padding(all: 16),
+                  child: Text(
+                    'Quick Actions',
+                    style: ResponsiveConfig.textStyle(
+                      size: 18,
+                      weight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.science_outlined),
+                  title: const Text('Analyze Skin Type'),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    _showSkinTypeSheet(context, userId);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.add_shopping_cart_outlined),
+                  title: const Text('Add Product'),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    context.push('/skincare/create-product');
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.auto_fix_high_outlined),
+                  title: const Text('Create Routine'),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    _showRoutineTemplateSheet(context, userId);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.healing_outlined),
+                  title: const Text('Log Acne Breakout'),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    _showAcneSheet(context, userId);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.sunny_snowing),
+                  title: const Text('Log UV Index'),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    _showUVSheet(context, userId);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.flag_outlined),
+                  title: const Text('Add Skin Goal'),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    _showGoalSheet(context, userId);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.water_drop_outlined),
+                  title: const Text('Schedule Hydration Reminder'),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    _scheduleHydrationReminder(userId);
+                  },
+                ),
+              ],
+            ),
           ),
         );
       },
@@ -654,61 +725,63 @@ class _SkincareTrackingScreenState extends ConsumerState<SkincareTrackingScreen>
           ),
           child: StatefulBuilder(
             builder: (context, setState) {
-              return Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: searchController,
-                    decoration: InputDecoration(
-                      labelText: 'Search ingredient',
-                      suffixIcon: IconButton(
-                        icon: const Icon(Icons.search),
-                        onPressed: () => setState(
-                            () => query = searchController.text.trim()),
-                      ),
-                    ),
-                    onSubmitted: (value) =>
-                        setState(() => query = value.trim()),
-                  ),
-                  ResponsiveConfig.heightBox(16),
-                  StreamBuilder<List<Ingredient>>(
-                    stream: _enhancedService.getIngredients(
-                      searchTerm: query.isEmpty ? null : query,
-                    ),
-                    builder: (context, snapshot) {
-                      final ingredients = snapshot.data ?? [];
-                      if (ingredients.isEmpty) {
-                        return Text(query.isEmpty
-                            ? 'Enter an ingredient name to see details.'
-                            : 'No ingredient found for "$query".');
-                      }
-                      return SizedBox(
-                        height: min(ingredients.length * 60, 320),
-                        child: ListView.builder(
-                          itemCount: ingredients.length,
-                          itemBuilder: (context, index) {
-                            final ingredient = ingredients[index];
-                            return ListTile(
-                              title: Text(ingredient.name),
-                              subtitle: Text(
-                                ingredient.benefits ?? 'No description',
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              trailing: ingredient.comedogenicRating != null
-                                  ? Chip(
-                                      label: Text(
-                                        'Comedo ${ingredient.comedogenicRating}',
-                                      ),
-                                    )
-                                  : null,
-                            );
-                          },
+              return SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: searchController,
+                      decoration: InputDecoration(
+                        labelText: 'Search ingredient',
+                        suffixIcon: IconButton(
+                          icon: const Icon(Icons.search),
+                          onPressed: () => setState(
+                              () => query = searchController.text.trim()),
                         ),
-                      );
-                    },
-                  ),
-                ],
+                      ),
+                      onSubmitted: (value) =>
+                          setState(() => query = value.trim()),
+                    ),
+                    ResponsiveConfig.heightBox(16),
+                    StreamBuilder<List<Ingredient>>(
+                      stream: _enhancedService.getIngredients(
+                        searchTerm: query.isEmpty ? null : query,
+                      ),
+                      builder: (context, snapshot) {
+                        final ingredients = snapshot.data ?? [];
+                        if (ingredients.isEmpty) {
+                          return Text(query.isEmpty
+                              ? 'Enter an ingredient name to see details.'
+                              : 'No ingredient found for "$query".');
+                        }
+                        return SizedBox(
+                          height: min(ingredients.length * 60, 320),
+                          child: ListView.builder(
+                            itemCount: ingredients.length,
+                            itemBuilder: (context, index) {
+                              final ingredient = ingredients[index];
+                              return ListTile(
+                                title: Text(ingredient.name),
+                                subtitle: Text(
+                                  ingredient.benefits ?? 'No description',
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                trailing: ingredient.comedogenicRating != null
+                                    ? Chip(
+                                        label: Text(
+                                          'Comedo ${ingredient.comedogenicRating}',
+                                        ),
+                                      )
+                                    : null,
+                              );
+                            },
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
               );
             },
           ),
@@ -739,81 +812,85 @@ class _SkincareTrackingScreenState extends ConsumerState<SkincareTrackingScreen>
             top: 24,
             bottom: MediaQuery.of(context).viewInsets.bottom + 24,
           ),
-          child: Form(
-            key: formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'Log breakout',
-                  style: ResponsiveConfig.textStyle(
-                    size: 18,
-                    weight: FontWeight.bold,
+          child: SingleChildScrollView(
+            child: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Log breakout',
+                    style: ResponsiveConfig.textStyle(
+                      size: 18,
+                      weight: FontWeight.bold,
+                    ),
                   ),
-                ),
-                DropdownButtonFormField<String>(
-                  value: type,
-                  decoration: const InputDecoration(labelText: 'Type'),
-                  items: const [
-                    DropdownMenuItem(value: 'papule', child: Text('Papule')),
-                    DropdownMenuItem(value: 'pustule', child: Text('Pustule')),
-                    DropdownMenuItem(value: 'cyst', child: Text('Cyst')),
-                    DropdownMenuItem(
-                        value: 'whitehead', child: Text('Whitehead')),
-                    DropdownMenuItem(
-                        value: 'blackhead', child: Text('Blackhead')),
-                  ],
-                  onChanged: (value) => type = value ?? 'papule',
-                ),
-                TextFormField(
-                  controller: locationController,
-                  decoration: const InputDecoration(labelText: 'Location'),
-                  validator: (value) =>
-                      value == null || value.trim().isEmpty ? 'Required' : null,
-                ),
-                Slider(
-                  value: severity,
-                  min: 1,
-                  max: 5,
-                  divisions: 4,
-                  label: 'Severity ${severity.round()}',
-                  onChanged: (value) => setState(() => severity = value),
-                ),
-                TextField(
-                  controller: treatmentController,
-                  decoration: const InputDecoration(
-                    labelText: 'Treatment used (optional)',
+                  DropdownButtonFormField<String>(
+                    value: type,
+                    decoration: const InputDecoration(labelText: 'Type'),
+                    items: const [
+                      DropdownMenuItem(value: 'papule', child: Text('Papule')),
+                      DropdownMenuItem(
+                          value: 'pustule', child: Text('Pustule')),
+                      DropdownMenuItem(value: 'cyst', child: Text('Cyst')),
+                      DropdownMenuItem(
+                          value: 'whitehead', child: Text('Whitehead')),
+                      DropdownMenuItem(
+                          value: 'blackhead', child: Text('Blackhead')),
+                    ],
+                    onChanged: (value) => type = value ?? 'papule',
                   ),
-                ),
-                TextField(
-                  controller: notesController,
-                  decoration: const InputDecoration(labelText: 'Notes'),
-                  maxLines: 2,
-                ),
-                ResponsiveConfig.heightBox(20),
-                ElevatedButton(
-                  onPressed: () async {
-                    if (!formKey.currentState!.validate()) return;
-                    final entry = AcneEntry(
-                      userId: userId,
-                      date: DateTime.now(),
-                      location: locationController.text.trim(),
-                      type: type,
-                      severity: severity.round(),
-                      treatmentUsed: treatmentController.text.trim().isEmpty
-                          ? null
-                          : treatmentController.text.trim(),
-                      notes: notesController.text.trim().isEmpty
-                          ? null
-                          : notesController.text.trim(),
-                      createdAt: DateTime.now(),
-                    );
-                    await _enhancedService.logAcneEntry(entry);
-                    if (mounted) Navigator.of(context).pop();
-                  },
-                  child: const Text('Save breakout'),
-                ),
-              ],
+                  TextFormField(
+                    controller: locationController,
+                    decoration: const InputDecoration(labelText: 'Location'),
+                    validator: (value) => value == null || value.trim().isEmpty
+                        ? 'Required'
+                        : null,
+                  ),
+                  Slider(
+                    value: severity,
+                    min: 1,
+                    max: 5,
+                    divisions: 4,
+                    label: 'Severity ${severity.round()}',
+                    onChanged: (value) => setState(() => severity = value),
+                  ),
+                  TextField(
+                    controller: treatmentController,
+                    decoration: const InputDecoration(
+                      labelText: 'Treatment used (optional)',
+                    ),
+                  ),
+                  TextField(
+                    controller: notesController,
+                    decoration: const InputDecoration(labelText: 'Notes'),
+                    maxLines: 2,
+                  ),
+                  ResponsiveConfig.heightBox(20),
+                  ElevatedButton(
+                    onPressed: () async {
+                      if (!formKey.currentState!.validate()) return;
+                      final entry = AcneEntry(
+                        userId: userId,
+                        date: DateTime.now(),
+                        location: locationController.text.trim(),
+                        type: type,
+                        severity: severity.round(),
+                        treatmentUsed: treatmentController.text.trim().isEmpty
+                            ? null
+                            : treatmentController.text.trim(),
+                        notes: notesController.text.trim().isEmpty
+                            ? null
+                            : notesController.text.trim(),
+                        createdAt: DateTime.now(),
+                      );
+                      await _enhancedService.logAcneEntry(entry);
+                      if (mounted) Navigator.of(context).pop();
+                    },
+                    child: const Text('Save breakout'),
+                  ),
+                ],
+              ),
             ),
           ),
         );
@@ -840,55 +917,57 @@ class _SkincareTrackingScreenState extends ConsumerState<SkincareTrackingScreen>
             top: 24,
             bottom: MediaQuery.of(context).viewInsets.bottom + 24,
           ),
-          child: Form(
-            key: formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'Log UV index',
-                  style: ResponsiveConfig.textStyle(
-                    size: 18,
-                    weight: FontWeight.bold,
+          child: SingleChildScrollView(
+            child: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Log UV index',
+                    style: ResponsiveConfig.textStyle(
+                      size: 18,
+                      weight: FontWeight.bold,
+                    ),
                   ),
-                ),
-                TextFormField(
-                  controller: indexController,
-                  keyboardType: TextInputType.number,
-                  decoration:
-                      const InputDecoration(labelText: 'UV index (0-12)'),
-                  validator: (value) {
-                    final parsed = int.tryParse(value ?? '');
-                    if (parsed == null) return 'Enter a number';
-                    if (parsed < 0 || parsed > 12)
-                      return 'UV index must be 0-12';
-                    return null;
-                  },
-                ),
-                TextField(
-                  controller: notesController,
-                  decoration: const InputDecoration(
-                      labelText: 'Protection used (optional)'),
-                ),
-                ResponsiveConfig.heightBox(20),
-                ElevatedButton(
-                  onPressed: () async {
-                    if (!formKey.currentState!.validate()) return;
-                    final entry = UVIndexEntry(
-                      userId: userId,
-                      date: DateTime.now(),
-                      uvIndex: int.parse(indexController.text.trim()),
-                      protectionUsed: notesController.text.trim().isEmpty
-                          ? null
-                          : notesController.text.trim(),
-                      createdAt: DateTime.now(),
-                    );
-                    await _enhancedService.logUVIndex(entry);
-                    if (mounted) Navigator.of(context).pop();
-                  },
-                  child: const Text('Save UV log'),
-                ),
-              ],
+                  TextFormField(
+                    controller: indexController,
+                    keyboardType: TextInputType.number,
+                    decoration:
+                        const InputDecoration(labelText: 'UV index (0-12)'),
+                    validator: (value) {
+                      final parsed = int.tryParse(value ?? '');
+                      if (parsed == null) return 'Enter a number';
+                      if (parsed < 0 || parsed > 12)
+                        return 'UV index must be 0-12';
+                      return null;
+                    },
+                  ),
+                  TextField(
+                    controller: notesController,
+                    decoration: const InputDecoration(
+                        labelText: 'Protection used (optional)'),
+                  ),
+                  ResponsiveConfig.heightBox(20),
+                  ElevatedButton(
+                    onPressed: () async {
+                      if (!formKey.currentState!.validate()) return;
+                      final entry = UVIndexEntry(
+                        userId: userId,
+                        date: DateTime.now(),
+                        uvIndex: int.parse(indexController.text.trim()),
+                        protectionUsed: notesController.text.trim().isEmpty
+                            ? null
+                            : notesController.text.trim(),
+                        createdAt: DateTime.now(),
+                      );
+                      await _enhancedService.logUVIndex(entry);
+                      if (mounted) Navigator.of(context).pop();
+                    },
+                    child: const Text('Save UV log'),
+                  ),
+                ],
+              ),
             ),
           ),
         );
@@ -916,65 +995,68 @@ class _SkincareTrackingScreenState extends ConsumerState<SkincareTrackingScreen>
             top: 24,
             bottom: MediaQuery.of(context).viewInsets.bottom + 24,
           ),
-          child: Form(
-            key: formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'Add skin goal',
-                  style: ResponsiveConfig.textStyle(
-                    size: 18,
-                    weight: FontWeight.bold,
+          child: SingleChildScrollView(
+            child: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Add skin goal',
+                    style: ResponsiveConfig.textStyle(
+                      size: 18,
+                      weight: FontWeight.bold,
+                    ),
                   ),
-                ),
-                TextFormField(
-                  controller: goalController,
-                  decoration: const InputDecoration(labelText: 'Goal'),
-                  validator: (value) =>
-                      value == null || value.trim().isEmpty ? 'Required' : null,
-                ),
-                TextField(
-                  controller: descriptionController,
-                  decoration: const InputDecoration(
-                      labelText: 'Description (optional)'),
-                ),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.calendar_month_outlined),
-                  title: Text(DateFormat('MMM d, y').format(targetDate)),
-                  onTap: () async {
-                    final picked = await showDatePicker(
-                      context: context,
-                      initialDate: targetDate,
-                      firstDate: DateTime.now(),
-                      lastDate: DateTime.now().add(const Duration(days: 365)),
-                    );
-                    if (picked != null) {
-                      targetDate = picked;
-                      setState(() {});
-                    }
-                  },
-                ),
-                ResponsiveConfig.heightBox(20),
-                ElevatedButton(
-                  onPressed: () async {
-                    if (!formKey.currentState!.validate()) return;
-                    final goal = SkinGoal(
-                      userId: userId,
-                      goal: goalController.text.trim(),
-                      description: descriptionController.text.trim().isEmpty
-                          ? null
-                          : descriptionController.text.trim(),
-                      targetDate: targetDate,
-                      createdAt: DateTime.now(),
-                    );
-                    await _enhancedService.createSkinGoal(goal);
-                    if (mounted) Navigator.of(context).pop();
-                  },
-                  child: const Text('Save goal'),
-                ),
-              ],
+                  TextFormField(
+                    controller: goalController,
+                    decoration: const InputDecoration(labelText: 'Goal'),
+                    validator: (value) => value == null || value.trim().isEmpty
+                        ? 'Required'
+                        : null,
+                  ),
+                  TextField(
+                    controller: descriptionController,
+                    decoration: const InputDecoration(
+                        labelText: 'Description (optional)'),
+                  ),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.calendar_month_outlined),
+                    title: Text(DateFormat('MMM d, y').format(targetDate)),
+                    onTap: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: targetDate,
+                        firstDate: DateTime.now(),
+                        lastDate: DateTime.now().add(const Duration(days: 365)),
+                      );
+                      if (picked != null) {
+                        targetDate = picked;
+                        setState(() {});
+                      }
+                    },
+                  ),
+                  ResponsiveConfig.heightBox(20),
+                  ElevatedButton(
+                    onPressed: () async {
+                      if (!formKey.currentState!.validate()) return;
+                      final goal = SkinGoal(
+                        userId: userId,
+                        goal: goalController.text.trim(),
+                        description: descriptionController.text.trim().isEmpty
+                            ? null
+                            : descriptionController.text.trim(),
+                        targetDate: targetDate,
+                        createdAt: DateTime.now(),
+                      );
+                      await _enhancedService.createSkinGoal(goal);
+                      if (mounted) Navigator.of(context).pop();
+                    },
+                    child: const Text('Save goal'),
+                  ),
+                ],
+              ),
             ),
           ),
         );
@@ -995,6 +1077,10 @@ class _OverviewTab extends StatelessWidget {
     required this.goalStream,
     required this.reminderService,
     required this.onAnalyzeSkin,
+    required this.onLogAcne,
+    required this.onLogUV,
+    required this.onAddGoal,
+    required this.onAddProduct,
   });
 
   final String userId;
@@ -1005,6 +1091,10 @@ class _OverviewTab extends StatelessWidget {
   final Stream<List<SkinGoal>> goalStream;
   final ReminderService reminderService;
   final VoidCallback onAnalyzeSkin;
+  final VoidCallback onLogAcne;
+  final VoidCallback onLogUV;
+  final VoidCallback onAddGoal;
+  final VoidCallback onAddProduct;
 
   @override
   Widget build(BuildContext context) {
@@ -1026,17 +1116,17 @@ class _OverviewTab extends StatelessWidget {
           ResponsiveConfig.heightBox(16),
           _HydrationCard(
             onSchedule: () async {
-              await reminderService.createReminder(
-                Reminder(
+              final result = await showDialog(
+                context: context,
+                builder: (context) => CreateReminderDialog(
                   userId: userId,
-                  type: 'hydration',
-                  title: 'Hydration reminder',
-                  description: 'Sip water to keep skin plump!',
-                  scheduledTime: DateTime.now().add(const Duration(minutes: 1)),
-                  metadata: const {'repeat': 'daily'},
+                  defaultType: 'hydration',
+                  defaultTitle: 'Hydration Reminder',
+                  defaultDescription: 'Sip water to keep skin plump!',
                 ),
               );
-              if (context.mounted) {
+
+              if (result == true && context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
                       content: Text('Hydration reminder scheduled.')),
@@ -1048,28 +1138,40 @@ class _OverviewTab extends StatelessWidget {
           StreamBuilder<List<SkincareProduct>>(
             stream: productStream,
             builder: (context, snapshot) {
-              return _InventoryCard(products: snapshot.data ?? []);
+              return _InventoryCard(
+                products: snapshot.data ?? [],
+                onAddProduct: onAddProduct,
+              );
             },
           ),
           ResponsiveConfig.heightBox(16),
           StreamBuilder<List<AcneEntry>>(
             stream: acneStream,
             builder: (context, snapshot) {
-              return _AcneCard(entries: snapshot.data ?? []);
+              return _AcneCard(
+                entries: snapshot.data ?? [],
+                onLogAcne: onLogAcne,
+              );
             },
           ),
           ResponsiveConfig.heightBox(16),
           StreamBuilder<List<UVIndexEntry>>(
             stream: uvStream,
             builder: (context, snapshot) {
-              return _UVOverviewCard(entries: snapshot.data ?? []);
+              return _UVOverviewCard(
+                entries: snapshot.data ?? [],
+                onLogUV: onLogUV,
+              );
             },
           ),
           ResponsiveConfig.heightBox(16),
           StreamBuilder<List<SkinGoal>>(
             stream: goalStream,
             builder: (context, snapshot) {
-              return _GoalCard(goals: snapshot.data ?? []);
+              return _GoalCard(
+                goals: snapshot.data ?? [],
+                onAddGoal: onAddGoal,
+              );
             },
           ),
           ResponsiveConfig.heightBox(16),
@@ -1580,9 +1682,13 @@ class _HydrationCard extends StatelessWidget {
 }
 
 class _InventoryCard extends StatelessWidget {
-  const _InventoryCard({required this.products});
+  const _InventoryCard({
+    required this.products,
+    required this.onAddProduct,
+  });
 
   final List<SkincareProduct> products;
+  final VoidCallback onAddProduct;
 
   @override
   Widget build(BuildContext context) {
@@ -1598,12 +1704,23 @@ class _InventoryCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Product Inventory',
-              style: ResponsiveConfig.textStyle(
-                size: 18,
-                weight: FontWeight.bold,
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Product Inventory',
+                  style: ResponsiveConfig.textStyle(
+                    size: 18,
+                    weight: FontWeight.bold,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.add_circle_outline),
+                  color: AppTheme.primaryPink,
+                  onPressed: onAddProduct,
+                  tooltip: 'Add product',
+                ),
+              ],
             ),
             ResponsiveConfig.heightBox(12),
             Wrap(
@@ -1635,9 +1752,13 @@ class _InventoryCard extends StatelessWidget {
 }
 
 class _AcneCard extends StatelessWidget {
-  const _AcneCard({required this.entries});
+  const _AcneCard({
+    required this.entries,
+    required this.onLogAcne,
+  });
 
   final List<AcneEntry> entries;
+  final VoidCallback onLogAcne;
 
   @override
   Widget build(BuildContext context) {
@@ -1657,9 +1778,20 @@ class _AcneCard extends StatelessWidget {
                     weight: FontWeight.bold,
                   ),
                 ),
-                Chip(
-                  label: Text('${entries.length} logged'),
-                  backgroundColor: AppTheme.primaryPink.withOpacity(0.15),
+                Row(
+                  children: [
+                    Chip(
+                      label: Text('${entries.length} logged'),
+                      backgroundColor: AppTheme.primaryPink.withOpacity(0.15),
+                    ),
+                    /* ResponsiveConfig.widthBox(8),
+                    IconButton(
+                      icon: const Icon(Icons.healing_outlined),
+                      color: AppTheme.primaryPink,
+                      onPressed: onLogAcne,
+                      tooltip: 'Log breakout',
+                    ), */
+                  ],
                 ),
               ],
             ),
@@ -1698,9 +1830,13 @@ class _AcneCard extends StatelessWidget {
 }
 
 class _UVOverviewCard extends StatelessWidget {
-  const _UVOverviewCard({required this.entries});
+  const _UVOverviewCard({
+    required this.entries,
+    required this.onLogUV,
+  });
 
   final List<UVIndexEntry> entries;
+  final VoidCallback onLogUV;
 
   @override
   Widget build(BuildContext context) {
@@ -1710,12 +1846,23 @@ class _UVOverviewCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'UV Index Monitor',
-              style: ResponsiveConfig.textStyle(
-                size: 18,
-                weight: FontWeight.bold,
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'UV Index Monitor',
+                  style: ResponsiveConfig.textStyle(
+                    size: 18,
+                    weight: FontWeight.bold,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.sunny_snowing),
+                  color: AppTheme.primaryPink,
+                  onPressed: onLogUV,
+                  tooltip: 'Log UV index',
+                ),
+              ],
             ),
             ResponsiveConfig.heightBox(8),
             if (entries.isEmpty)
@@ -1753,9 +1900,13 @@ class _UVOverviewCard extends StatelessWidget {
 }
 
 class _GoalCard extends StatelessWidget {
-  const _GoalCard({required this.goals});
+  const _GoalCard({
+    required this.goals,
+    required this.onAddGoal,
+  });
 
   final List<SkinGoal> goals;
+  final VoidCallback onAddGoal;
 
   @override
   Widget build(BuildContext context) {
@@ -1763,12 +1914,36 @@ class _GoalCard extends StatelessWidget {
       return Card(
         child: Padding(
           padding: ResponsiveConfig.padding(all: 16),
-          child: Text(
-            'Set actionable goals (e.g. "Reduce hyperpigmentation by June") to stay consistent.',
-            style: ResponsiveConfig.textStyle(
-              size: 14,
-              color: AppTheme.mediumGray,
-            ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Skin Goal Planner',
+                    style: ResponsiveConfig.textStyle(
+                      size: 18,
+                      weight: FontWeight.bold,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.flag_outlined),
+                    color: AppTheme.primaryPink,
+                    onPressed: onAddGoal,
+                    tooltip: 'Add goal',
+                  ),
+                ],
+              ),
+              ResponsiveConfig.heightBox(8),
+              Text(
+                'Set actionable goals (e.g. "Reduce hyperpigmentation by June") to stay consistent.',
+                style: ResponsiveConfig.textStyle(
+                  size: 14,
+                  color: AppTheme.mediumGray,
+                ),
+              ),
+            ],
           ),
         ),
       );
@@ -1779,23 +1954,44 @@ class _GoalCard extends StatelessWidget {
         padding: ResponsiveConfig.padding(all: 16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: goals.take(3).map((goal) {
-            return ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: Icon(
-                goal.status == 'achieved'
-                    ? Icons.check_circle
-                    : Icons.flag_outlined,
-                color: goal.status == 'achieved'
-                    ? AppTheme.successGreen
-                    : AppTheme.primaryPink,
-              ),
-              title: Text(goal.goal),
-              subtitle: Text(
-                'Target: ${DateFormat('MMM d, y').format(goal.targetDate)} • Status: ${goal.status}',
-              ),
-            );
-          }).toList(),
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Skin Goal Planner',
+                  style: ResponsiveConfig.textStyle(
+                    size: 18,
+                    weight: FontWeight.bold,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.flag_outlined),
+                  color: AppTheme.primaryPink,
+                  onPressed: onAddGoal,
+                  tooltip: 'Add goal',
+                ),
+              ],
+            ),
+            ResponsiveConfig.heightBox(12),
+            ...goals.take(3).map((goal) {
+              return ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Icon(
+                  goal.status == 'achieved'
+                      ? Icons.check_circle
+                      : Icons.flag_outlined,
+                  color: goal.status == 'achieved'
+                      ? AppTheme.successGreen
+                      : AppTheme.primaryPink,
+                ),
+                title: Text(goal.goal),
+                subtitle: Text(
+                  'Target: ${DateFormat('MMM d, y').format(goal.targetDate)} • Status: ${goal.status}',
+                ),
+              );
+            }).toList(),
+          ],
         ),
       ),
     );
@@ -1876,15 +2072,15 @@ class _CommunityCard extends StatelessWidget {
               ),
             ),
             ResponsiveConfig.heightBox(16),
-            Wrap(
-              spacing: 8,
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 ElevatedButton.icon(
                   onPressed: () => context.push('/groups', extra: 'skincare'),
                   icon: const Icon(Icons.groups_outlined),
                   label: const Text('Join forum'),
                 ),
-                ResponsiveConfig.widthBox(8),
+                ResponsiveConfig.heightBox(8),
                 OutlinedButton.icon(
                   onPressed: () => context.push('/events', extra: 'skincare'),
                   icon: const Icon(Icons.event_outlined),
@@ -2064,14 +2260,15 @@ class _DermatologistCard extends StatelessWidget {
               ),
             ),
             ResponsiveConfig.heightBox(12),
-            Wrap(
-              spacing: 8,
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 ElevatedButton.icon(
                   onPressed: () {},
                   icon: const Icon(Icons.video_call_outlined),
                   label: const Text('Book video call'),
                 ),
+                ResponsiveConfig.heightBox(8),
                 OutlinedButton.icon(
                   onPressed: () {},
                   icon: const Icon(Icons.picture_as_pdf_outlined),
@@ -2236,12 +2433,13 @@ class _HealthScoreCard extends StatelessWidget {
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
-                    CircularProgressIndicator(
-                      value: overall / 100,
-                      strokeWidth: 12,
-                      backgroundColor: AppTheme.palePink,
-                      valueColor: const AlwaysStoppedAnimation<Color>(
-                        AppTheme.primaryPink,
+                    CustomPaint(
+                      size: const Size(150, 150),
+                      painter: _SkinHealthScorePainter(
+                        progress: overall / 100,
+                        backgroundColor: AppTheme.palePink,
+                        progressColor: AppTheme.primaryPink,
+                        strokeWidth: 12,
                       ),
                     ),
                     Column(
@@ -2817,5 +3015,59 @@ class _EmptyState extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+/// Custom painter for skin health score circular progress
+class _SkinHealthScorePainter extends CustomPainter {
+  final double progress;
+  final Color backgroundColor;
+  final Color progressColor;
+  final double strokeWidth;
+
+  _SkinHealthScorePainter({
+    required this.progress,
+    required this.backgroundColor,
+    required this.progressColor,
+    required this.strokeWidth,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = (size.width - strokeWidth) / 2;
+
+    // Draw background circle
+    final backgroundPaint = Paint()
+      ..color = backgroundColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.round;
+
+    canvas.drawCircle(center, radius, backgroundPaint);
+
+    // Draw progress arc
+    final progressPaint = Paint()
+      ..color = progressColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.round;
+
+    final sweepAngle = 2 * pi * progress;
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius),
+      -pi / 2, // Start from top
+      sweepAngle,
+      false,
+      progressPaint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_SkinHealthScorePainter oldDelegate) {
+    return oldDelegate.progress != progress ||
+        oldDelegate.backgroundColor != backgroundColor ||
+        oldDelegate.progressColor != progressColor ||
+        oldDelegate.strokeWidth != strokeWidth;
   }
 }

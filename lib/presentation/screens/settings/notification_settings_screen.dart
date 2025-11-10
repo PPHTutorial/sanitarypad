@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../core/config/responsive_config.dart';
+import '../../../core/providers/auth_provider.dart';
 import '../../../services/notification_service.dart';
 import '../../../core/widgets/back_button_handler.dart';
+import '../reminders/create_reminder_dialog.dart';
 
 /// Notification settings screen
 class NotificationSettingsScreen extends ConsumerStatefulWidget {
@@ -148,8 +151,45 @@ class _NotificationSettingsScreenState
                 ),
                 ResponsiveConfig.heightBox(24),
 
-                // Test Notification Button
+                // View Reminders Button
+                OutlinedButton.icon(
+                  onPressed: () => context.push('/reminders'),
+                  icon: const Icon(Icons.list_alt),
+                  label: const Text('View All Reminders'),
+                ),
+                ResponsiveConfig.heightBox(12),
+
+                // Create Reminder Button
                 ElevatedButton.icon(
+                  onPressed: () async {
+                    final userAsync = ref.read(currentUserStreamProvider);
+                    final user = userAsync.value;
+                    if (user == null) return;
+
+                    final result = await showDialog(
+                      context: context,
+                      builder: (context) => CreateReminderDialog(
+                        userId: user.userId,
+                        defaultType: 'custom',
+                        defaultTitle: 'Custom Reminder',
+                      ),
+                    );
+
+                    if (result == true && mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Reminder created successfully'),
+                        ),
+                      );
+                    }
+                  },
+                  icon: const Icon(Icons.add_alarm),
+                  label: const Text('Create Reminder'),
+                ),
+                ResponsiveConfig.heightBox(12),
+
+                // Test Notification Button
+                OutlinedButton.icon(
                   onPressed: () async {
                     try {
                       await _notificationService.showImmediateNotification(

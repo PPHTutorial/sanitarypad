@@ -54,6 +54,7 @@ class Reminder {
 class ReminderService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final NotificationService _notificationService = NotificationService();
+  bool _notificationServiceInitialized = false;
 
   /// Create a reminder
   Future<String> createReminder(Reminder reminder) async {
@@ -64,18 +65,48 @@ class ReminderService {
 
       // Schedule local notification
       if (reminder.isActive && reminder.scheduledTime.isAfter(DateTime.now())) {
-        // Use a valid 32-bit integer ID (max: 2,147,483,647)
-        final notificationId = docRef.id.hashCode.abs() % 2147483647;
-        await _notificationService.scheduleNotification(
-          id: notificationId,
-          title: reminder.title,
-          body: reminder.description ?? '',
-          scheduledDate: reminder.scheduledTime,
-        );
+        try {
+          // Ensure notification service is initialized
+          if (!_notificationServiceInitialized) {
+            await _notificationService.initialize();
+            _notificationServiceInitialized = true;
+          }
+
+          // Use a valid 32-bit integer ID (max: 2,147,483,647)
+          final notificationId = docRef.id.hashCode.abs() % 2147483647;
+
+          // Extract repeat interval from metadata
+          final repeatInterval = reminder.metadata?['repeat'] as String?;
+          final customIntervalDays =
+              reminder.metadata?['customIntervalDays'] as int?;
+
+          await _notificationService.scheduleNotification(
+            id: notificationId,
+            title: reminder.title,
+            body: reminder.description ?? '',
+            scheduledDate: reminder.scheduledTime,
+            repeatInterval: repeatInterval,
+            customIntervalDays: customIntervalDays,
+          );
+          print(
+              '✅ Notification scheduled: ${reminder.title} at ${reminder.scheduledTime} (ID: $notificationId, repeat: ${repeatInterval ?? 'none'})');
+        } catch (e) {
+          print('❌ Error scheduling notification: $e');
+          print('Stack trace: ${e.toString()}');
+          // Don't fail reminder creation if notification scheduling fails
+        }
+      } else {
+        if (!reminder.isActive) {
+          print('⚠️ Reminder is not active, skipping notification');
+        } else {
+          print(
+              '⚠️ Scheduled time is in the past: ${reminder.scheduledTime}, current: ${DateTime.now()}');
+        }
       }
 
       return docRef.id;
     } catch (e) {
+      print('❌ Error creating reminder: $e');
       rethrow;
     }
   }
@@ -92,21 +123,43 @@ class ReminderService {
           .doc(reminder.id)
           .update(reminder.toMap());
 
+      // Cancel existing notification first
+      final notificationId = reminder.id!.hashCode.abs() % 2147483647;
+      await _notificationService.cancelNotification(notificationId);
+
       // Update local notification
       if (reminder.isActive && reminder.scheduledTime.isAfter(DateTime.now())) {
-        // Use a valid 32-bit integer ID (max: 2,147,483,647)
-        final notificationId = reminder.id!.hashCode.abs() % 2147483647;
-        await _notificationService.scheduleNotification(
-          id: notificationId,
-          title: reminder.title,
-          body: reminder.description ?? '',
-          scheduledDate: reminder.scheduledTime,
-        );
+        try {
+          // Ensure notification service is initialized
+          if (!_notificationServiceInitialized) {
+            await _notificationService.initialize();
+            _notificationServiceInitialized = true;
+          }
+
+          // Extract repeat interval from metadata
+          final repeatInterval = reminder.metadata?['repeat'] as String?;
+          final customIntervalDays =
+              reminder.metadata?['customIntervalDays'] as int?;
+
+          await _notificationService.scheduleNotification(
+            id: notificationId,
+            title: reminder.title,
+            body: reminder.description ?? '',
+            scheduledDate: reminder.scheduledTime,
+            repeatInterval: repeatInterval,
+            customIntervalDays: customIntervalDays,
+          );
+          print(
+              '✅ Notification updated: ${reminder.title} at ${reminder.scheduledTime} (ID: $notificationId, repeat: ${repeatInterval ?? 'none'})');
+        } catch (e) {
+          print('❌ Error updating notification: $e');
+          print('Stack trace: ${e.toString()}');
+        }
       } else {
-        final notificationId = reminder.id!.hashCode.abs() % 2147483647;
-        await _notificationService.cancelNotification(notificationId);
+        print('⚠️ Reminder not active or in past, notification cancelled');
       }
     } catch (e) {
+      print('❌ Error updating reminder: $e');
       rethrow;
     }
   }

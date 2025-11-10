@@ -28,6 +28,7 @@ import '../../presentation/screens/profile/emergency_contacts_screen.dart';
 import '../../presentation/screens/profile/emergency_contact_form_screen.dart';
 import '../../data/models/emergency_contact_model.dart';
 import '../../presentation/screens/settings/notification_settings_screen.dart';
+import '../../presentation/screens/reminders/reminders_list_screen.dart';
 import '../../presentation/screens/pregnancy/pregnancy_tracking_screen.dart';
 import '../../presentation/screens/pregnancy/pregnancy_form_screen.dart';
 import '../../data/models/pregnancy_model.dart';
@@ -46,6 +47,7 @@ import '../../presentation/screens/community/group_form_screen.dart';
 import '../../presentation/screens/community/events_list_screen.dart';
 import '../../presentation/screens/community/event_detail_screen.dart';
 import '../../presentation/screens/community/event_form_screen.dart';
+import '../../presentation/screens/ai/ai_chat_screen.dart';
 import '../../core/providers/auth_provider.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
@@ -299,6 +301,11 @@ class AppRouter {
           name: 'notification-settings',
           builder: (context, state) => const NotificationSettingsScreen(),
         ),
+        GoRoute(
+          path: '/reminders',
+          name: 'reminders',
+          builder: (context, state) => const RemindersListScreen(),
+        ),
 
         // Health Alerts - Protected route
         GoRoute(
@@ -416,6 +423,20 @@ class AppRouter {
           builder: (context, state) {
             final category = state.extra as String?;
             return EventFormScreen(category: category);
+          },
+        ),
+
+        // AI Assistant - Protected routes
+        GoRoute(
+          path: '/ai-chat/:category',
+          name: 'ai-chat',
+          builder: (context, state) {
+            final category = state.pathParameters['category']!;
+            final context = state.extra as Map<String, dynamic>?;
+            return AIChatScreen(
+              category: category,
+              context: context,
+            );
           },
         ),
       ],
