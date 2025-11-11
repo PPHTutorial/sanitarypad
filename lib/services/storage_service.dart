@@ -2,6 +2,16 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'dart:io';
 
+class StorageUploadResult {
+  final String downloadUrl;
+  final String storagePath;
+
+  const StorageUploadResult({
+    required this.downloadUrl,
+    required this.storagePath,
+  });
+}
+
 /// Storage service for Firestore and Firebase Storage
 class StorageService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -103,19 +113,19 @@ class StorageService {
   }
 
   /// Upload file to Firebase Storage
-  Future<String> uploadFile({
+  Future<StorageUploadResult> uploadFile({
     required String path,
     required File file,
-    String? userId,
   }) async {
     try {
       final ref = _storage.ref().child(path);
-      if (userId != null) {
-        ref.child(userId);
-      }
       final uploadTask = ref.putFile(file);
       final snapshot = await uploadTask;
-      return await snapshot.ref.getDownloadURL();
+      final downloadUrl = await snapshot.ref.getDownloadURL();
+      return StorageUploadResult(
+        downloadUrl: downloadUrl,
+        storagePath: snapshot.ref.fullPath,
+      );
     } catch (e) {
       throw Exception('Failed to upload file: ${e.toString()}');
     }

@@ -185,52 +185,6 @@ class HomeScreen extends ConsumerWidget {
             Expanded(
               child: _buildActionButton(
                 context,
-                icon: Icons.water_drop,
-                label: 'Log Period',
-                onTap: () => context.go('/log-period'),
-              ),
-            ),
-            ResponsiveConfig.widthBox(12),
-            Expanded(
-              child: _buildActionButton(
-                context,
-                icon: Icons.sanitizer,
-                label: 'Pad Change',
-                onTap: () => context.go('/pad-management'),
-              ),
-            ),
-          ],
-        ),
-        ResponsiveConfig.heightBox(12),
-        // Second Row: Wellness & Calendar
-        Row(
-          children: [
-            Expanded(
-              child: _buildActionButton(
-                context,
-                icon: Icons.favorite_outline,
-                label: 'Wellness',
-                onTap: () => context.go('/wellness-journal-list'),
-              ),
-            ),
-            ResponsiveConfig.widthBox(12),
-            Expanded(
-              child: _buildActionButton(
-                context,
-                icon: Icons.calendar_today,
-                label: 'Calendar',
-                onTap: () => context.go('/calendar'),
-              ),
-            ),
-          ],
-        ),
-        ResponsiveConfig.heightBox(12),
-        // Third Row: Pregnancy & Fertility
-        Row(
-          children: [
-            Expanded(
-              child: _buildActionButton(
-                context,
                 icon: Icons.child_care,
                 label: 'Pregnancy',
                 onTap: () => context.go('/pregnancy-tracking'),
@@ -247,8 +201,9 @@ class HomeScreen extends ConsumerWidget {
             ),
           ],
         ),
+
         ResponsiveConfig.heightBox(12),
-        // Fourth Row: Skincare
+        // Second Row: Wellness & Calendar
         Row(
           children: [
             Expanded(
@@ -263,9 +218,32 @@ class HomeScreen extends ConsumerWidget {
             Expanded(
               child: _buildActionButton(
                 context,
-                icon: Icons.insights,
-                label: 'Insights',
-                onTap: () => context.go('/insights'),
+                icon: Icons.favorite_outline,
+                label: 'Wellness',
+                onTap: () => context.go('/wellness-journal-list'),
+              ),
+            )
+          ],
+        ),
+        ResponsiveConfig.heightBox(12),
+        // Third Row: Pregnancy & Fertility
+        Row(
+          children: [
+            Expanded(
+              child: _buildActionButton(
+                context,
+                icon: Icons.water_drop,
+                label: 'Log Period',
+                onTap: () => context.go('/log-period'),
+              ),
+            ),
+            ResponsiveConfig.widthBox(12),
+            Expanded(
+              child: _buildActionButton(
+                context,
+                icon: Icons.sanitizer,
+                label: 'Pad Change',
+                onTap: () => context.go('/pad-management'),
               ),
             ),
           ],

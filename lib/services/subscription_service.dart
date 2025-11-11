@@ -157,7 +157,7 @@ class SubscriptionService {
     return {
       AppConstants.planMonthly: {
         'name': 'Monthly',
-        'price': 4.99,
+        'price': 24.99,
         'currency': 'USD',
         'duration': 1, // months
         'features': [
@@ -169,7 +169,7 @@ class SubscriptionService {
       },
       AppConstants.planQuarterly: {
         'name': 'Quarterly',
-        'price': 12.99,
+        'price': 69.99,
         'currency': 'USD',
         'duration': 3, // months
         'discount': 13, // percentage
@@ -181,9 +181,24 @@ class SubscriptionService {
           'Save 13%',
         ],
       },
+      AppConstants.planSemiAnnual: {
+        'name': 'Semi-Annual',
+        'price': 119.99,
+        'currency': 'USD',
+        'duration': 6, // months
+        'discount': 25, // percentage
+        'features': [
+          'Unlimited cycle tracking',
+          'Advanced insights',
+          'Wellness content library',
+          'Priority support',
+          'Save 25%',
+        ],
+      },
+      
       AppConstants.planYearly: {
         'name': 'Yearly',
-        'price': 39.99,
+        'price': 239.99,
         'currency': 'USD',
         'duration': 12, // months
         'discount': 33, // percentage

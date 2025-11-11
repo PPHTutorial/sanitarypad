@@ -7,13 +7,18 @@ import '../../../core/providers/auth_provider.dart';
 import '../../../core/widgets/back_button_handler.dart';
 import '../../../data/models/event_model.dart';
 import '../../../services/event_service.dart';
+import '../../../core/theme/app_theme.dart';
 
 class EventFormScreen extends ConsumerStatefulWidget {
   final String? category;
+  final String? groupId;
+  final String? groupName;
 
   const EventFormScreen({
     super.key,
     this.category,
+    this.groupId,
+    this.groupName,
   });
 
   @override
@@ -93,6 +98,7 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
         description: _descriptionController.text.trim(),
         category: _selectedCategory,
         createdBy: user.userId,
+        groupId: widget.groupId,
         startDate: startDateTime,
         endDate: endDateTime,
         location: _locationController.text.trim().isEmpty
@@ -145,6 +151,49 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                if (widget.groupId != null)
+                  Card(
+                    color: AppTheme.primaryPink.withOpacity(0.12),
+                    child: Padding(
+                      padding: ResponsiveConfig.padding(all: 16),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.groups_outlined,
+                              color: AppTheme.primaryPink),
+                          ResponsiveConfig.widthBox(12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Group event',
+                                  style: ResponsiveConfig.textStyle(
+                                    size: 14,
+                                    weight: FontWeight.bold,
+                                    color: AppTheme.primaryPink,
+                                  ),
+                                ),
+                                ResponsiveConfig.heightBox(4),
+                                Text(
+                                  widget.groupName ?? 'Linked community',
+                                  style: ResponsiveConfig.textStyle(size: 13),
+                                ),
+                                ResponsiveConfig.heightBox(4),
+                                Text(
+                                  'Members of this group will see and engage with this event first.',
+                                  style: ResponsiveConfig.textStyle(
+                                    size: 12,
+                                    color: AppTheme.mediumGray,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                if (widget.groupId != null) ResponsiveConfig.heightBox(16),
                 TextFormField(
                   controller: _titleController,
                   decoration: const InputDecoration(

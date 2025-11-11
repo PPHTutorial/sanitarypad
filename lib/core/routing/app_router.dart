@@ -36,6 +36,7 @@ import '../../presentation/screens/fertility/fertility_tracking_screen.dart';
 import '../../presentation/screens/fertility/fertility_entry_form_screen.dart';
 import '../../data/models/fertility_model.dart';
 import '../../presentation/screens/skincare/skincare_tracking_screen.dart';
+import '../../presentation/screens/skincare/skincare_product_management_screen.dart';
 import '../../presentation/screens/skincare/skincare_product_form_screen.dart';
 import '../../presentation/screens/skincare/skincare_routine_form_screen.dart';
 import '../../data/models/skincare_model.dart';
@@ -43,6 +44,7 @@ import '../../presentation/screens/alerts/red_flag_alerts_screen.dart';
 import '../../presentation/screens/reports/health_report_screen.dart';
 import '../../presentation/screens/community/groups_list_screen.dart';
 import '../../presentation/screens/community/group_detail_screen.dart';
+import '../../presentation/screens/community/group_chat_screen.dart';
 import '../../presentation/screens/community/group_form_screen.dart';
 import '../../presentation/screens/community/events_list_screen.dart';
 import '../../presentation/screens/community/event_detail_screen.dart';
@@ -358,6 +360,15 @@ class AppRouter {
           builder: (context, state) => const SkincareTrackingScreen(),
         ),
         GoRoute(
+          path: '/skincare/products',
+          name: 'skincare-products',
+          builder: (context, state) {
+            final view = state.extra as ProductInventoryView? ??
+                ProductInventoryView.all;
+            return SkincareProductManagementScreen(view: view);
+          },
+        ),
+        GoRoute(
           path: '/skincare-product-form',
           name: 'skincare-product-form',
           builder: (context, state) {
@@ -392,6 +403,15 @@ class AppRouter {
           },
         ),
         GoRoute(
+          path: '/groups/:id/chat',
+          name: 'group-chat',
+          builder: (context, state) {
+            final id = state.pathParameters['id']!;
+            final groupName = state.extra as String?;
+            return GroupChatScreen(groupId: id, groupName: groupName);
+          },
+        ),
+        GoRoute(
           path: '/groups/create',
           name: 'group-create',
           builder: (context, state) {
@@ -421,8 +441,24 @@ class AppRouter {
           path: '/events/create',
           name: 'event-create',
           builder: (context, state) {
-            final category = state.extra as String?;
-            return EventFormScreen(category: category);
+            String? category;
+            String? groupId;
+            String? groupName;
+
+            final extra = state.extra;
+            if (extra is String) {
+              category = extra;
+            } else if (extra is Map) {
+              category = extra['category'] as String?;
+              groupId = extra['groupId'] as String?;
+              groupName = extra['groupName'] as String?;
+            }
+
+            return EventFormScreen(
+              category: category,
+              groupId: groupId,
+              groupName: groupName,
+            );
           },
         ),
 

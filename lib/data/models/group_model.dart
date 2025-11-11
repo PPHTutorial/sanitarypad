@@ -7,6 +7,7 @@ class GroupModel {
   final String category; // 'pregnancy', 'fertility', 'skincare', 'general'
   final String? imageUrl;
   final String createdBy;
+  final String adminId;
   final DateTime createdAt;
   final DateTime updatedAt;
   final bool isPublic;
@@ -21,6 +22,7 @@ class GroupModel {
     required this.category,
     this.imageUrl,
     required this.createdBy,
+    required this.adminId,
     required this.createdAt,
     required this.updatedAt,
     this.isPublic = true,
@@ -38,6 +40,7 @@ class GroupModel {
       category: data['category'] ?? 'general',
       imageUrl: data['imageUrl'],
       createdBy: data['createdBy'] ?? '',
+      adminId: data['adminId'] ?? data['createdBy'] ?? '',
       createdAt: (data['createdAt'] as Timestamp).toDate(),
       updatedAt: (data['updatedAt'] as Timestamp).toDate(),
       isPublic: data['isPublic'] ?? true,
@@ -54,6 +57,7 @@ class GroupModel {
       'category': category,
       'imageUrl': imageUrl,
       'createdBy': createdBy,
+      'adminId': adminId,
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': Timestamp.fromDate(updatedAt),
       'isPublic': isPublic,
@@ -70,6 +74,7 @@ class GroupModel {
     String? category,
     String? imageUrl,
     String? createdBy,
+    String? adminId,
     DateTime? createdAt,
     DateTime? updatedAt,
     bool? isPublic,
@@ -84,6 +89,7 @@ class GroupModel {
       category: category ?? this.category,
       imageUrl: imageUrl ?? this.imageUrl,
       createdBy: createdBy ?? this.createdBy,
+      adminId: adminId ?? this.adminId,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       isPublic: isPublic ?? this.isPublic,

@@ -32,7 +32,20 @@ class _GroupFormScreenState extends ConsumerState<GroupFormScreen> {
   void initState() {
     super.initState();
     if (widget.category != null) {
-      _selectedCategory = widget.category!;
+      const allowed = {
+        'general',
+        'pregnancy',
+        'fertility',
+        'skincare',
+        'wellness',
+        'mental_health',
+        'nutrition',
+        'fitness',
+        'support',
+        'community',
+      };
+      _selectedCategory =
+          allowed.contains(widget.category) ? widget.category! : 'general';
     }
   }
 
@@ -52,13 +65,16 @@ class _GroupFormScreenState extends ConsumerState<GroupFormScreen> {
     setState(() => _isLoading = true);
 
     try {
+      final now = DateTime.now();
       final group = GroupModel(
         name: _nameController.text.trim(),
         description: _descriptionController.text.trim(),
         category: _selectedCategory,
+        imageUrl: null,
         createdBy: user.userId,
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
+        adminId: user.userId,
+        createdAt: now,
+        updatedAt: now,
         isPublic: _isPublic,
       );
 
@@ -138,6 +154,17 @@ class _GroupFormScreenState extends ConsumerState<GroupFormScreen> {
                         value: 'fertility', child: Text('Fertility')),
                     DropdownMenuItem(
                         value: 'skincare', child: Text('Skincare')),
+                    DropdownMenuItem(
+                        value: 'wellness', child: Text('Wellness')),
+                    DropdownMenuItem(
+                        value: 'mental_health', child: Text('Mental Health')),
+                    DropdownMenuItem(
+                        value: 'nutrition', child: Text('Nutrition')),
+                    DropdownMenuItem(value: 'fitness', child: Text('Fitness')),
+                    DropdownMenuItem(
+                        value: 'support', child: Text('Support Circle')),
+                    DropdownMenuItem(
+                        value: 'community', child: Text('Community Events')),
                   ],
                   onChanged: (value) {
                     if (value != null) {

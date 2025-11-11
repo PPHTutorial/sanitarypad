@@ -50,8 +50,10 @@ class _GroupsListScreenState extends ConsumerState<GroupsListScreen> {
           actions: [
             IconButton(
               icon: const Icon(Icons.add),
-              onPressed: () =>
-                  context.push('/groups/create', extra: widget.category),
+              onPressed: () => context.push(
+                '/groups/create',
+                extra: widget.category == 'all' ? null : widget.category,
+              ),
             ),
           ],
         ),
@@ -99,7 +101,9 @@ class _GroupsListScreenState extends ConsumerState<GroupsListScreen> {
                     ResponsiveConfig.heightBox(24),
                     ElevatedButton.icon(
                       onPressed: () => context.push('/groups/create',
-                          extra: widget.category),
+                          extra: widget.category == 'all'
+                              ? null
+                              : widget.category),
                       icon: const Icon(Icons.add),
                       label: const Text('Create Group'),
                     ),
@@ -176,8 +180,10 @@ class _GroupsListScreenState extends ConsumerState<GroupsListScreen> {
           },
         ),
         floatingActionButton: FloatingActionButton.extended(
-          onPressed: () =>
-              context.push('/groups/create', extra: widget.category),
+          onPressed: () => context.push(
+            '/groups/create',
+            extra: widget.category == 'all' ? null : widget.category,
+          ),
           icon: const Icon(Icons.add),
           label: const Text('Create Group'),
         ),

@@ -1,44 +1,95 @@
 import 'dart:async';
-import 'package:workmanager/workmanager.dart';
-import 'package:flutter/foundation.dart';
+import 'dart:ui';
+import 'package:flutter_background_service/flutter_background_service.dart';
+import 'package:flutter_background_service_android/flutter_background_service_android.dart';
 import 'notification_service.dart';
 import 'reminder_service.dart';
 import 'auth_service.dart';
 import 'cycle_service.dart';
 import 'pad_service.dart';
 import 'fertility_service.dart';
+import 'notification_settings_service.dart';
 
-/// Background task callback for WorkManager
-@pragma('vm:entry-point')
-void callbackDispatcher() {
-  Workmanager().executeTask((task, inputData) async {
-    try {
-      print('🔄 Background task started: $task');
+Timer? _globalCheckTimer;
 
-      final scheduler = BackgroundNotificationScheduler();
+/// Start periodic check with configurable interval
+Future<void> _startPeriodicCheck(ServiceInstance service) async {
+  final settingsService = NotificationSettingsService();
+  final interval = await settingsService.getCheckInterval();
 
-      switch (task) {
-        case 'rescheduleNotifications':
-          await scheduler.rescheduleAllNotifications();
-          break;
-        case 'checkMissedNotifications':
-          await scheduler.checkAndRescheduleMissedNotifications();
-          break;
-        default:
-          print('⚠️ Unknown background task: $task');
+  // Cancel existing timer if any
+  _globalCheckTimer?.cancel();
+
+  _globalCheckTimer = Timer.periodic(interval, (timer) async {
+    if (service is AndroidServiceInstance) {
+      if (await service.isForegroundService()) {
+        // Service is running in foreground
       }
+    }
 
-      print('✅ Background task completed: $task');
-      return Future.value(true);
+    try {
+      final notificationService = NotificationService();
+
+      // Initialize notification service
+      await notificationService.initialize();
+
+      // Check and fire due notifications
+      await notificationService.checkAndFireDueNotifications();
+
+      print('✅ Background service: Checked for due notifications');
     } catch (e, stackTrace) {
-      print('❌ Error in background task $task: $e');
+      print('❌ Error in background service: $e');
       print('Stack trace: $stackTrace');
-      return Future.value(false);
+    }
+
+    // Re-check interval in case user changed it
+    final newInterval = await settingsService.getCheckInterval();
+    if (newInterval != interval) {
+      print('🔄 Notification check interval changed, restarting timer...');
+      timer.cancel();
+      await _startPeriodicCheck(service);
     }
   });
+
+  // Also check immediately
+  try {
+    final notificationService = NotificationService();
+    await notificationService.initialize();
+    await notificationService.checkAndFireDueNotifications();
+  } catch (e) {
+    print('⚠️ Error in initial notification check: $e');
+  }
+}
+
+/// Background service entry point
+/// This runs even when the app is closed
+@pragma('vm:entry-point')
+Future<bool> onStart(ServiceInstance service) async {
+  // Only available for flutter 3.0.0 and above
+  DartPluginRegistrant.ensureInitialized();
+
+  if (service is AndroidServiceInstance) {
+    service.on('setAsForeground').listen((event) {
+      service.setAsForegroundService();
+    });
+
+    service.on('setAsBackground').listen((event) {
+      service.setAsBackgroundService();
+    });
+  }
+
+  service.on('stopService').listen((event) {
+    service.stopSelf();
+  });
+
+  // Start periodic check with configurable interval
+  await _startPeriodicCheck(service);
+
+  return true;
 }
 
 /// Service for scheduling background tasks to ensure notifications fire reliably
+/// even when the app is completely closed
 class BackgroundNotificationScheduler {
   final NotificationService _notificationService = NotificationService();
   final ReminderService _reminderService = ReminderService();
@@ -47,47 +98,43 @@ class BackgroundNotificationScheduler {
   final PadService _padService = PadService();
   final FertilityService _fertilityService = FertilityService();
 
-  /// Initialize WorkManager and schedule periodic tasks
+  /// Initialize background service
   Future<void> initialize() async {
     try {
-      // Initialize WorkManager
-      await Workmanager().initialize(
-        callbackDispatcher,
-        isInDebugMode: kDebugMode,
-      );
-      print('✅ WorkManager initialized');
+      final service = FlutterBackgroundService();
 
-      // Schedule periodic task to check and reschedule notifications
-      // This runs every 15 minutes to ensure notifications are still scheduled
-      await Workmanager().registerPeriodicTask(
-        'notificationCheck',
-        'checkMissedNotifications',
-        frequency: const Duration(minutes: 15),
-        constraints: Constraints(
-          networkType: NetworkType.not_required,
-          requiresBatteryNotLow: false,
-          requiresCharging: false,
-          requiresDeviceIdle: false,
-          requiresStorageNotLow: false,
+      // Initialize the service
+      await service.configure(
+        androidConfiguration: AndroidConfiguration(
+          onStart: onStart,
+          autoStart: true,
+          isForegroundMode: false, // Run in background, not foreground
+          notificationChannelId: 'femcare_background_service',
+          initialNotificationTitle: 'FemCare+',
+          initialNotificationContent: 'Monitoring your reminders',
+          foregroundServiceNotificationId: 888,
         ),
-        existingWorkPolicy: ExistingWorkPolicy.replace,
+        iosConfiguration: IosConfiguration(
+          autoStart: true,
+          onForeground: onStart,
+          onBackground: onStart,
+        ),
       );
-      print('✅ Periodic notification check task registered');
 
-      // Schedule one-time task to reschedule all notifications on app start
-      await Workmanager().registerOneOffTask(
-        'rescheduleOnStart',
-        'rescheduleNotifications',
-        initialDelay: const Duration(seconds: 10),
-        constraints: Constraints(
-          networkType: NetworkType.not_required,
-        ),
-        existingWorkPolicy: ExistingWorkPolicy.replace,
-      );
-      print('✅ One-time reschedule task registered');
+      print('✅ Background service initialized');
+
+      // Start the service
+      await service.startService();
+
+      print('✅ Background service started');
+
+      // Reschedule notifications on app start
+      await rescheduleAllNotifications();
     } catch (e, stackTrace) {
-      print('❌ Error initializing background scheduler: $e');
+      print('❌ Error initializing background service: $e');
       print('Stack trace: $stackTrace');
+      // Don't fail app initialization if background service fails
+      // Notifications will still work via flutter_local_notifications
     }
   }
 
@@ -102,39 +149,8 @@ class BackgroundNotificationScheduler {
 
       print('🔄 Rescheduling all notifications for user: ${user.uid}');
 
-      // Ensure notification service is initialized
-      await _notificationService.initialize();
-
-      // Reschedule all active reminders
-      final remindersStream = _reminderService.getUserReminders(user.uid);
-      final reminders = await remindersStream.first;
-      final activeReminders = reminders.where((r) => r.isActive).toList();
-
-      print(
-          '📋 Found ${activeReminders.length} active reminders to reschedule');
-
-      for (final reminder in activeReminders) {
-        if (reminder.scheduledTime.isAfter(DateTime.now())) {
-          try {
-            final notificationId = reminder.id!.hashCode.abs() % 2147483647;
-            final repeatInterval = reminder.metadata?['repeat'] as String?;
-            final customIntervalDays =
-                reminder.metadata?['customIntervalDays'] as int?;
-
-            await _notificationService.scheduleNotification(
-              id: notificationId,
-              title: reminder.title,
-              body: reminder.description ?? '',
-              scheduledDate: reminder.scheduledTime,
-              repeatInterval: repeatInterval,
-              customIntervalDays: customIntervalDays,
-            );
-            print('✅ Rescheduled reminder: ${reminder.title}');
-          } catch (e) {
-            print('❌ Error rescheduling reminder ${reminder.id}: $e');
-          }
-        }
-      }
+      // Check and fire any due notifications immediately
+      await _notificationService.checkAndFireDueNotifications();
 
       // Reschedule period predictions
       await _reschedulePeriodPredictions(user.uid);
@@ -152,68 +168,38 @@ class BackgroundNotificationScheduler {
     }
   }
 
-  /// Check for missed notifications and reschedule them
-  Future<void> checkAndRescheduleMissedNotifications() async {
-    try {
-      final user = _authService.currentUser;
-      if (user == null) return;
-
-      // Get all active reminders
-      final remindersStream = _reminderService.getUserReminders(user.uid);
-      final reminders = await remindersStream.first;
-      final now = DateTime.now();
-
-      for (final reminder in reminders) {
-        if (!reminder.isActive) continue;
-
-        // Check if reminder was supposed to fire in the last hour but didn't
-        final timeDiff = now.difference(reminder.scheduledTime);
-        if (timeDiff.inHours >= 0 && timeDiff.inHours <= 1) {
-          // Reschedule if it's a repeating reminder
-          final repeatInterval = reminder.metadata?['repeat'] as String?;
-          if (repeatInterval != null && repeatInterval != 'none') {
-            print(
-                '🔄 Rescheduling missed repeating reminder: ${reminder.title}');
-            await rescheduleAllNotifications();
-            break;
-          }
-        }
-      }
-    } catch (e) {
-      print('❌ Error checking missed notifications: $e');
-    }
-  }
-
-  /// Reschedule period prediction notifications
+  /// Reschedule period prediction reminders
   Future<void> _reschedulePeriodPredictions(String userId) async {
     try {
       final cycles = await _cycleService.getCycles();
       if (cycles.isEmpty) return;
 
-      // Get the most recent cycle
-      cycles.sort((a, b) => b.startDate.compareTo(a.startDate));
       final latestCycle = cycles.first;
 
       // Calculate next period start based on cycle length
-      final nextPeriodStart =
-          latestCycle.startDate.add(Duration(days: latestCycle.cycleLength));
+      final avgCycleLength =
+          cycles.take(6).map((c) => c.cycleLength).reduce((a, b) => a + b) /
+              cycles.length;
+      DateTime nextPeriodStart = latestCycle.startDate;
+      final today = DateTime.now();
 
-      if (nextPeriodStart.isAfter(DateTime.now())) {
-        final reminderDate = nextPeriodStart.subtract(const Duration(days: 1));
+      while (nextPeriodStart.isBefore(today) ||
+          nextPeriodStart.isAtSameMomentAs(today)) {
+        nextPeriodStart =
+            nextPeriodStart.add(Duration(days: avgCycleLength.round()));
+      }
 
-        if (reminderDate.isAfter(DateTime.now())) {
-          final notificationId = 'period_${userId}'.hashCode.abs() % 2147483647;
-          await _notificationService.scheduleNotification(
-            id: notificationId,
-            title: 'Period Reminder',
-            body: 'Your period is predicted to start soon',
-            scheduledDate: reminderDate,
-          );
-          print('✅ Period prediction notification rescheduled');
-        }
+      final reminderDate = nextPeriodStart.subtract(const Duration(days: 1));
+
+      if (reminderDate.isAfter(DateTime.now())) {
+        await _reminderService.createPeriodPredictionReminder(
+          userId: userId,
+          predictedDate: nextPeriodStart,
+        );
+        print('✅ Period prediction reminder rescheduled');
       }
     } catch (e) {
-      print('❌ Error rescheduling period predictions: $e');
+      print('⚠️ Error rescheduling period predictions: $e');
     }
   }
 
@@ -223,24 +209,20 @@ class BackgroundNotificationScheduler {
       final pads = await _padService.getPadChanges(limit: 1);
       if (pads.isEmpty) return;
 
-      // Get the most recent pad change
-      final latestPad = pads.first;
+      final lastPad = pads.first;
+      final nextReminderTime = lastPad.changeTime.add(
+        const Duration(hours: 4), // Default 4 hours
+      );
 
-      final nextReminderTime =
-          latestPad.changeTime.add(const Duration(hours: 4));
       if (nextReminderTime.isAfter(DateTime.now())) {
-        final notificationId =
-            'pad_${userId}_${latestPad.padId}'.hashCode.abs() % 2147483647;
-        await _notificationService.scheduleNotification(
-          id: notificationId,
-          title: 'Pad Change Reminder',
-          body: 'Time to change your pad',
-          scheduledDate: nextReminderTime,
+        await _reminderService.createPadChangeReminder(
+          userId: userId,
+          scheduledTime: nextReminderTime,
         );
         print('✅ Pad change reminder rescheduled');
       }
     } catch (e) {
-      print('❌ Error rescheduling pad reminders: $e');
+      print('⚠️ Error rescheduling pad reminders: $e');
     }
   }
 
@@ -260,9 +242,10 @@ class BackgroundNotificationScheduler {
         startDate,
         endDate,
       );
-      final fertilityEntries = await fertilityEntriesStream.first;
 
-      if (fertilityEntries.isEmpty && cycles.isEmpty) return;
+      // Convert stream to list (take first snapshot)
+      final fertilityEntriesSnapshot = await fertilityEntriesStream.first;
+      final fertilityEntries = fertilityEntriesSnapshot;
 
       final prediction = await _fertilityService.predictOvulation(
         userId,
@@ -270,35 +253,41 @@ class BackgroundNotificationScheduler {
         fertilityEntries,
       );
 
-      if (prediction.predictedOvulation.isAfter(DateTime.now())) {
-        final reminderDate =
-            prediction.predictedOvulation.subtract(const Duration(days: 1));
+      final reminderDate =
+          prediction.predictedOvulation.subtract(const Duration(days: 1));
 
-        if (reminderDate.isAfter(DateTime.now())) {
-          final notificationId =
-              'fertility_${userId}'.hashCode.abs() % 2147483647;
-          await _notificationService.scheduleNotification(
-            id: notificationId,
-            title: 'Fertile Window Approaching',
-            body: 'Your fertile window is starting soon',
-            scheduledDate: reminderDate,
-          );
-          print('✅ Fertility notification rescheduled');
-        }
+      if (reminderDate.isAfter(DateTime.now())) {
+        // Create fertility reminder via reminder service
+        await _reminderService.createCustomReminder(
+          userId: userId,
+          title: 'Fertile Window Approaching',
+          description:
+              'Your fertile window is predicted to start soon. Track your symptoms for better predictions.',
+          scheduledTime: reminderDate,
+          metadata: {
+            'type': 'fertility',
+            'predictedOvulation':
+                prediction.predictedOvulation.toIso8601String(),
+          },
+        );
+        print('✅ Fertility notification rescheduled');
       }
     } catch (e) {
-      print('❌ Error rescheduling fertility notifications: $e');
+      print('⚠️ Error rescheduling fertility notifications: $e');
     }
   }
 
-  /// Cancel all background tasks (useful for logout)
-  Future<void> cancelAllTasks() async {
+  /// Stop the background service
+  Future<void> stopService() async {
     try {
-      await Workmanager().cancelByUniqueName('notificationCheck');
-      await Workmanager().cancelByUniqueName('rescheduleOnStart');
-      print('✅ All background tasks cancelled');
+      final service = FlutterBackgroundService();
+      final isRunning = await service.isRunning();
+      if (isRunning) {
+        service.invoke('stopService');
+        print('✅ Background service stopped');
+      }
     } catch (e) {
-      print('❌ Error cancelling background tasks: $e');
+      print('⚠️ Error stopping background service: $e');
     }
   }
 }

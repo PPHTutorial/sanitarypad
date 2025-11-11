@@ -168,4 +168,19 @@ class EventService {
         .get();
     return result.docs.isNotEmpty;
   }
+
+  // Get events linked to a specific group
+  Stream<List<EventModel>> getEventsForGroup(String groupId) {
+    return _firestore
+        .collection(AppConstants.collectionEvents)
+        .where('groupId', isEqualTo: groupId)
+        .where('startDate',
+            isGreaterThan: Timestamp.fromDate(DateTime.now().subtract(
+              const Duration(hours: 2),
+            )))
+        .orderBy('startDate', descending: false)
+        .snapshots()
+        .map((snapshot) =>
+            snapshot.docs.map((doc) => EventModel.fromFirestore(doc)).toList());
+  }
 }

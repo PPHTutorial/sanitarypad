@@ -9,6 +9,7 @@ class SkincareProduct extends Equatable {
   final String category; // cleanser, moisturizer, serum, sunscreen, etc.
   final String? brand;
   final String? imageUrl;
+  final String? imagePath;
   final DateTime? purchaseDate;
   final DateTime? expirationDate;
   final double? price;
@@ -24,6 +25,7 @@ class SkincareProduct extends Equatable {
     required this.category,
     this.brand,
     this.imageUrl,
+    this.imagePath,
     this.purchaseDate,
     this.expirationDate,
     this.price,
@@ -43,6 +45,7 @@ class SkincareProduct extends Equatable {
       category: data['category'] as String,
       brand: data['brand'] as String?,
       imageUrl: data['imageUrl'] as String?,
+      imagePath: data['imagePath'] as String?,
       purchaseDate: data['purchaseDate'] != null
           ? (data['purchaseDate'] as Timestamp).toDate()
           : null,
@@ -67,6 +70,7 @@ class SkincareProduct extends Equatable {
       'category': category,
       'brand': brand,
       'imageUrl': imageUrl,
+      'imagePath': imagePath,
       'purchaseDate':
           purchaseDate != null ? Timestamp.fromDate(purchaseDate!) : null,
       'expirationDate':
@@ -99,6 +103,7 @@ class SkincareProduct extends Equatable {
         category,
         brand,
         imageUrl,
+        imagePath,
         purchaseDate,
         expirationDate,
         price,
@@ -357,6 +362,39 @@ class SkinJournalEntry extends Equatable {
       ];
 }
 
+extension SkinJournalEntryExtension on SkinJournalEntry {
+  SkinJournalEntry copyWith({
+    DateTime? date,
+    String? skinCondition,
+    int? hydrationLevel,
+    int? oilinessLevel,
+    List<String>? concerns,
+    String? notes,
+    List<String>? photoUrls,
+    String? weatherCondition,
+    int? sleepHours,
+    String? stressLevel,
+    DateTime? updatedAt,
+  }) {
+    return SkinJournalEntry(
+      id: id,
+      userId: userId,
+      date: date ?? this.date,
+      skinCondition: skinCondition ?? this.skinCondition,
+      hydrationLevel: hydrationLevel ?? this.hydrationLevel,
+      oilinessLevel: oilinessLevel ?? this.oilinessLevel,
+      concerns: concerns ?? this.concerns,
+      notes: notes ?? this.notes,
+      photoUrls: photoUrls ?? this.photoUrls,
+      weatherCondition: weatherCondition ?? this.weatherCondition,
+      sleepHours: sleepHours ?? this.sleepHours,
+      stressLevel: stressLevel ?? this.stressLevel,
+      createdAt: createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+}
+
 /// Personalized routine template
 class RoutineTemplate extends Equatable {
   final String? id;
@@ -439,6 +477,33 @@ class RoutineTemplate extends Equatable {
         createdAt,
         updatedAt,
       ];
+}
+
+extension RoutineTemplateExtension on RoutineTemplate {
+  RoutineTemplate copyWith({
+    String? name,
+    String? skinType,
+    List<String>? concerns,
+    String? routineType,
+    List<String>? productIds,
+    String? notes,
+    bool? isActive,
+    DateTime? updatedAt,
+  }) {
+    return RoutineTemplate(
+      id: id,
+      userId: userId,
+      name: name ?? this.name,
+      skinType: skinType ?? this.skinType,
+      concerns: concerns ?? this.concerns,
+      routineType: routineType ?? this.routineType,
+      productIds: productIds ?? this.productIds,
+      notes: notes ?? this.notes,
+      isActive: isActive ?? this.isActive,
+      createdAt: createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
 }
 
 /// Product ingredient
@@ -612,6 +677,33 @@ class AcneEntry extends Equatable {
       ];
 }
 
+extension AcneEntryExtension on AcneEntry {
+  AcneEntry copyWith({
+    DateTime? date,
+    String? location,
+    String? type,
+    int? severity,
+    String? notes,
+    List<String>? photoUrls,
+    String? treatmentUsed,
+    DateTime? updatedAt,
+  }) {
+    return AcneEntry(
+      id: id,
+      userId: userId,
+      date: date ?? this.date,
+      location: location ?? this.location,
+      type: type ?? this.type,
+      severity: severity ?? this.severity,
+      notes: notes ?? this.notes,
+      photoUrls: photoUrls ?? this.photoUrls,
+      treatmentUsed: treatmentUsed ?? this.treatmentUsed,
+      createdAt: createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+}
+
 /// UV Index entry
 class UVIndexEntry extends Equatable {
   final String? id;
@@ -671,6 +763,27 @@ class UVIndexEntry extends Equatable {
         protectionUsed,
         createdAt
       ];
+}
+
+extension UVIndexEntryExtension on UVIndexEntry {
+  UVIndexEntry copyWith({
+    DateTime? date,
+    int? uvIndex,
+    String? location,
+    String? weatherCondition,
+    String? protectionUsed,
+  }) {
+    return UVIndexEntry(
+      id: id,
+      userId: userId,
+      date: date ?? this.date,
+      uvIndex: uvIndex ?? this.uvIndex,
+      location: location ?? this.location,
+      weatherCondition: weatherCondition ?? this.weatherCondition,
+      protectionUsed: protectionUsed ?? this.protectionUsed,
+      createdAt: createdAt,
+    );
+  }
 }
 
 /// Skin goal
@@ -741,4 +854,27 @@ class SkinGoal extends Equatable {
         createdAt,
         updatedAt,
       ];
+}
+
+extension SkinGoalExtension on SkinGoal {
+  SkinGoal copyWith({
+    String? goal,
+    String? description,
+    DateTime? targetDate,
+    String? status,
+    List<String>? actionSteps,
+    DateTime? updatedAt,
+  }) {
+    return SkinGoal(
+      id: id,
+      userId: userId,
+      goal: goal ?? this.goal,
+      description: description ?? this.description,
+      targetDate: targetDate ?? this.targetDate,
+      status: status ?? this.status,
+      actionSteps: actionSteps ?? this.actionSteps,
+      createdAt: createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
 }

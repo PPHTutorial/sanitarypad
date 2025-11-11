@@ -12,7 +12,6 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/back_button_handler.dart';
 import '../../../data/models/pregnancy_model.dart';
 import '../../../services/pregnancy_service.dart';
-import '../../../services/reminder_service.dart';
 import '../reminders/create_reminder_dialog.dart';
 
 class PregnancyTrackingScreen extends ConsumerStatefulWidget {
@@ -27,8 +26,7 @@ class _PregnancyTrackingScreenState
     extends ConsumerState<PregnancyTrackingScreen>
     with TickerProviderStateMixin {
   final _pregnancyService = PregnancyService();
-  final _reminderService = ReminderService();
-  late final TabController _tabController;
+  late TabController _tabController;
 
   @override
   void initState() {
@@ -53,12 +51,28 @@ class _PregnancyTrackingScreenState
 
     return BackButtonHandler(
       fallbackRoute: '/home',
-      child: FutureBuilder<Pregnancy?>(
-        future: _pregnancyService.getActivePregnancy(user.userId),
+      child: StreamBuilder<Pregnancy?>(
+        stream: _pregnancyService.watchActivePregnancy(user.userId),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Scaffold(
                 body: Center(child: CircularProgressIndicator()));
+          }
+
+          if (snapshot.hasError) {
+            return Scaffold(
+              appBar: AppBar(title: const Text('Pregnancy Tracking')),
+              body: Center(
+                child: Padding(
+                  padding: ResponsiveConfig.padding(all: 24),
+                  child: Text(
+                    'Unable to load pregnancy data right now. Please try again.',
+                    style: ResponsiveConfig.textStyle(size: 14),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+            );
           }
 
           final pregnancy = snapshot.data;
@@ -400,21 +414,46 @@ class _PregnancyTrackingScreenState
                 ElevatedButton(
                   onPressed: () async {
                     if (!formKey.currentState!.validate()) return;
-                    final entry = KickEntry(
-                      userId: userId,
-                      pregnancyId: pregnancyId,
-                      date: DateTime.now(),
-                      time: DateTime.now(),
-                      kickCount: int.parse(countController.text.trim()),
-                      duration: Duration(minutes: durationMinutes.round()),
-                      notes: notesController.text.trim().isEmpty
-                          ? null
-                          : notesController.text.trim(),
-                      createdAt: DateTime.now(),
-                    );
-                    await _pregnancyService.logKickEntry(entry);
-                    if (!mounted) return;
-                    Navigator.of(context).pop();
+
+                    try {
+                      final entry = KickEntry(
+                        userId: userId,
+                        pregnancyId: pregnancyId,
+                        date: DateTime.now(),
+                        time: DateTime.now(),
+                        kickCount: int.parse(countController.text.trim()),
+                        duration: Duration(minutes: durationMinutes.round()),
+                        notes: notesController.text.trim().isEmpty
+                            ? null
+                            : notesController.text.trim(),
+                        createdAt: DateTime.now(),
+                      );
+
+                      await _pregnancyService.logKickEntry(entry);
+
+                      if (!mounted) return;
+
+                      Navigator.of(context).pop();
+
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('✅ Saved ${entry.kickCount} kicks'),
+                            duration: const Duration(seconds: 2),
+                          ),
+                        );
+                      }
+                    } catch (e) {
+                      if (!mounted) return;
+
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content:
+                              Text('❌ Error saving kicks: ${e.toString()}'),
+                          duration: const Duration(seconds: 3),
+                        ),
+                      );
+                    }
                   },
                   child: const Text('Save kicks'),
                 ),

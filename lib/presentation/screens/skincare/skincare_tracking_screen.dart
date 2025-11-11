@@ -11,10 +11,13 @@ import '../../../core/config/responsive_config.dart';
 import '../../../core/providers/auth_provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/back_button_handler.dart';
+import '../../../core/constants/app_constants.dart';
 import '../../../data/models/skincare_model.dart';
+import '../../../data/models/wellness_model.dart';
 import '../../../services/reminder_service.dart';
 import '../../../services/skincare_service.dart';
 import '../reminders/create_reminder_dialog.dart';
+import 'skincare_product_management_screen.dart' show ProductInventoryView;
 
 class SkincareTrackingScreen extends ConsumerStatefulWidget {
   const SkincareTrackingScreen({super.key});
@@ -63,6 +66,17 @@ class _SkincareTrackingScreenState extends ConsumerState<SkincareTrackingScreen>
     final productStream = _skincareService.getUserProducts(user.userId);
     final routineTemplateStream =
         _enhancedService.getRoutineTemplates(user.userId);
+    final hydrationStream = FirebaseFirestore.instance
+        .collection(AppConstants.collectionWellnessEntries)
+        .where('userId', isEqualTo: user.userId)
+        .orderBy('date', descending: true)
+        .limit(10)
+        .snapshots()
+        .map(
+          (snapshot) => snapshot.docs
+              .map((doc) => WellnessModel.fromFirestore(doc))
+              .toList(),
+        );
 
     return BackButtonHandler(
       fallbackRoute: '/home',
@@ -81,16 +95,25 @@ class _SkincareTrackingScreenState extends ConsumerState<SkincareTrackingScreen>
             _OverviewTab(
               userId: user.userId,
               enhancedService: _enhancedService,
+              skinTypeStream: _enhancedService.watchSkinType(user.userId),
               productStream: productStream,
               acneStream: acneStream,
               uvStream: uvStream,
               goalStream: goalStream,
+              journalStream: journalStream,
+              hydrationStream: hydrationStream,
               reminderService: _reminderService,
               onAnalyzeSkin: () => _showSkinTypeSheet(context, user.userId),
               onLogAcne: () => _showAcneSheet(context, user.userId),
               onLogUV: () => _showUVSheet(context, user.userId),
               onAddGoal: () => _showGoalSheet(context, user.userId),
-              onAddProduct: () => context.push('/skincare/products/create'),
+              onAddProduct: () => context.push('/skincare-product-form'),
+              onManageProducts: () =>
+                  _openProductManager(context, view: ProductInventoryView.all),
+              onOpenProductCategory: (view) =>
+                  _openProductManager(context, view: view),
+              onLogHydration: () => context.push('/wellness-journal'),
+              onViewHydrationLogs: () => context.push('/wellness-journal-list'),
             ),
             _JournalTab(
               userId: user.userId,
@@ -115,6 +138,7 @@ class _SkincareTrackingScreenState extends ConsumerState<SkincareTrackingScreen>
               journalStream: journalStream,
               acneStream: acneStream,
               uvStream: uvStream,
+              hydrationStream: hydrationStream,
               routineEntriesStream: _skincareService.getEntries(
                 user.userId,
                 DateTime.now().subtract(const Duration(days: 90)),
@@ -200,6 +224,11 @@ class _SkincareTrackingScreenState extends ConsumerState<SkincareTrackingScreen>
         const SnackBar(content: Text('Hydration reminder scheduled.')),
       );
     }
+  }
+
+  void _openProductManager(BuildContext context,
+      {ProductInventoryView view = ProductInventoryView.all}) {
+    context.push('/skincare/products', extra: view);
   }
 
   Future<void> _scheduleRoutineReminder(String userId) async {
@@ -654,7 +683,7 @@ class _SkincareTrackingScreenState extends ConsumerState<SkincareTrackingScreen>
                   title: const Text('Add Product'),
                   onTap: () {
                     Navigator.of(context).pop();
-                    context.push('/skincare/create-product');
+                    context.push('/skincare-product-form');
                   },
                 ),
                 ListTile(
@@ -1071,30 +1100,44 @@ class _OverviewTab extends StatelessWidget {
   const _OverviewTab({
     required this.userId,
     required this.enhancedService,
+    required this.skinTypeStream,
     required this.productStream,
     required this.acneStream,
     required this.uvStream,
     required this.goalStream,
+    required this.journalStream,
+    required this.hydrationStream,
     required this.reminderService,
     required this.onAnalyzeSkin,
     required this.onLogAcne,
     required this.onLogUV,
     required this.onAddGoal,
     required this.onAddProduct,
+    required this.onManageProducts,
+    required this.onOpenProductCategory,
+    required this.onLogHydration,
+    required this.onViewHydrationLogs,
   });
 
   final String userId;
   final SkincareEnhancedService enhancedService;
+  final Stream<SkinType?> skinTypeStream;
   final Stream<List<SkincareProduct>> productStream;
   final Stream<List<AcneEntry>> acneStream;
   final Stream<List<UVIndexEntry>> uvStream;
   final Stream<List<SkinGoal>> goalStream;
+  final Stream<List<SkinJournalEntry>> journalStream;
+  final Stream<List<WellnessModel>> hydrationStream;
   final ReminderService reminderService;
   final VoidCallback onAnalyzeSkin;
   final VoidCallback onLogAcne;
   final VoidCallback onLogUV;
   final VoidCallback onAddGoal;
   final VoidCallback onAddProduct;
+  final VoidCallback onManageProducts;
+  final void Function(ProductInventoryView view) onOpenProductCategory;
+  final VoidCallback onLogHydration;
+  final VoidCallback onViewHydrationLogs;
 
   @override
   Widget build(BuildContext context) {
@@ -1103,35 +1146,58 @@ class _OverviewTab extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          FutureBuilder<SkinType?>(
-            future: enhancedService.getSkinType(userId),
+          StreamBuilder<SkinType?>(
+            stream: skinTypeStream,
             builder: (context, snapshot) {
-              final skinType = snapshot.data;
               return _SkinTypeCard(
-                skinType: skinType,
+                skinType: snapshot.data,
                 onAnalyze: onAnalyzeSkin,
               );
             },
           ),
           ResponsiveConfig.heightBox(16),
-          _HydrationCard(
-            onSchedule: () async {
-              final result = await showDialog(
-                context: context,
-                builder: (context) => CreateReminderDialog(
-                  userId: userId,
-                  defaultType: 'hydration',
-                  defaultTitle: 'Hydration Reminder',
-                  defaultDescription: 'Sip water to keep skin plump!',
-                ),
-              );
+          StreamBuilder<List<WellnessModel>>(
+            stream: hydrationStream,
+            builder: (context, hydrationSnapshot) {
+              return StreamBuilder<List<SkinJournalEntry>>(
+                stream: journalStream,
+                builder: (context, journalSnapshot) {
+                  final hydrationLogs = _mergeHydrationLogs(
+                    hydrationSnapshot.data ?? [],
+                    journalSnapshot.data ?? [],
+                  );
+                  final isLoading = (hydrationSnapshot.connectionState ==
+                              ConnectionState.waiting ||
+                          journalSnapshot.connectionState ==
+                              ConnectionState.waiting) &&
+                      hydrationLogs.isEmpty;
+                  return _HydrationCard(
+                    hydrationLogs: hydrationLogs,
+                    isLoading: isLoading,
+                    onSchedule: () async {
+                      final result = await showDialog(
+                        context: context,
+                        builder: (context) => CreateReminderDialog(
+                          userId: userId,
+                          defaultType: 'hydration',
+                          defaultTitle: 'Hydration Reminder',
+                          defaultDescription: 'Sip water to keep skin plump!',
+                        ),
+                      );
 
-              if (result == true && context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                      content: Text('Hydration reminder scheduled.')),
-                );
-              }
+                      if (result == true && context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Hydration reminder scheduled.'),
+                          ),
+                        );
+                      }
+                    },
+                    onLogHydration: onLogHydration,
+                    onViewHydrationLogs: onViewHydrationLogs,
+                  );
+                },
+              );
             },
           ),
           ResponsiveConfig.heightBox(16),
@@ -1141,6 +1207,8 @@ class _OverviewTab extends StatelessWidget {
               return _InventoryCard(
                 products: snapshot.data ?? [],
                 onAddProduct: onAddProduct,
+                onManageProducts: onManageProducts,
+                onOpenCategory: onOpenProductCategory,
               );
             },
           ),
@@ -1362,6 +1430,7 @@ class _InsightsTab extends StatelessWidget {
     required this.journalStream,
     required this.acneStream,
     required this.uvStream,
+    required this.hydrationStream,
     required this.routineEntriesStream,
     required this.onIngredientSearch,
   });
@@ -1370,6 +1439,7 @@ class _InsightsTab extends StatelessWidget {
   final Stream<List<SkinJournalEntry>> journalStream;
   final Stream<List<AcneEntry>> acneStream;
   final Stream<List<UVIndexEntry>> uvStream;
+  final Stream<List<WellnessModel>> hydrationStream;
   final Stream<List<SkincareEntry>> routineEntriesStream;
   final VoidCallback onIngredientSearch;
 
@@ -1401,7 +1471,19 @@ class _InsightsTab extends StatelessWidget {
                             acneEntries: acneEntries,
                           ),
                           ResponsiveConfig.heightBox(16),
-                          _HydrationTrendChart(journals: journals),
+                          StreamBuilder<List<WellnessModel>>(
+                            stream: hydrationStream,
+                            builder: (context, hydrationSnapshot) {
+                              final hydrationLogs = _mergeHydrationLogs(
+                                hydrationSnapshot.data ?? [],
+                                journals,
+                              );
+                              return _HydrationTrendChart(
+                                hydrationLogs: hydrationLogs,
+                                onInsightTapped: onIngredientSearch,
+                              );
+                            },
+                          ),
                           ResponsiveConfig.heightBox(16),
                           _SleepWellnessCard(journals: journals),
                           ResponsiveConfig.heightBox(16),
@@ -1634,12 +1716,23 @@ class _TypeScoreBar extends StatelessWidget {
 }
 
 class _HydrationCard extends StatelessWidget {
-  const _HydrationCard({required this.onSchedule});
+  const _HydrationCard({
+    required this.hydrationLogs,
+    required this.isLoading,
+    required this.onSchedule,
+    required this.onLogHydration,
+    required this.onViewHydrationLogs,
+  });
 
+  final List<_HydrationLogEntry> hydrationLogs;
+  final bool isLoading;
   final VoidCallback onSchedule;
+  final VoidCallback onLogHydration;
+  final VoidCallback onViewHydrationLogs;
 
   @override
   Widget build(BuildContext context) {
+    final hasLogs = hydrationLogs.isNotEmpty;
     return Card(
       child: Padding(
         padding: ResponsiveConfig.padding(all: 16),
@@ -1652,7 +1745,7 @@ class _HydrationCard extends StatelessWidget {
                     color: AppTheme.primaryPink),
                 ResponsiveConfig.widthBox(8),
                 Text(
-                  'Hydration Reminder',
+                  'Hydration Tracker',
                   style: ResponsiveConfig.textStyle(
                     size: 18,
                     weight: FontWeight.bold,
@@ -1662,17 +1755,86 @@ class _HydrationCard extends StatelessWidget {
             ),
             ResponsiveConfig.heightBox(8),
             Text(
-              'Schedule gentle nudges to drink water and log intake for healthier, dewy skin.',
+              'Stay hydrated to keep your skin barrier happy. Log glasses to visualize progress.',
               style: ResponsiveConfig.textStyle(
                 size: 14,
                 color: AppTheme.mediumGray,
               ),
             ),
             ResponsiveConfig.heightBox(12),
-            OutlinedButton.icon(
-              onPressed: onSchedule,
-              icon: const Icon(Icons.alarm_add_outlined),
-              label: const Text('Schedule hydration'),
+            if (isLoading)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 12),
+                child: Center(
+                  child: SizedBox(
+                    height: 32,
+                    width: 32,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                ),
+              )
+            else if (!hasLogs)
+              const _HydrationEmptyState()
+            else ...[
+              ResponsiveConfig.heightBox(8),
+              Column(
+                children: hydrationLogs.take(3).map((entry) {
+                  final date = DateFormat('MMM d').format(entry.date);
+                  final glasses = entry.waterGlasses;
+                  final goal = entry.goal;
+                  final remaining = (goal - glasses).clamp(0, goal);
+                  final metGoal = glasses >= goal;
+                  final statusText = metGoal
+                      ? 'Goal met'
+                      : '$remaining glass${remaining == 1 ? '' : 'es'} to goal';
+                  return ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    dense: true,
+                    leading: CircleAvatar(
+                      backgroundColor: AppTheme.primaryPink.withOpacity(0.12),
+                      child: Text(
+                        glasses.toString(),
+                        style: ResponsiveConfig.textStyle(
+                          size: 14,
+                          weight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    title: Text('$date • $glasses / $goal glasses'),
+                    subtitle: Text(
+                      statusText,
+                      style: ResponsiveConfig.textStyle(
+                        size: 12,
+                        color: metGoal
+                            ? AppTheme.primaryPink
+                            : AppTheme.mediumGray,
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ],
+            ResponsiveConfig.heightBox(16),
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                OutlinedButton.icon(
+                  onPressed: onSchedule,
+                  icon: const Icon(Icons.alarm_add_outlined),
+                  label: const Text('Schedule reminder'),
+                ),
+                FilledButton.icon(
+                  onPressed: onLogHydration,
+                  icon: const Icon(Icons.water_drop_outlined),
+                  label: const Text('Log hydration'),
+                ),
+                TextButton.icon(
+                  onPressed: onViewHydrationLogs,
+                  icon: const Icon(Icons.list_alt_outlined),
+                  label: const Text('View logs'),
+                ),
+              ],
             ),
           ],
         ),
@@ -1685,18 +1847,28 @@ class _InventoryCard extends StatelessWidget {
   const _InventoryCard({
     required this.products,
     required this.onAddProduct,
+    required this.onManageProducts,
+    required this.onOpenCategory,
   });
 
   final List<SkincareProduct> products;
   final VoidCallback onAddProduct;
+  final VoidCallback onManageProducts;
+  final void Function(ProductInventoryView view) onOpenCategory;
 
   @override
   Widget build(BuildContext context) {
-    final cleansers = products
-        .where((p) => p.category.toLowerCase().contains('cleanser'))
+    final brands = products
+        .where((p) => (p.brand ?? '').trim().isNotEmpty)
+        .map((p) => p.brand!.trim().toLowerCase())
+        .toSet()
         .length;
-    final sunscreens =
-        products.where((p) => p.category.toLowerCase().contains('sun')).length;
+    final totalAmount = products.fold<double>(
+      0.0,
+      (sum, product) => sum + (product.price ?? 0.0),
+    );
+    final expiringSoon =
+        products.where((p) => p.isExpiringSoon || p.isExpired).length;
 
     return Card(
       child: Padding(
@@ -1723,26 +1895,227 @@ class _InventoryCard extends StatelessWidget {
               ],
             ),
             ResponsiveConfig.heightBox(12),
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _StatTile(
-                  icon: Icons.inventory_2_outlined,
-                  label: 'Active products',
-                  value: products.length.toString(),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _InventoryStatTile(
+                        icon: Icons.inventory_2_outlined,
+                        label: 'Active products',
+                        value: products.length.toString(),
+                        onTap: () =>
+                            onOpenCategory(ProductInventoryView.active),
+                      ),
+                    ),
+                    ResponsiveConfig.widthBox(12),
+                    Expanded(
+                      child: _InventoryStatTile(
+                        icon: Icons.local_offer_outlined,
+                        label: 'Brands',
+                        value: brands.toString(),
+                        onTap: () =>
+                            onOpenCategory(ProductInventoryView.brands),
+                      ),
+                    ),
+                  ],
                 ),
-                _StatTile(
-                  icon: Icons.cleaning_services_outlined,
-                  label: 'Cleansers',
-                  value: cleansers.toString(),
-                ),
-                _StatTile(
-                  icon: Icons.light_mode_outlined,
-                  label: 'Sunscreens',
-                  value: sunscreens.toString(),
+                ResponsiveConfig.heightBox(12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _InventoryStatTile(
+                        icon: Icons.attach_money_outlined,
+                        label: 'Total amount',
+                        value: totalAmount == 0
+                            ? '\$0'
+                            : '\$${totalAmount.toStringAsFixed(2)}',
+                        onTap: () =>
+                            onOpenCategory(ProductInventoryView.totalValue),
+                      ),
+                    ),
+                    ResponsiveConfig.widthBox(12),
+                    Expanded(
+                      child: _InventoryStatTile(
+                        icon: Icons.alarm_on_outlined,
+                        label: 'Expiring soon',
+                        value: expiringSoon.toString(),
+                        onTap: () =>
+                            onOpenCategory(ProductInventoryView.expiringSoon),
+                      ),
+                    ),
+                  ],
                 ),
               ],
+            ),
+            ResponsiveConfig.heightBox(16),
+            if (products.isEmpty)
+              Text(
+                'No products added yet. Track your cleansers, treatments and sunscreens to monitor expiry dates.',
+                style: ResponsiveConfig.textStyle(
+                  size: 14,
+                  color: AppTheme.mediumGray,
+                ),
+              )
+            else ...[
+              Column(
+                children: products.take(3).map((product) {
+                  return _ProductPreviewTile(
+                    product: product,
+                    onManage: onManageProducts,
+                  );
+                }).toList(),
+              ),
+              if (products.length > 3)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    '+ ${products.length - 3} more products in inventory',
+                    style: ResponsiveConfig.textStyle(
+                      size: 12,
+                      color: AppTheme.mediumGray,
+                    ),
+                  ),
+                ),
+            ],
+            ResponsiveConfig.heightBox(16),
+            Row(
+              children: [
+                /* FilledButton.icon(
+                  onPressed: onAddProduct,
+                  icon: const Icon(Icons.add),
+                  label: const Text('Add product'),
+                ),
+                ResponsiveConfig.widthBox(12),
+                 */
+                OutlinedButton.icon(
+                  onPressed: onManageProducts,
+                  icon: const Icon(Icons.manage_search_outlined),
+                  label: const Text('Manage inventory'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ProductPreviewTile extends StatelessWidget {
+  const _ProductPreviewTile({
+    required this.product,
+    required this.onManage,
+  });
+
+  final SkincareProduct product;
+  final VoidCallback onManage;
+
+  @override
+  Widget build(BuildContext context) {
+    final subtitleParts = <String>[];
+    if (product.brand?.isNotEmpty == true) {
+      subtitleParts.add(product.brand!);
+    }
+    subtitleParts.add(product.category.replaceAll('_', ' ').toUpperCase());
+    if (product.expirationDate != null) {
+      subtitleParts.add(
+        'Expires ${DateFormat('MMM d').format(product.expirationDate!)}',
+      );
+    }
+
+    return ListTile(
+      onTap: onManage,
+      contentPadding: EdgeInsets.zero,
+      leading: product.imageUrl != null
+          ? ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.network(
+                product.imageUrl!,
+                width: 48,
+                height: 48,
+                fit: BoxFit.cover,
+              ),
+            )
+          : Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: AppTheme.primaryPink.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(
+                Icons.inventory_2_outlined,
+                color: AppTheme.primaryPink,
+              ),
+            ),
+      title: Text(
+        product.name,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+      subtitle: Text(
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        subtitleParts.join(' • '),
+        style: ResponsiveConfig.textStyle(
+          size: 12,
+          color: AppTheme.mediumGray,
+        ),
+      ),
+      trailing: IconButton(
+        icon: const Icon(Icons.launch_outlined),
+        tooltip: 'Open inventory manager',
+        onPressed: onManage,
+      ),
+    );
+  }
+}
+
+class _InventoryStatTile extends StatelessWidget {
+  const _InventoryStatTile({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: ResponsiveConfig.borderRadius(16),
+      onTap: onTap,
+      child: Ink(
+        padding: ResponsiveConfig.padding(all: 16),
+        decoration: BoxDecoration(
+          color: AppTheme.primaryPink.withOpacity(0.08),
+          borderRadius: ResponsiveConfig.borderRadius(16),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, color: AppTheme.primaryPink),
+            ResponsiveConfig.heightBox(8),
+            Text(
+              value,
+              style: ResponsiveConfig.textStyle(
+                size: 20,
+                weight: FontWeight.bold,
+              ),
+            ),
+            ResponsiveConfig.heightBox(4),
+            Text(
+              label,
+              style: ResponsiveConfig.textStyle(
+                size: 12,
+                color: AppTheme.mediumGray,
+              ),
             ),
           ],
         ),
@@ -2481,35 +2854,26 @@ class _HealthScoreCard extends StatelessWidget {
 }
 
 class _HydrationTrendChart extends StatelessWidget {
-  const _HydrationTrendChart({required this.journals});
+  const _HydrationTrendChart({
+    required this.hydrationLogs,
+    this.onInsightTapped,
+  });
 
-  final List<SkinJournalEntry> journals;
+  final List<_HydrationLogEntry> hydrationLogs;
+  final VoidCallback? onInsightTapped;
 
   @override
   Widget build(BuildContext context) {
-    final data = journals
-        .where((entry) => entry.hydrationLevel != null)
-        .toList()
+    final data = hydrationLogs.where((entry) => entry.waterGlasses > 0).toList()
       ..sort((a, b) => a.date.compareTo(b.date));
 
     if (data.length < 2) {
-      return Card(
-        child: Padding(
-          padding: ResponsiveConfig.padding(all: 16),
-          child: Text(
-            'Log hydration metrics for at least two days to unlock hydration trends.',
-            style: ResponsiveConfig.textStyle(
-              size: 14,
-              color: AppTheme.mediumGray,
-            ),
-          ),
-        ),
-      );
+      return const _HydrationEmptyState();
     }
 
     final spots = <FlSpot>[];
     for (int i = 0; i < data.length; i++) {
-      spots.add(FlSpot(i.toDouble(), data[i].hydrationLevel!.toDouble()));
+      spots.add(FlSpot(i.toDouble(), data[i].waterGlasses.toDouble()));
     }
 
     return Card(
@@ -2537,7 +2901,7 @@ class _HydrationTrendChart extends StatelessWidget {
                           final index = spot.spotIndex;
                           final entry = data[index];
                           return LineTooltipItem(
-                            '${DateFormat('MMM d').format(entry.date)}\nHydration: ${entry.hydrationLevel}',
+                            '${DateFormat('MMM d').format(entry.date)}\nHydration: ${entry.waterGlasses}/${entry.goal}',
                             ResponsiveConfig.textStyle(
                               size: 12,
                               color: Colors.white,
@@ -2583,7 +2947,9 @@ class _HydrationTrendChart extends StatelessWidget {
                     topTitles: const AxisTitles(),
                   ),
                   minY: 0,
-                  maxY: 10,
+                  maxY: data.map((entry) => entry.goal.toDouble()).fold<double>(
+                          8, (prev, element) => max(prev, element)) +
+                      1,
                   lineBarsData: [
                     LineChartBarData(
                       spots: spots,
@@ -2905,52 +3271,6 @@ class _UVAnalyticsCard extends StatelessWidget {
   }
 }
 
-class _StatTile extends StatelessWidget {
-  const _StatTile({
-    required this.icon,
-    required this.label,
-    required this.value,
-  });
-
-  final IconData icon;
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 120,
-      padding: ResponsiveConfig.padding(all: 12),
-      decoration: BoxDecoration(
-        color: AppTheme.primaryPink.withOpacity(0.08),
-        borderRadius: ResponsiveConfig.borderRadius(16),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: AppTheme.primaryPink),
-          ResponsiveConfig.heightBox(8),
-          Text(
-            label,
-            style: ResponsiveConfig.textStyle(
-              size: 12,
-              color: AppTheme.primaryPink.withOpacity(0.8),
-            ),
-          ),
-          ResponsiveConfig.heightBox(4),
-          Text(
-            value,
-            style: ResponsiveConfig.textStyle(
-              size: 18,
-              weight: FontWeight.bold,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _EmptyState extends StatelessWidget {
   const _EmptyState({
     required this.icon,
@@ -3021,9 +3341,9 @@ class _EmptyState extends StatelessWidget {
 /// Custom painter for skin health score circular progress
 class _SkinHealthScorePainter extends CustomPainter {
   final double progress;
-  final Color backgroundColor;
-  final Color progressColor;
   final double strokeWidth;
+  final Color progressColor;
+  final Color backgroundColor;
 
   _SkinHealthScorePainter({
     required this.progress,
@@ -3070,4 +3390,70 @@ class _SkinHealthScorePainter extends CustomPainter {
         oldDelegate.progressColor != progressColor ||
         oldDelegate.strokeWidth != strokeWidth;
   }
+}
+
+class _HydrationEmptyState extends StatelessWidget {
+  const _HydrationEmptyState();
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: ResponsiveConfig.padding(all: 16),
+        child: Text(
+          'Log hydration metrics for at least two days to unlock hydration trends.',
+          style: ResponsiveConfig.textStyle(
+            size: 14,
+            color: AppTheme.mediumGray,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _HydrationLogEntry {
+  final DateTime date;
+  final int waterGlasses;
+  final int goal;
+
+  const _HydrationLogEntry({
+    required this.date,
+    required this.waterGlasses,
+    required this.goal,
+  });
+}
+
+List<_HydrationLogEntry> _mergeHydrationLogs(
+  List<WellnessModel> wellnessLogs,
+  List<SkinJournalEntry> journalLogs,
+) {
+  final combined = <_HydrationLogEntry>[];
+
+  for (final entry in wellnessLogs) {
+    final glasses = entry.hydration.waterGlasses;
+    if (glasses <= 0) continue;
+    combined.add(
+      _HydrationLogEntry(
+        date: entry.date,
+        waterGlasses: glasses,
+        goal: entry.hydration.goal,
+      ),
+    );
+  }
+
+  for (final entry in journalLogs) {
+    final hydrationLevel = entry.hydrationLevel;
+    if (hydrationLevel == null || hydrationLevel <= 0) continue;
+    combined.add(
+      _HydrationLogEntry(
+        date: entry.date,
+        waterGlasses: hydrationLevel,
+        goal: 8,
+      ),
+    );
+  }
+
+  combined.sort((a, b) => b.date.compareTo(a.date));
+  return combined;
 }

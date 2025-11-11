@@ -79,13 +79,13 @@ class _SkincareRoutineFormScreenState
           final user = ref.read(currentUserStreamProvider).value;
           if (user != null) {
             final file = File(image.path);
-            final url = await _storageService.uploadFile(
+            final uploadResult = await _storageService.uploadFile(
               file: file,
               path:
                   'skincare/${user.userId}/${DateTime.now().millisecondsSinceEpoch}.jpg',
             );
             setState(() {
-              _photoUrls.add(url);
+              _photoUrls.add(uploadResult.downloadUrl);
               _isLoading = false;
             });
           }

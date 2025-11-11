@@ -72,6 +72,8 @@
 -dontwarn kotlinx.coroutines.flow.internal.**
 -keep class kotlinx.coroutines.** { *; }
 
+# WorkManager removed - using flutter_local_notifications for scheduling
+
 # Google Play Services
 -dontwarn com.google.android.gms.**
 -dontwarn com.google.android.gms.common.annotation.NoNullnessRewrite

@@ -71,6 +71,21 @@ class PregnancyService {
     }
   }
 
+  /// Stream user's active pregnancy for real-time updates
+  Stream<Pregnancy?> watchActivePregnancy(String userId) {
+    return _firestore
+        .collection(AppConstants.collectionPregnancies)
+        .where('userId', isEqualTo: userId)
+        .orderBy('createdAt', descending: true)
+        .limit(1)
+        .snapshots()
+        .map((snapshot) {
+      if (snapshot.docs.isEmpty) return null;
+      final pregnancy = Pregnancy.fromFirestore(snapshot.docs.first);
+      return pregnancy.currentWeek >= 42 ? null : pregnancy;
+    });
+  }
+
   /// Get user's pregnancy history
   Stream<List<Pregnancy>> getPregnancyHistory(String userId) {
     return _firestore
@@ -133,16 +148,23 @@ class PregnancyService {
         .collection(AppConstants.collectionKickEntries)
         .where('userId', isEqualTo: userId)
         .where('pregnancyId', isEqualTo: pregnancyId)
-        .orderBy('loggedAt', descending: true)
+        .orderBy('createdAt', descending: true)
         .snapshots()
         .map((snapshot) =>
             snapshot.docs.map((doc) => KickEntry.fromFirestore(doc)).toList());
   }
 
   Future<void> logKickEntry(KickEntry entry) async {
-    await _firestore
-        .collection(AppConstants.collectionKickEntries)
-        .add(entry.toFirestore());
+    try {
+      await _firestore
+          .collection(AppConstants.collectionKickEntries)
+          .add(entry.toFirestore());
+      print('✅ Kick entry saved: ${entry.kickCount} kicks on ${entry.date}');
+    } catch (e, stackTrace) {
+      print('❌ Error saving kick entry: $e');
+      print('Stack trace: $stackTrace');
+      rethrow;
+    }
   }
 
   Stream<List<ContractionEntry>> getContractionEntries(

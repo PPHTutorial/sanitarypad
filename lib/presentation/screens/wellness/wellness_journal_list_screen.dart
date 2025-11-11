@@ -51,8 +51,8 @@ class _WellnessJournalListScreenState
             ),
           ],
         ),
-        body: FutureBuilder<List<WellnessModel>>(
-          future: _wellnessService.getWellnessEntries(limit: 50),
+        body: StreamBuilder<List<WellnessModel>>(
+          stream: _wellnessService.watchWellnessEntries(user.userId, limit: 50),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());

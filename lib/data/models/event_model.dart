@@ -7,6 +7,7 @@ class EventModel {
   final String category; // 'pregnancy', 'fertility', 'skincare', 'general'
   final String? imageUrl;
   final String createdBy;
+  final String? groupId;
   final DateTime startDate;
   final DateTime endDate;
   final String? location;
@@ -26,6 +27,7 @@ class EventModel {
     required this.category,
     this.imageUrl,
     required this.createdBy,
+    this.groupId,
     required this.startDate,
     required this.endDate,
     this.location,
@@ -48,6 +50,7 @@ class EventModel {
       category: data['category'] ?? 'general',
       imageUrl: data['imageUrl'],
       createdBy: data['createdBy'] ?? '',
+      groupId: data['groupId'],
       startDate: (data['startDate'] as Timestamp).toDate(),
       endDate: (data['endDate'] as Timestamp).toDate(),
       location: data['location'],
@@ -69,6 +72,7 @@ class EventModel {
       'category': category,
       'imageUrl': imageUrl,
       'createdBy': createdBy,
+      'groupId': groupId,
       'startDate': Timestamp.fromDate(startDate),
       'endDate': Timestamp.fromDate(endDate),
       'location': location,
@@ -90,6 +94,7 @@ class EventModel {
     String? category,
     String? imageUrl,
     String? createdBy,
+    String? groupId,
     DateTime? startDate,
     DateTime? endDate,
     String? location,
@@ -109,6 +114,7 @@ class EventModel {
       category: category ?? this.category,
       imageUrl: imageUrl ?? this.imageUrl,
       createdBy: createdBy ?? this.createdBy,
+      groupId: groupId ?? this.groupId,
       startDate: startDate ?? this.startDate,
       endDate: endDate ?? this.endDate,
       location: location ?? this.location,

@@ -30,6 +30,13 @@ class AppConstants {
   static const String prefsKeyPinHash = 'pin_hash';
   static const String prefsKeyBiometricEnabled = 'biometric_enabled';
   static const String prefsKeyAnonymousMode = 'anonymous_mode';
+  static const String prefsKeyNotificationCheckInterval =
+      'notification_check_interval_minutes';
+
+  // Notification Check Intervals (in minutes)
+  static const int defaultNotificationCheckInterval = 5; // Default: 5 minutes
+  static const int minNotificationCheckInterval = 1; // Minimum: 1 minute
+  static const int maxNotificationCheckInterval = 30; // Maximum: 30 minutes
 
   // Collection Names (Firestore)
   static const String collectionUsers = 'users';
@@ -77,6 +84,7 @@ class AppConstants {
       'ovulationTestReminders';
   static const String collectionGroups = 'groups';
   static const String collectionGroupMembers = 'groupMembers';
+  static const String collectionGroupMessages = 'groupMessages';
   static const String collectionEvents = 'events';
   static const String collectionEventAttendees = 'eventAttendees';
   static const String collectionAIChatMessages = 'aiChatMessages';
@@ -89,6 +97,7 @@ class AppConstants {
   // Subscription Plans
   static const String planMonthly = 'monthly';
   static const String planQuarterly = 'quarterly';
+  static const String planSemiAnnual = 'semi_annual';
   static const String planYearly = 'yearly';
 
   // Flow Intensity

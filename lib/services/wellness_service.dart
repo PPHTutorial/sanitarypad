@@ -76,6 +76,27 @@ class WellnessService {
     return query.docs.map((doc) => WellnessModel.fromFirestore(doc)).toList();
   }
 
+  /// Stream wellness entries for real-time updates
+  Stream<List<WellnessModel>> watchWellnessEntries(
+    String userId, {
+    int? limit,
+  }) {
+    Query collection = _firestore
+        .collection(AppConstants.collectionWellnessEntries)
+        .where('userId', isEqualTo: userId)
+        .orderBy('date', descending: true);
+
+    if (limit != null && limit > 0) {
+      collection = collection.limit(limit);
+    }
+
+    return collection.snapshots().map(
+          (snapshot) => snapshot.docs
+              .map((doc) => WellnessModel.fromFirestore(doc))
+              .toList(),
+        );
+  }
+
   /// Get wellness entry for specific date
   Future<WellnessModel?> getWellnessEntryForDate(DateTime date) async {
     final user = _authService.currentUser;

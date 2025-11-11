@@ -50,17 +50,30 @@ class SkincareService {
 
   /// Get user's products
   Stream<List<SkincareProduct>> getUserProducts(String userId) {
-    return _firestore
+    return getProducts(
+      userId,
+      isActive: true,
+    );
+  }
+
+  /// Get products with optional active filter
+  Stream<List<SkincareProduct>> getProducts(
+    String userId, {
+    bool? isActive,
+  }) {
+    Query collection = _firestore
         .collection(AppConstants.collectionSkincareProducts)
-        .where('userId', isEqualTo: userId)
-        .where('isActive', isEqualTo: true)
-        .orderBy('createdAt', descending: true)
-        .snapshots()
-        .map((snapshot) {
-      return snapshot.docs
-          .map((doc) => SkincareProduct.fromFirestore(doc))
-          .toList();
-    });
+        .where('userId', isEqualTo: userId);
+
+    if (isActive != null) {
+      collection = collection.where('isActive', isEqualTo: isActive);
+    }
+
+    return collection.orderBy('createdAt', descending: true).snapshots().map(
+          (snapshot) => snapshot.docs
+              .map((doc) => SkincareProduct.fromFirestore(doc))
+              .toList(),
+        );
   }
 
   /// Get products by category
@@ -190,6 +203,7 @@ extension SkincareProductExtension on SkincareProduct {
     String? category,
     String? brand,
     String? imageUrl,
+    String? imagePath,
     DateTime? purchaseDate,
     DateTime? expirationDate,
     double? price,
@@ -204,6 +218,7 @@ extension SkincareProductExtension on SkincareProduct {
       category: category ?? this.category,
       brand: brand ?? this.brand,
       imageUrl: imageUrl ?? this.imageUrl,
+      imagePath: imagePath ?? this.imagePath,
       purchaseDate: purchaseDate ?? this.purchaseDate,
       expirationDate: expirationDate ?? this.expirationDate,
       price: price ?? this.price,
@@ -237,6 +252,14 @@ class SkincareEnhancedService {
         .get();
     if (!doc.exists) return null;
     return SkinType.fromFirestore(doc);
+  }
+
+  Stream<SkinType?> watchSkinType(String userId) {
+    return _firestore
+        .collection(AppConstants.collectionSkinTypes)
+        .doc(userId)
+        .snapshots()
+        .map((doc) => doc.exists ? SkinType.fromFirestore(doc) : null);
   }
 
   // Skin journal
@@ -276,6 +299,24 @@ class SkincareEnhancedService {
         .add(entry.toFirestore());
   }
 
+  Future<void> updateSkinJournalEntry(SkinJournalEntry entry) async {
+    if (entry.id == null) throw Exception('Journal entry ID required');
+
+    await _firestore
+        .collection(AppConstants.collectionSkinJournalEntries)
+        .doc(entry.id)
+        .update(
+          entry.copyWith(updatedAt: DateTime.now()).toFirestore(),
+        );
+  }
+
+  Future<void> deleteSkinJournalEntry(String entryId) async {
+    await _firestore
+        .collection(AppConstants.collectionSkinJournalEntries)
+        .doc(entryId)
+        .delete();
+  }
+
   // Routine templates
   Stream<List<RoutineTemplate>> getRoutineTemplates(String userId) {
     return _firestore
@@ -295,6 +336,33 @@ class SkincareEnhancedService {
     await _firestore
         .collection(AppConstants.collectionRoutineTemplates)
         .add(template.toFirestore());
+  }
+
+  Future<void> updateRoutineTemplate(RoutineTemplate template) async {
+    if (template.id == null) throw Exception('Routine template ID required');
+
+    await _firestore
+        .collection(AppConstants.collectionRoutineTemplates)
+        .doc(template.id)
+        .update(
+          template.copyWith(updatedAt: DateTime.now()).toFirestore(),
+        );
+  }
+
+  Future<void> deleteRoutineTemplate(String templateId,
+      {bool softDelete = true}) async {
+    final docRef = _firestore
+        .collection(AppConstants.collectionRoutineTemplates)
+        .doc(templateId);
+
+    if (softDelete) {
+      await docRef.update({
+        'isActive': false,
+        'updatedAt': Timestamp.fromDate(DateTime.now()),
+      });
+    } else {
+      await docRef.delete();
+    }
   }
 
   // Ingredients
@@ -335,6 +403,24 @@ class SkincareEnhancedService {
         .add(entry.toFirestore());
   }
 
+  Future<void> updateAcneEntry(AcneEntry entry) async {
+    if (entry.id == null) throw Exception('Acne entry ID required');
+
+    await _firestore
+        .collection(AppConstants.collectionAcneEntries)
+        .doc(entry.id)
+        .update(
+          entry.copyWith(updatedAt: DateTime.now()).toFirestore(),
+        );
+  }
+
+  Future<void> deleteAcneEntry(String entryId) async {
+    await _firestore
+        .collection(AppConstants.collectionAcneEntries)
+        .doc(entryId)
+        .delete();
+  }
+
   // UV index
   Future<void> logUVIndex(UVIndexEntry entry) async {
     await _firestore
@@ -353,6 +439,22 @@ class SkincareEnhancedService {
               .map((doc) => UVIndexEntry.fromFirestore(doc))
               .toList(),
         );
+  }
+
+  Future<void> updateUVIndexEntry(UVIndexEntry entry) async {
+    if (entry.id == null) throw Exception('UV entry ID required');
+
+    await _firestore
+        .collection(AppConstants.collectionUVIndexEntries)
+        .doc(entry.id)
+        .update(entry.toFirestore());
+  }
+
+  Future<void> deleteUVIndexEntry(String entryId) async {
+    await _firestore
+        .collection(AppConstants.collectionUVIndexEntries)
+        .doc(entryId)
+        .delete();
   }
 
   // Skin goals
@@ -379,7 +481,16 @@ class SkincareEnhancedService {
     await _firestore
         .collection(AppConstants.collectionSkinGoals)
         .doc(goal.id)
-        .update(goal.toFirestore());
+        .update(
+          goal.copyWith(updatedAt: DateTime.now()).toFirestore(),
+        );
+  }
+
+  Future<void> deleteSkinGoal(String goalId) async {
+    await _firestore
+        .collection(AppConstants.collectionSkinGoals)
+        .doc(goalId)
+        .delete();
   }
 }
 

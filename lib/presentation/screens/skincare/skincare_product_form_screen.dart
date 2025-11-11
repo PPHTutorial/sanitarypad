@@ -35,10 +35,12 @@ class _SkincareProductFormScreenState
   DateTime? _purchaseDate;
   DateTime? _expirationDate;
   String? _imageUrl;
+  String? _imagePath;
   bool _isLoading = false;
 
   final List<String> _categories = [
     'cleanser',
+    'wash',
     'moisturizer',
     'serum',
     'sunscreen',
@@ -47,6 +49,30 @@ class _SkincareProductFormScreenState
     'mask',
     'eye_cream',
     'treatment',
+    'face_oil',
+    'makeup_remover',
+    'essence',
+    'ampoule',
+    'spot_treatment',
+    'lip_balm',
+    'night_cream',
+    'day_cream',
+    'face_mist',
+    'sheet_mask',
+    'clay_mask',
+    'peel',
+    'scrub',
+    'body_lotion',
+    'hand_cream',
+    'foot_cream',
+    'body_wash',
+    'body_scrub',
+    'after_sun',
+    'anti_aging',
+    'acne_control',
+    'brightening',
+    'pore_care',
+    'hydrating',
     'other',
   ];
 
@@ -62,6 +88,7 @@ class _SkincareProductFormScreenState
       _purchaseDate = widget.product!.purchaseDate;
       _expirationDate = widget.product!.expirationDate;
       _imageUrl = widget.product!.imageUrl;
+      _imagePath = widget.product!.imagePath;
     }
   }
 
@@ -75,19 +102,23 @@ class _SkincareProductFormScreenState
       if (image != null) {
         setState(() => _isLoading = true);
         try {
-          // Upload image to Firebase Storage
           final user = ref.read(currentUserStreamProvider).value;
           if (user != null) {
             final file = File(image.path);
-            final url = await _storageService.uploadFile(
+            final previousPath = _imagePath;
+            final result = await _storageService.uploadFile(
               file: file,
               path:
                   'skincare/products/${user.userId}/${DateTime.now().millisecondsSinceEpoch}.jpg',
             );
             setState(() {
-              _imageUrl = url;
+              _imageUrl = result.downloadUrl;
+              _imagePath = result.storagePath;
               _isLoading = false;
             });
+            if (previousPath != null && previousPath != _imagePath) {
+              await _storageService.deleteFile(previousPath);
+            }
           }
         } catch (e) {
           setState(() => _isLoading = false);
@@ -148,6 +179,7 @@ class _SkincareProductFormScreenState
           expirationDate: _expirationDate,
           price: price,
           imageUrl: _imageUrl,
+          imagePath: _imagePath,
           notes: _notesController.text.trim().isEmpty
               ? null
               : _notesController.text.trim(),
@@ -167,6 +199,7 @@ class _SkincareProductFormScreenState
           expirationDate: _expirationDate,
           price: price,
           imageUrl: _imageUrl,
+          imagePath: _imagePath,
           notes: _notesController.text.trim().isEmpty
               ? null
               : _notesController.text.trim(),
@@ -384,8 +417,17 @@ class _SkincareProductFormScreenState
               if (_imageUrl != null) ...[
                 ResponsiveConfig.heightBox(8),
                 TextButton.icon(
-                  onPressed: () {
-                    setState(() => _imageUrl = null);
+                  onPressed: () async {
+                    final path = _imagePath;
+                    if (path != null) {
+                      try {
+                        await _storageService.deleteFile(path);
+                      } catch (_) {}
+                    }
+                    setState(() {
+                      _imageUrl = null;
+                      _imagePath = null;
+                    });
                   },
                   icon: const Icon(Icons.delete_outline),
                   label: const Text('Remove Image'),

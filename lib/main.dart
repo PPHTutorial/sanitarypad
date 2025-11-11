@@ -78,10 +78,16 @@ void main() async {
     final notificationService = NotificationService();
     await notificationService.initialize();
 
-    // Initialize background notification scheduler
-    final backgroundScheduler = BackgroundNotificationScheduler();
-    await backgroundScheduler.initialize();
-    print('✅ Background notification scheduler initialized');
+    // Initialize background notification scheduler (optional - works without workmanager)
+    try {
+      final backgroundScheduler = BackgroundNotificationScheduler();
+      await backgroundScheduler.initialize();
+      print('✅ Background notification scheduler initialized');
+    } catch (e) {
+      // Background scheduler is optional - notifications still work via flutter_local_notifications
+      print('⚠️ Background scheduler initialization skipped: $e');
+      print('ℹ️ Notifications will still work via flutter_local_notifications');
+    }
   } catch (e, stackTrace) {
     // Handle initialization errors gracefully
     await ErrorHandler.handleError(
@@ -99,11 +105,39 @@ void main() async {
   );
 }
 
-class MyApp extends ConsumerWidget {
+class MyApp extends ConsumerStatefulWidget {
   const MyApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
+  final _notificationService = NotificationService();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.resumed) {
+      // Check for due notifications when app comes to foreground
+      _notificationService.checkAndFireDueNotifications();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final router = ref.watch(AppRouter.routerProvider);
     final themeMode = ref.watch(themeModeProvider);
 
