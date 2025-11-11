@@ -12,6 +12,7 @@ import 'core/widgets/splash_background_wrapper.dart';
 import 'core/widgets/double_back_to_exit.dart';
 import 'core/providers/theme_provider.dart';
 import 'services/notification_service.dart';
+import 'services/background_notification_scheduler.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -77,8 +78,10 @@ void main() async {
     final notificationService = NotificationService();
     await notificationService.initialize();
 
-    // Initialize notification scheduler (will schedule notifications when user logs in)
-    // This is handled by the scheduler service when user data is available
+    // Initialize background notification scheduler
+    final backgroundScheduler = BackgroundNotificationScheduler();
+    await backgroundScheduler.initialize();
+    print('✅ Background notification scheduler initialized');
   } catch (e, stackTrace) {
     // Handle initialization errors gracefully
     await ErrorHandler.handleError(

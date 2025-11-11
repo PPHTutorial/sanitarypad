@@ -7,6 +7,7 @@ import '../../../core/utils/validators.dart';
 import '../../../services/auth_service.dart';
 import '../../../core/providers/auth_provider.dart';
 import '../../../services/notification_scheduler_service.dart';
+import '../../../services/background_notification_scheduler.dart';
 
 /// Login screen
 class LoginScreen extends ConsumerStatefulWidget {
@@ -76,6 +77,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       try {
         final scheduler = NotificationSchedulerService();
         await scheduler.initialize();
+
+        // Trigger background scheduler to reschedule all notifications
+        final backgroundScheduler = BackgroundNotificationScheduler();
+        await backgroundScheduler.rescheduleAllNotifications();
       } catch (e) {
         // Don't fail login if notification initialization fails
         print('Error initializing notifications: $e');

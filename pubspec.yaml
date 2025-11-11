@@ -101,6 +101,9 @@ dependencies:
   # Local Notifications
   flutter_local_notifications: ^18.0.1
   timezone: ^0.9.4
+  
+  # Background Tasks
+  workmanager: ^0.5.2
 
   # Payments & IAP
   in_app_purchase: ^3.2.0
