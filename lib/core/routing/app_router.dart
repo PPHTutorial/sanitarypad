@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sanitarypad/data/models/cycle_model.dart';
+import 'package:sanitarypad/presentation/screens/movie/movies.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/constants/app_constants.dart';
 import '../../presentation/screens/onboarding/onboarding_screen.dart';
@@ -121,16 +122,24 @@ class AppRouter {
         final isOnboardingComplete = await _isOnboardingComplete();
 
         // Check Firebase Auth directly for immediate auth state (persisted)
-        final authService = ref.read(authServiceProvider);
-        final firebaseUser = authService.currentUser;
-        final isAuthenticated = firebaseUser != null;
+        final asyncUser = ref.watch(currentUserStreamProvider);
+        final isAuthenticated = ref.watch(isAuthenticatedProvider);
+
+        print('Group auth is, $isAuthenticated');
 
         final currentLocation = state.matchedLocation;
+
+        final isSplasingRoute = currentLocation == '/splash';
         final isOnboardingRoute = currentLocation == '/onboarding';
         final isAuthRoute =
             currentLocation == '/login' || currentLocation == '/signup';
-        final isProtectedRoute = !isOnboardingRoute && !isAuthRoute;
+        final isProtectedRoute =
+            !isOnboardingRoute && !isAuthRoute && !isSplasingRoute;
 
+        // While loading → don't redirect yet
+        if (asyncUser.isLoading) {
+          return '/splash';
+        }
         // If onboarding is complete and user is on onboarding route, redirect to login
         if (isOnboardingComplete && isOnboardingRoute) {
           return '/login';
@@ -158,10 +167,16 @@ class AppRouter {
 
         return null; // No redirect needed
       },
+
       refreshListenable: RouterRefreshNotifier(ref),
       initialLocation: '/onboarding', // Will be redirected by redirect logic
       routes: [
         // Onboarding
+        GoRoute(
+          path: '/splash',
+          name: 'splash',
+          builder: (context, state) => const SplashScreenPage(),
+        ),
         GoRoute(
           path: '/onboarding',
           name: 'onboarding',
@@ -238,6 +253,11 @@ class AppRouter {
           path: '/wellness-journal-list',
           name: 'wellness-journal-list',
           builder: (context, state) => const WellnessJournalListScreen(),
+        ),
+        GoRoute(
+          path: '/movies',
+          name: 'movies',
+          builder: (context, state) => const MovieScreen(),
         ),
 
         // Settings - Protected routes
@@ -391,7 +411,17 @@ class AppRouter {
           name: 'groups',
           builder: (context, state) {
             final category = state.extra as String? ?? 'all';
+            print('(Router) Group List: $category');
             return GroupsListScreen(category: category);
+          },
+        ),
+        GoRoute(
+          path: '/groups/create',
+          name: 'group-create',
+          builder: (context, state) {
+            final category = state.extra as String?;
+            print('(Route) Group creation $category');
+            return GroupFormScreen(category: category);
           },
         ),
         GoRoute(
@@ -411,14 +441,6 @@ class AppRouter {
             return GroupChatScreen(groupId: id, groupName: groupName);
           },
         ),
-        GoRoute(
-          path: '/groups/create',
-          name: 'group-create',
-          builder: (context, state) {
-            final category = state.extra as String?;
-            return GroupFormScreen(category: category);
-          },
-        ),
 
         // Community - Events - Protected routes
         GoRoute(
@@ -427,14 +449,6 @@ class AppRouter {
           builder: (context, state) {
             final category = state.extra as String? ?? 'all';
             return EventsListScreen(category: category);
-          },
-        ),
-        GoRoute(
-          path: '/events/:id',
-          name: 'event-detail',
-          builder: (context, state) {
-            final id = state.pathParameters['id']!;
-            return EventDetailScreen(eventId: id);
           },
         ),
         GoRoute(
@@ -459,6 +473,14 @@ class AppRouter {
               groupId: groupId,
               groupName: groupName,
             );
+          },
+        ),
+        GoRoute(
+          path: '/events/:id',
+          name: 'event-detail',
+          builder: (context, state) {
+            final id = state.pathParameters['id']!;
+            return EventDetailScreen(eventId: id);
           },
         ),
 
@@ -505,5 +527,18 @@ class RouterRefreshNotifier extends ChangeNotifier {
   void dispose() {
     _subscription?.cancel();
     super.dispose();
+  }
+}
+
+class SplashScreenPage extends StatelessWidget {
+  const SplashScreenPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      body: Center(
+        child: CircularProgressIndicator(),
+      ),
+    );
   }
 }

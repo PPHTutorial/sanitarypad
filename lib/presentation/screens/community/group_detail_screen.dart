@@ -54,6 +54,8 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen>
     final userAsync = ref.watch(currentUserStreamProvider);
     final user = userAsync.value;
 
+    print('Group GpID:${widget.groupId}');
+
     if (user == null) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),
@@ -156,6 +158,8 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen>
                     ),
                   ],
                   bottom: TabBar(
+                    dividerColor:
+                        Theme.of(context).colorScheme.outline.withOpacity(0.07),
                     controller: _tabController,
                     tabs: const [
                       Tab(
@@ -187,6 +191,7 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen>
                           _toggleMembership(context, user, isMember),
                       groupService: _groupService,
                       eventService: _eventService,
+                      controller: _tabController,
                     ),
                     _DiscussionTab(
                       group: group,
@@ -479,6 +484,7 @@ class _OverviewTab extends StatelessWidget {
     required this.onJoinPressed,
     required this.groupService,
     required this.eventService,
+    required this.controller,
   });
 
   final GroupModel group;
@@ -487,6 +493,7 @@ class _OverviewTab extends StatelessWidget {
   final VoidCallback onJoinPressed;
   final GroupService groupService;
   final EventService eventService;
+  final TabController controller;
 
   @override
   Widget build(BuildContext context) {
@@ -496,6 +503,7 @@ class _OverviewTab extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Card(
+            margin: ResponsiveConfig.margin(all: 0),
             child: Padding(
               padding: ResponsiveConfig.padding(all: 20),
               child: Column(
@@ -603,13 +611,10 @@ class _OverviewTab extends StatelessWidget {
           ResponsiveConfig.heightBox(24),
           _SectionHeader(
             title: 'Upcoming happenings',
-            actionLabel: 'View calendar',
+            actionLabel: 'View Events',
             onAction: () {
-              final TabController? controller =
-                  DefaultTabController.of(context);
-              if (controller != null) {
-                controller.animateTo(2);
-              }
+              //final TabController controller = DefaultTabController.of(context);
+              controller.animateTo(2);
             },
           ),
           ResponsiveConfig.heightBox(8),
@@ -680,7 +685,7 @@ class _DiscussionTab extends StatelessWidget {
 
               if (messages.isEmpty) {
                 return Padding(
-                  padding: ResponsiveConfig.padding(all: 24),
+                  padding: ResponsiveConfig.padding(all: 4),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -841,6 +846,7 @@ class _MembersPreview extends StatelessWidget {
         final members = snapshot.data ?? [];
         if (members.isEmpty) {
           return Card(
+            margin: ResponsiveConfig.margin(all: 0),
             child: Padding(
               padding: ResponsiveConfig.padding(all: 16),
               child: Text(
@@ -980,6 +986,7 @@ class _GroupEventsPreview extends StatelessWidget {
         final events = snapshot.data ?? [];
         if (events.isEmpty) {
           return Card(
+            margin: ResponsiveConfig.margin(all: 0),
             child: Padding(
               padding: ResponsiveConfig.padding(all: 16),
               child: Column(
@@ -1256,6 +1263,8 @@ class _BadgeChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Chip(
+      side: BorderSide(
+          color: Theme.of(context).colorScheme.outline.withOpacity(0.07)),
       avatar: Icon(icon, size: 16, color: AppTheme.primaryPink),
       backgroundColor: AppTheme.primaryPink.withOpacity(0.1),
       label: Text(

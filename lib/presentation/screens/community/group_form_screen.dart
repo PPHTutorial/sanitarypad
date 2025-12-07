@@ -31,6 +31,8 @@ class _GroupFormScreenState extends ConsumerState<GroupFormScreen> {
   @override
   void initState() {
     super.initState();
+    print('Group category ${widget.category}');
+
     if (widget.category != null) {
       const allowed = {
         'general',

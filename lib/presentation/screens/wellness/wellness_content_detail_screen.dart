@@ -186,7 +186,6 @@ class _WellnessContentDetailScreenState
                   children: _content!.tags!.map((tag) {
                     return Chip(
                       label: Text(tag),
-                      backgroundColor: AppTheme.palePink,
                     );
                   }).toList(),
                 ),

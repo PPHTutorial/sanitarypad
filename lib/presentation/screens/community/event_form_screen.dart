@@ -47,6 +47,7 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
     if (widget.category != null) {
       _selectedCategory = widget.category!;
     }
+    if (widget.category == "all") _selectedCategory = "general";
   }
 
   @override
@@ -153,6 +154,7 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
               children: [
                 if (widget.groupId != null)
                   Card(
+                    margin: ResponsiveConfig.margin(all: 0),
                     color: AppTheme.primaryPink.withOpacity(0.12),
                     child: Padding(
                       padding: ResponsiveConfig.padding(all: 16),

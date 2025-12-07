@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sanitarypad/presentation/screens/movie/movies.dart';
+import 'package:sanitarypad/presentation/screens/movie/presentation/screens/home/home_screen.dart';
 import '../../../core/config/responsive_config.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/providers/cycle_provider.dart';
@@ -248,6 +250,24 @@ class HomeScreen extends ConsumerWidget {
             ),
           ],
         ),
+        ResponsiveConfig.heightBox(12),
+        Row(
+          children: [
+            Expanded(
+              child: _buildActionButton(
+                context,
+                icon: Icons.movie,
+                label: 'Movies',
+                onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => MovieMovieHomeScreen())),
+              ),
+            ),
+          ],
+        ),
+        ResponsiveConfig.heightBox(12),
+        const _CommunityCard()
       ],
     );
   }
@@ -360,5 +380,56 @@ class HomeScreen extends ConsumerWidget {
     } else {
       return '${date.day}/${date.month}/${date.year}';
     }
+  }
+}
+
+class _CommunityCard extends StatelessWidget {
+  const _CommunityCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: ResponsiveConfig.margin(all: 0),
+      child: Padding(
+        padding: ResponsiveConfig.padding(all: 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Community & Support Forum',
+              style: ResponsiveConfig.textStyle(
+                size: 18,
+                weight: FontWeight.bold,
+              ),
+            ),
+            ResponsiveConfig.heightBox(8),
+            Text(
+              'Share progress, ask dermatologists, join climate-based skincare groups, Pregnancy women and mothers and more...',
+              style: ResponsiveConfig.textStyle(
+                size: 14,
+                color: AppTheme.mediumGray,
+              ),
+            ),
+            ResponsiveConfig.heightBox(16),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                ElevatedButton.icon(
+                  onPressed: () => context.push('/groups', extra: "all"),
+                  icon: const Icon(Icons.groups_outlined),
+                  label: const Text('Join forum'),
+                ),
+                ResponsiveConfig.heightBox(8),
+                OutlinedButton.icon(
+                  onPressed: () => context.push('/events', extra: 'all'),
+                  icon: const Icon(Icons.event_outlined),
+                  label: const Text('Upcoming events'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

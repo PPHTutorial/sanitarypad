@@ -12,7 +12,6 @@ import 'core/widgets/splash_background_wrapper.dart';
 import 'core/widgets/double_back_to_exit.dart';
 import 'core/providers/theme_provider.dart';
 import 'services/notification_service.dart';
-import 'services/background_notification_scheduler.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -77,17 +76,6 @@ void main() async {
     // Initialize notifications
     final notificationService = NotificationService();
     await notificationService.initialize();
-
-    // Initialize background notification scheduler (optional - works without workmanager)
-    try {
-      final backgroundScheduler = BackgroundNotificationScheduler();
-      await backgroundScheduler.initialize();
-      print('✅ Background notification scheduler initialized');
-    } catch (e) {
-      // Background scheduler is optional - notifications still work via flutter_local_notifications
-      print('⚠️ Background scheduler initialization skipped: $e');
-      print('ℹ️ Notifications will still work via flutter_local_notifications');
-    }
   } catch (e, stackTrace) {
     // Handle initialization errors gracefully
     await ErrorHandler.handleError(
@@ -124,6 +112,7 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    
     super.dispose();
   }
 
@@ -165,4 +154,5 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
       ),
     );
   }
+  
 }

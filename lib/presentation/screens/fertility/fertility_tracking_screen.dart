@@ -1004,18 +1004,21 @@ class _FertilityTrackingScreenState
                   ),
                 ),
                 ResponsiveConfig.heightBox(12),
-                Wrap(
-                  spacing: 8,
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    ActionChip(
-                      label: const Text('Join Community'),
-                      onPressed: () {},
-                      backgroundColor: AppTheme.primaryPink.withOpacity(0.1),
+                    ElevatedButton.icon(
+                      onPressed: () =>
+                          context.push('/groups', extra: 'fertility'),
+                      icon: const Icon(Icons.groups_outlined),
+                      label: const Text('Join forum'),
                     ),
-                    ActionChip(
-                      label: const Text('Find Counselor'),
-                      onPressed: () {},
-                      backgroundColor: AppTheme.primaryPink.withOpacity(0.1),
+                    ResponsiveConfig.heightBox(8),
+                    OutlinedButton.icon(
+                      onPressed: () =>
+                          context.push('/events', extra: 'fertility'),
+                      icon: const Icon(Icons.event_outlined),
+                      label: const Text('Upcoming events'),
                     ),
                   ],
                 ),

@@ -1328,6 +1328,8 @@ class _OverviewTab extends StatelessWidget {
           const _BabyNameCard(),
           ResponsiveConfig.heightBox(16),
           const _NutritionPlannerCard(),
+          ResponsiveConfig.heightBox(16),
+          const _CommunityCard(),
         ],
       ),
     );
@@ -1922,6 +1924,7 @@ class _JournalTab extends StatelessWidget {
                 );
               }
               return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: entries.take(10).map(_JournalEntryTile.new).toList(),
               );
             },
@@ -2129,7 +2132,7 @@ class _WeightTrendCard extends StatelessWidget {
                           return FlSpot(
                               entry.key.toDouble(), entry.value.weight);
                         }).toList(),
-                        isCurved: true,
+                        isCurved: false,
                         color: AppTheme.primaryPink,
                         barWidth: 3,
                         dotData: FlDotData(show: true),
@@ -2654,7 +2657,7 @@ class _KickTrendCard extends StatelessWidget {
             ),
             ResponsiveConfig.heightBox(12),
             SizedBox(
-              height: 200,
+              height: 300,
               child: LineChart(
                 LineChartData(
                   lineTouchData: LineTouchData(
@@ -2684,7 +2687,7 @@ class _KickTrendCard extends StatelessWidget {
                   lineBarsData: [
                     LineChartBarData(
                       spots: spots,
-                      isCurved: true,
+                      isCurved: false,
                       color: AppTheme.primaryPink,
                       barWidth: 3,
                       dotData: FlDotData(show: true),
@@ -2872,6 +2875,11 @@ class _SleepPatternCard extends StatelessWidget {
               spacing: 8,
               children: sleepEntries.map((entry) {
                 return Chip(
+                  side: BorderSide(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .outline
+                          .withValues(alpha: 0.05)),
                   avatar: const Icon(Icons.nightlight_round, size: 14),
                   label: Text(
                       '${DateFormat('MMMd').format(entry.date)} · ${entry.sleepHours} h'),
@@ -3099,6 +3107,56 @@ class _SliderInput extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+}
+
+class _CommunityCard extends StatelessWidget {
+  const _CommunityCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: ResponsiveConfig.padding(all: 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Community & Support Forum',
+              style: ResponsiveConfig.textStyle(
+                size: 18,
+                weight: FontWeight.bold,
+              ),
+            ),
+            ResponsiveConfig.heightBox(8),
+            Text(
+              'Get to interract with mothers and other pregnant women to share and gather experiences.',
+              style: ResponsiveConfig.textStyle(
+                size: 14,
+                color: AppTheme.mediumGray,
+              ),
+            ),
+            ResponsiveConfig.heightBox(16),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                ElevatedButton.icon(
+                  onPressed: () => context.push('/groups', extra: 'pregnancy'),
+                  icon: const Icon(Icons.groups_outlined),
+                  label: const Text('Join forum'),
+                ),
+                ResponsiveConfig.heightBox(8),
+                OutlinedButton.icon(
+                  onPressed: () => context.push('/events', extra: 'pregnancy'),
+                  icon: const Icon(Icons.event_outlined),
+                  label: const Text('Upcoming events'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

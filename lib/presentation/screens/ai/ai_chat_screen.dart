@@ -358,7 +358,7 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
                 message.content,
                 style: ResponsiveConfig.textStyle(
                   size: 14,
-                  color: isUser ? Colors.white : null,
+                  color: isUser ? Colors.white : Colors.black,
                 ),
               ),
             ),
