@@ -1,3 +1,4 @@
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -22,13 +23,13 @@ class HomeScreen extends ConsumerWidget {
         title: const Text('FemCare+'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.notifications_outlined),
+            icon: const FaIcon(FontAwesomeIcons.bell),
             onPressed: () {
               context.go('/red-flag-alerts');
             },
           ),
           IconButton(
-            icon: const Icon(Icons.settings_outlined),
+            icon: const FaIcon(FontAwesomeIcons.gear),
             onPressed: () {
               context.go('/profile');
             },
@@ -121,7 +122,7 @@ class HomeScreen extends ConsumerWidget {
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.edit_outlined),
+                  icon: const FaIcon(FontAwesomeIcons.penToSquare),
                   onPressed: () {
                     // Navigate to edit current cycle
                     context.push('/log-period', extra: cycle);
@@ -132,8 +133,8 @@ class HomeScreen extends ConsumerWidget {
             ResponsiveConfig.heightBox(12),
             Row(
               children: [
-                Icon(
-                  Icons.calendar_today,
+                FaIcon(
+                  FontAwesomeIcons.calendar,
                   color: AppTheme.primaryPink,
                   size: ResponsiveConfig.iconSize(24),
                 ),
@@ -186,7 +187,7 @@ class HomeScreen extends ConsumerWidget {
             Expanded(
               child: _buildActionButton(
                 context,
-                icon: Icons.child_care,
+                icon: FontAwesomeIcons.baby,
                 label: 'Pregnancy',
                 onTap: () {
                   AdsService().showInterstitialAd();
@@ -198,7 +199,7 @@ class HomeScreen extends ConsumerWidget {
             Expanded(
               child: _buildActionButton(
                 context,
-                icon: Icons.egg,
+                icon: FontAwesomeIcons.egg,
                 label: 'Fertility',
                 onTap: () => context.go('/fertility-tracking'),
               ),
@@ -213,7 +214,7 @@ class HomeScreen extends ConsumerWidget {
             Expanded(
               child: _buildActionButton(
                 context,
-                icon: Icons.face,
+                icon: FontAwesomeIcons.faceSmile,
                 label: 'Skincare',
                 onTap: () => context.go('/skincare-tracking'),
               ),
@@ -222,11 +223,11 @@ class HomeScreen extends ConsumerWidget {
             Expanded(
               child: _buildActionButton(
                 context,
-                icon: Icons.favorite_outline,
+                icon: FontAwesomeIcons.heartPulse,
                 label: 'Wellness',
                 onTap: () => context.go('/wellness-journal-list'),
               ),
-            )
+            ),
           ],
         ),
         ResponsiveConfig.heightBox(12),
@@ -236,7 +237,7 @@ class HomeScreen extends ConsumerWidget {
             Expanded(
               child: _buildActionButton(
                 context,
-                icon: Icons.water_drop,
+                icon: FontAwesomeIcons.droplet,
                 label: 'Log Period',
                 onTap: () => context.go('/log-period'),
               ),
@@ -245,7 +246,7 @@ class HomeScreen extends ConsumerWidget {
             Expanded(
               child: _buildActionButton(
                 context,
-                icon: Icons.sanitizer,
+                icon: FontAwesomeIcons.toiletPaper,
                 label: 'Pad Change',
                 onTap: () => context.go('/pad-management'),
               ),
@@ -258,7 +259,7 @@ class HomeScreen extends ConsumerWidget {
             Expanded(
               child: _buildActionButton(
                 context,
-                icon: Icons.movie,
+                icon: FontAwesomeIcons.film,
                 label: 'Movies',
                 onTap: () => context.push('/movies'),
               ),
@@ -284,8 +285,8 @@ class HomeScreen extends ConsumerWidget {
           children: [
             Row(
               children: [
-                Icon(
-                  Icons.rocket_launch,
+                FaIcon(
+                  FontAwesomeIcons.rocket,
                   color: AppTheme.primaryPink,
                   size: ResponsiveConfig.iconSize(28),
                 ),
@@ -310,7 +311,7 @@ class HomeScreen extends ConsumerWidget {
             ResponsiveConfig.heightBox(16),
             ElevatedButton.icon(
               onPressed: () => context.go('/log-period'),
-              icon: const Icon(Icons.add),
+              icon: const FaIcon(FontAwesomeIcons.plus),
               label: const Text('Log Your First Period'),
               style: ElevatedButton.styleFrom(
                 padding: ResponsiveConfig.padding(vertical: 16, horizontal: 24),
@@ -347,7 +348,7 @@ class HomeScreen extends ConsumerWidget {
         ),
         child: Column(
           children: [
-            Icon(
+            FaIcon(
               icon,
               color: AppTheme.primaryPink,
               size: ResponsiveConfig.iconSize(32),
@@ -417,13 +418,13 @@ class _CommunityCard extends StatelessWidget {
               children: [
                 ElevatedButton.icon(
                   onPressed: () => context.push('/groups', extra: "all"),
-                  icon: const Icon(Icons.groups_outlined),
+                  icon: const FaIcon(FontAwesomeIcons.users),
                   label: const Text('Join forum'),
                 ),
                 ResponsiveConfig.heightBox(8),
                 OutlinedButton.icon(
                   onPressed: () => context.push('/events', extra: 'all'),
-                  icon: const Icon(Icons.event_outlined),
+                  icon: const FaIcon(FontAwesomeIcons.calendarCheck),
                   label: const Text('Upcoming events'),
                 ),
               ],

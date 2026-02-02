@@ -1,3 +1,4 @@
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -27,7 +28,7 @@ class WellnessScreen extends ConsumerWidget {
           title: const Text('Wellness'),
           actions: [
             IconButton(
-              icon: const Icon(Icons.add),
+              icon: const FaIcon(FontAwesomeIcons.plus),
               onPressed: () {
                 context.push('/wellness-content-form');
               },
@@ -133,8 +134,8 @@ class WellnessScreen extends ConsumerWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(
-                  Icons.article_outlined,
+                FaIcon(
+                  FontAwesomeIcons.newspaper,
                   size: ResponsiveConfig.iconSize(64),
                   color: AppTheme.mediumGray,
                 ),
@@ -241,7 +242,8 @@ class WellnessScreen extends ConsumerWidget {
                   if (content.userId ==
                       ref.read(authServiceProvider).currentUser?.uid) ...[
                     IconButton(
-                      icon: const Icon(Icons.edit_outlined, size: 20),
+                      icon:
+                          const FaIcon(FontAwesomeIcons.penToSquare, size: 20),
                       visualDensity: VisualDensity.compact,
                       onPressed: () {
                         context.push('/wellness-content-form', extra: content);
@@ -249,7 +251,7 @@ class WellnessScreen extends ConsumerWidget {
                       tooltip: 'Edit',
                     ),
                     IconButton(
-                      icon: const Icon(Icons.delete_outline,
+                      icon: const FaIcon(FontAwesomeIcons.trashCan,
                           size: 20, color: AppTheme.errorRed),
                       visualDensity: VisualDensity.compact,
                       onPressed: () =>
@@ -275,8 +277,8 @@ class WellnessScreen extends ConsumerWidget {
                 ResponsiveConfig.heightBox(8),
                 Row(
                   children: [
-                    Icon(
-                      Icons.access_time,
+                    FaIcon(
+                      FontAwesomeIcons.clock,
                       size: ResponsiveConfig.iconSize(14),
                       color: AppTheme.mediumGray,
                     ),
@@ -333,7 +335,8 @@ class WellnessScreen extends ConsumerWidget {
                 }
               }
             },
-            child: const Text('Delete', style: TextStyle(color: AppTheme.errorRed)),
+            child: const Text('Delete',
+                style: TextStyle(color: AppTheme.errorRed)),
           ),
         ],
       ),

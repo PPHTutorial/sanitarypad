@@ -12,6 +12,7 @@ import 'package:logger/web.dart';
 import '../../../core/config/responsive_config.dart';
 import '../../../core/providers/auth_provider.dart';
 import '../../../core/theme/app_theme.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../../core/widgets/back_button_handler.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../data/models/skincare_model.dart';
@@ -179,10 +180,10 @@ class _SkincareTrackingScreenState extends ConsumerState<SkincareTrackingScreen>
       labelColor: AppTheme.primaryPink,
       unselectedLabelColor: AppTheme.mediumGray,
       tabs: const [
-        Tab(text: 'Overview', icon: Icon(Icons.dashboard_outlined)),
-        Tab(text: 'Journal', icon: Icon(Icons.book_outlined)),
-        Tab(text: 'Routines', icon: Icon(Icons.auto_fix_high_outlined)),
-        Tab(text: 'Insights', icon: Icon(Icons.insights_outlined)),
+        Tab(text: 'Overview', icon: FaIcon(FontAwesomeIcons.chartPie)),
+        Tab(text: 'Journal', icon: FaIcon(FontAwesomeIcons.bookOpen)),
+        Tab(text: 'Routines', icon: FaIcon(FontAwesomeIcons.wandMagicSparkles)),
+        Tab(text: 'Insights', icon: FaIcon(FontAwesomeIcons.chartLine)),
       ],
     );
   }
@@ -191,25 +192,25 @@ class _SkincareTrackingScreenState extends ConsumerState<SkincareTrackingScreen>
     switch (_tabController.index) {
       case 0:
         return IconButton(
-          icon: const Icon(Icons.add_circle_outline),
+          icon: const FaIcon(FontAwesomeIcons.circlePlus),
           tooltip: 'Quick Actions',
           onPressed: () => _showQuickActionsSheet(context, userId),
         );
       case 1:
         return IconButton(
-          icon: const Icon(Icons.edit_note_outlined),
+          icon: const FaIcon(FontAwesomeIcons.penToSquare),
           tooltip: 'Log Journal',
           onPressed: () => _showJournalSheet(context, userId),
         );
       case 2:
         return IconButton(
-          icon: const Icon(Icons.auto_fix_high_outlined),
+          icon: const FaIcon(FontAwesomeIcons.wandMagicSparkles),
           tooltip: 'New Routine',
           onPressed: () => _showRoutineTemplateSheet(context, userId),
         );
       case 3:
         return IconButton(
-          icon: const Icon(Icons.playlist_add_outlined),
+          icon: const FaIcon(FontAwesomeIcons.listCheck),
           tooltip: 'Quick Actions',
           onPressed: () => _showQuickActionsSheet(context, userId),
         );
@@ -438,7 +439,7 @@ class _SkincareTrackingScreenState extends ConsumerState<SkincareTrackingScreen>
                   ResponsiveConfig.heightBox(38),
                   ListTile(
                     contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.calendar_month_outlined),
+                    leading: const FaIcon(FontAwesomeIcons.calendarDays),
                     title:
                         Text(DateFormat('EEEE, MMM d, y').format(selectedDate)),
                     onTap: () async {
@@ -694,7 +695,7 @@ class _SkincareTrackingScreenState extends ConsumerState<SkincareTrackingScreen>
                   ),
                 ),
                 ListTile(
-                  leading: const Icon(Icons.science_outlined),
+                  leading: const FaIcon(FontAwesomeIcons.magnifyingGlassChart),
                   title: const Text('Analyze Skin Type'),
                   onTap: () {
                     Navigator.of(context).pop();
@@ -702,7 +703,7 @@ class _SkincareTrackingScreenState extends ConsumerState<SkincareTrackingScreen>
                   },
                 ),
                 ListTile(
-                  leading: const Icon(Icons.add_shopping_cart_outlined),
+                  leading: const FaIcon(FontAwesomeIcons.cartPlus),
                   title: const Text('Add Product'),
                   onTap: () {
                     Navigator.of(context).pop();
@@ -710,7 +711,7 @@ class _SkincareTrackingScreenState extends ConsumerState<SkincareTrackingScreen>
                   },
                 ),
                 ListTile(
-                  leading: const Icon(Icons.auto_fix_high_outlined),
+                  leading: const FaIcon(FontAwesomeIcons.wandMagicSparkles),
                   title: const Text('Create Routine'),
                   onTap: () {
                     Navigator.of(context).pop();
@@ -718,7 +719,7 @@ class _SkincareTrackingScreenState extends ConsumerState<SkincareTrackingScreen>
                   },
                 ),
                 ListTile(
-                  leading: const Icon(Icons.healing_outlined),
+                  leading: const FaIcon(FontAwesomeIcons.faceSadTear),
                   title: const Text('Log Acne Breakout'),
                   onTap: () {
                     Navigator.of(context).pop();
@@ -726,7 +727,7 @@ class _SkincareTrackingScreenState extends ConsumerState<SkincareTrackingScreen>
                   },
                 ),
                 ListTile(
-                  leading: const Icon(Icons.sunny_snowing),
+                  leading: const FaIcon(FontAwesomeIcons.solidSun),
                   title: const Text('Log UV Index'),
                   onTap: () {
                     Navigator.of(context).pop();
@@ -734,7 +735,7 @@ class _SkincareTrackingScreenState extends ConsumerState<SkincareTrackingScreen>
                   },
                 ),
                 ListTile(
-                  leading: const Icon(Icons.flag_outlined),
+                  leading: const FaIcon(FontAwesomeIcons.flag),
                   title: const Text('Add Skin Goal'),
                   onTap: () {
                     Navigator.of(context).pop();
@@ -742,7 +743,7 @@ class _SkincareTrackingScreenState extends ConsumerState<SkincareTrackingScreen>
                   },
                 ),
                 ListTile(
-                  leading: const Icon(Icons.water_drop_outlined),
+                  leading: const FaIcon(FontAwesomeIcons.glassWaterDroplet),
                   title: const Text('Schedule Hydration Reminder'),
                   onTap: () {
                     Navigator.of(context).pop();
@@ -806,7 +807,7 @@ class _SkincareTrackingScreenState extends ConsumerState<SkincareTrackingScreen>
                       decoration: InputDecoration(
                         labelText: 'Search ingredient',
                         suffixIcon: IconButton(
-                          icon: const Icon(Icons.search),
+                          icon: const FaIcon(FontAwesomeIcons.magnifyingGlass),
                           onPressed: () => loading
                               ? null
                               : performSearch(searchController.text.trim()),
@@ -1094,7 +1095,7 @@ class _SkincareTrackingScreenState extends ConsumerState<SkincareTrackingScreen>
                   ),
                   ListTile(
                     contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.calendar_month_outlined),
+                    leading: const FaIcon(FontAwesomeIcons.calendarDays),
                     title: Text(DateFormat('MMM d, y').format(targetDate)),
                     onTap: () async {
                       final picked = await showDatePicker(
