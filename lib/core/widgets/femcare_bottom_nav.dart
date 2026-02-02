@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:sanitarypad/core/config/responsive_config.dart';
 import '../../core/theme/app_theme.dart';
 
@@ -16,34 +17,35 @@ class FemCareBottomNav extends StatelessWidget {
   });
 
   // Main navigation routes
-  static const List<NavItem> _navItems = [
-    NavItem(
-      icon: Icons.home_outlined,
-      activeIcon: Icons.home_rounded,
+  static final List<NavItem> _navItems = [
+    const NavItem(
+      icon: FontAwesomeIcons.house,
+      activeIcon: FontAwesomeIcons
+          .house, // FA uses same name, we can toggle solid/regular if using different IconData
       label: 'Home',
       route: '/home',
     ),
-    NavItem(
-      icon: Icons.calendar_today_outlined,
-      activeIcon: Icons.calendar_today_rounded,
+    const NavItem(
+      icon: FontAwesomeIcons.calendar,
+      activeIcon: FontAwesomeIcons.calendarCheck,
       label: 'Calendar',
       route: '/calendar',
     ),
-    NavItem(
-      icon: Icons.insights_outlined,
-      activeIcon: Icons.insights_rounded,
+    const NavItem(
+      icon: FontAwesomeIcons.chartLine,
+      activeIcon: FontAwesomeIcons.chartArea,
       label: 'Insights',
       route: '/insights',
     ),
-    NavItem(
-      icon: Icons.favorite_outline,
-      activeIcon: Icons.favorite_rounded,
+    const NavItem(
+      icon: FontAwesomeIcons.heart,
+      activeIcon: FontAwesomeIcons.heartCircleCheck,
       label: 'Wellness',
       route: '/wellness',
     ),
-    NavItem(
-      icon: Icons.person_outline,
-      activeIcon: Icons.person_rounded,
+    const NavItem(
+      icon: FontAwesomeIcons.user,
+      activeIcon: FontAwesomeIcons.userCheck,
       label: 'Profile',
       route: '/profile',
     ),
@@ -126,12 +128,14 @@ class FemCareBottomNav extends StatelessWidget {
                       ),
                     ),
                     // Icon
-                    Icon(
+                    FaIcon(
                       isActive ? item.activeIcon : item.icon,
                       color: isActive
                           ? AppTheme.primaryPink
                           : (isDark ? Colors.grey[500] : Colors.grey[600]),
-                      size: isActive ? 26 : 24,
+                      size: isActive
+                          ? 22
+                          : 20, // FaIcons can be slightly larger visually
                     ),
                   ],
                 ),

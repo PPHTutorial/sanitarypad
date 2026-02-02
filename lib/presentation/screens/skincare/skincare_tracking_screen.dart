@@ -846,39 +846,44 @@ class _SkincareTrackingScreenState extends ConsumerState<SkincareTrackingScreen>
                       onSubmitted: (value) =>
                           loading ? null : performSearch(value.trim())),
                   ResponsiveConfig.heightBox(16),
-                  SizedBox(
-                    height: ResponsiveConfig.screenHeight * 0.55,
-                    child: FutureBuilder<String>(
-                      future: _enhancedService.getAIIngredients(ref, query),
-                      builder: (context, snapshot) {
-                        final ingredients = snapshot.data;
-                        // Logger().t(ingredients);
-                        // setState removed to prevent build loop
+                  Flexible(
+                    child: SingleChildScrollView(
+                      child: FutureBuilder<String>(
+                        future: _enhancedService.getAIIngredients(ref, query),
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState ==
+                              ConnectionState.waiting) {
+                            return const SizedBox(
+                              height: 100,
+                              child: Center(child: CircularProgressIndicator()),
+                            );
+                          }
 
-                        if (ingredients == null) {
-                          return Text(query.isEmpty
-                              ? 'Enter an ingredient name to see details.'
-                              : 'No ingredient found for "$query".');
-                        }
-                        if (snapshot.connectionState ==
-                            ConnectionState.waiting) {
-                          // Show loading spinner while waiting
-                          return const Center(
-                              child: CircularProgressIndicator());
-                        }
-                        if (snapshot.hasError) {
-                          // Show error message if something went wrong
-                          return Center(
-                            child: Text(
-                              'Error: ${snapshot.error}',
-                              style: const TextStyle(color: Colors.red),
-                            ),
+                          if (snapshot.hasError) {
+                            return Center(
+                              child: Text(
+                                'Error: ${snapshot.error}',
+                                style: const TextStyle(color: Colors.red),
+                              ),
+                            );
+                          }
+
+                          final ingredients = snapshot.data;
+                          if (ingredients == null || ingredients.isEmpty) {
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 20),
+                              child: Text(query.isEmpty
+                                  ? 'Enter an ingredient name to see details.'
+                                  : 'No ingredient found for "$query".'),
+                            );
+                          }
+
+                          return MarkdownBody(
+                            data: ingredients,
+                            selectable: true,
                           );
-                        }
-                        return SingleChildScrollView(
-                          child: MarkdownBody(data: ingredients),
-                        );
-                      },
+                        },
+                      ),
                     ),
                   ),
                 ],

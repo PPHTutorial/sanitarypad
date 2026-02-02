@@ -6,10 +6,13 @@ import '../../../core/config/responsive_config.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/providers/auth_provider.dart';
 import '../../../core/providers/theme_provider.dart';
-import '../../../services/data_export_service.dart';
+import '../../../services/health_report_service.dart';
 import '../../../core/widgets/femcare_bottom_nav.dart';
 import '../../../core/widgets/back_button_handler.dart';
 import '../../../core/constants/legal_constants.dart';
+import '../../../core/constants/export_constants.dart';
+import '../../../services/data_backup_service.dart';
+import 'package:share_plus/share_plus.dart';
 import 'policy_viewer_screen.dart';
 
 /// Profile screen
@@ -52,6 +55,10 @@ class ProfileScreen extends ConsumerWidget {
                     _buildAccountActions(context, ref),
                     ResponsiveConfig.heightBox(16),
 
+                    // Social Section
+                    _buildSocialSection(context),
+                    ResponsiveConfig.heightBox(16),
+
                     // Legal Section
                     _buildLegalSection(context),
                     ResponsiveConfig.heightBox(32), // Bottom padding
@@ -88,7 +95,9 @@ class ProfileScreen extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    user.displayName ?? 'User',
+                    (user.fullName != null && user.fullName!.isNotEmpty)
+                        ? user.fullName!
+                        : (user.displayName ?? 'User'),
                     style: ResponsiveConfig.textStyle(
                       size: 20,
                       weight: FontWeight.bold,
@@ -104,6 +113,12 @@ class ProfileScreen extends ConsumerWidget {
                   ),
                 ],
               ),
+            ),
+            IconButton(
+              onPressed: () => context.push('/edit-profile'),
+              icon: const FaIcon(FontAwesomeIcons.userPen,
+                  size: 20, color: AppTheme.primaryPink),
+              tooltip: 'Edit Profile',
             ),
           ],
         ),
@@ -172,10 +187,7 @@ class ProfileScreen extends ConsumerWidget {
             icon: FontAwesomeIcons.calendar,
             title: 'Cycle Settings',
             onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                    content: Text('Advanced cycle settings coming soon')),
-              );
+              context.push('/cycle-settings');
             },
           ),
           const Divider(),
@@ -498,11 +510,30 @@ class ProfileScreen extends ConsumerWidget {
             ),
             ResponsiveConfig.heightBox(16),
             ListTile(
-              leading: const FaIcon(FontAwesomeIcons.download, size: 20),
-              title: const Text('Export Data'),
+              leading: const FaIcon(FontAwesomeIcons.fileArrowDown, size: 20),
+              title: const Text('Export Health Report'),
+              subtitle: const Text('PDF, Text or Word Doc'),
               onTap: () {
                 Navigator.pop(context);
                 _exportUserData(context, ref);
+              },
+            ),
+            ListTile(
+              leading: const FaIcon(FontAwesomeIcons.cloudArrowUp, size: 20),
+              title: const Text('Backup Data (JSON)'),
+              subtitle: const Text('Save a copy of all your data'),
+              onTap: () {
+                Navigator.pop(context);
+                _handleBackup(context, ref);
+              },
+            ),
+            ListTile(
+              leading: const FaIcon(FontAwesomeIcons.cloudArrowDown, size: 20),
+              title: const Text('Restore Data (JSON)'),
+              subtitle: const Text('Import from a previous backup'),
+              onTap: () {
+                Navigator.pop(context);
+                _handleRestore(context, ref);
               },
             ),
             ListTile(
@@ -599,6 +630,52 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 
+  Widget _buildSocialSection(BuildContext context) {
+    return Card(
+      shadowColor: Colors.black.withValues(alpha: 0.08),
+      margin: const EdgeInsets.only(bottom: 0),
+      child: Column(
+        children: [
+          _buildSettingsTile(
+            context,
+            icon: FontAwesomeIcons.userPlus,
+            title: 'Invite Friends',
+            onTap: () {
+              Share.share(
+                  'Join me on FemCare+! The smart assistant for women\'s health and wellness.\nDownload now: https://femcare.app/download',
+                  subject: 'Invite to FemCare+');
+            },
+          ),
+          const Divider(),
+          _buildSettingsTile(
+            context,
+            icon: FontAwesomeIcons.shareNodes,
+            title: 'Share App',
+            onTap: () {
+              Share.share(
+                  'Check out FemCare+, it is amazing for tracking health and cycle!\nhttps://femcare.app',
+                  subject: 'FemCare+ App');
+            },
+          ),
+          const Divider(),
+          _buildSettingsTile(
+            context,
+            icon: FontAwesomeIcons.solidStar,
+            title: 'Rate App',
+            onTap: () {
+              // For now, just show a snackbar or link to store
+              // In production, use in_app_review package
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                    content: Text('Rating feature coming to app store soon!')),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
   void _navigateToPolicy(BuildContext context, String title, String content) {
     Navigator.of(context).push(
       MaterialPageRoute(
@@ -662,45 +739,88 @@ class ProfileScreen extends ConsumerWidget {
 
     if (user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('User not found')),
+        const SnackBar(content: Text('User not found. Please log in.')),
       );
       return;
     }
 
-    try {
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => const Center(
-          child: Card(
-            child: Padding(
-              padding: EdgeInsets.all(24.0),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  CircularProgressIndicator(),
-                  SizedBox(height: 16),
-                  Text('Exporting data...'),
-                ],
-              ),
+    // Show format selection dialog
+    final format = await showDialog<ExportFormat>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Export Data Format'),
+        content: const Text('Choose your preferred file format for export:'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, ExportFormat.pdf),
+            child: const Text('PDF'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, ExportFormat.txt),
+            child: const Text('Text (TXT)'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, ExportFormat.docx),
+            child: const Text('Word (DOCX)'),
+          ),
+        ],
+      ),
+    );
+
+    if (format == null || !context.mounted) return;
+
+    // Show modal loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: Card(
+          child: Padding(
+            padding: EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text('Preparing your data...'),
+              ],
             ),
           ),
         ),
+      ),
+    );
+
+    try {
+      final reportService = HealthReportService();
+      await reportService.generateReport(
+        userId: user.userId,
+        format: format,
       );
 
-      final exportService = DataExportService();
-      final jsonData = await exportService.exportUserData(user.userId);
-      final fileName = exportService.generateExportFileName(user.userId);
-
       if (context.mounted) {
-        Navigator.pop(context); // Close loading dialog
-        await exportService.saveAndShareExport(jsonData, fileName);
+        Navigator.pop(context); // Dismiss loading dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Data exported successfully!'),
+            backgroundColor: Colors.green,
+          ),
+        );
       }
     } catch (e) {
       if (context.mounted) {
-        Navigator.pop(context); // Close loading dialog
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error exporting data: ${e.toString()}')),
+        Navigator.pop(context); // Dismiss loading dialog
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Export Failed'),
+            content: Text(e.toString()),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
         );
       }
     }
@@ -738,6 +858,70 @@ class ProfileScreen extends ConsumerWidget {
             SnackBar(content: Text('Error signing out: ${e.toString()}')),
           );
         }
+      }
+    }
+  }
+
+  Future<void> _handleBackup(BuildContext context, WidgetRef ref) async {
+    final user = ref.read(currentUserStreamProvider).value;
+    if (user == null) return;
+
+    try {
+      final backupService = DataBackupService();
+      await backupService.backupUserData(user.userId);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Backup shared successfully')),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Backup failed: ${e.toString()}')),
+        );
+      }
+    }
+  }
+
+  Future<void> _handleRestore(BuildContext context, WidgetRef ref) async {
+    final user = ref.read(currentUserStreamProvider).value;
+    if (user == null) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Restore Data'),
+        content: const Text(
+          'Warning: Restoring data will merge backup data with your current data. It is recommended to backup your current data first.',
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel')),
+          ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Restore')),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      final backupService = DataBackupService();
+      await backupService.restoreUserData(user.userId);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Data restored successfully!'),
+              backgroundColor: Colors.green),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Restore failed: ${e.toString()}')),
+        );
       }
     }
   }

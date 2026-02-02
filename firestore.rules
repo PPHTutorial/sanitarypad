@@ -141,10 +141,10 @@ service cloud.firestore {
     // ============================================
     // SUBSCRIPTIONS COLLECTION
     // ============================================
-    match /subscriptions/{subscriptionId} {
-      allow read: if isResourceOwner();
-      allow create: if isNewResourceOwner();
-      allow update: if isResourceOwner();
+    match /subscriptions/{userId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId);
       allow delete: if false; // Keep audit trail
     }
     
@@ -368,10 +368,12 @@ service cloud.firestore {
     
     match /ingredients/{ingredientId} {
       allow list: if request.auth != null;
-      allow read: if request.auth != null; // Ingredients can be shared/read by all authenticated users
-      allow create: if request.auth != null; // Any authenticated user can add ingredients
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+      // Only allow admins to update/delete globally shared ingredients
+      // For now, allowing update for persistence but restricting delete
       allow update: if request.auth != null;
-      allow delete: if request.auth != null;
+      allow delete: if false; 
     }
     
     match /acneEntries/{entryId} {

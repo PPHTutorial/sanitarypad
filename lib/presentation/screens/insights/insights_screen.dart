@@ -465,8 +465,7 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
                             ),
                           ],
                         ),
-                      ))
-                  ,
+                      )),
             ],
           ],
         ),
@@ -569,39 +568,33 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
               icon: Icons.face,
               color: AppTheme.lavender,
             ),
-            Row(
+            Column(
               children: [
-                Expanded(
-                  child: _buildStatTile(
-                    context,
-                    label: 'Routines',
-                    value: '${skincareData['totalRoutines'] ?? 0}',
-                    subtitle: 'COMPLETED',
-                    icon: Icons.spa,
-                    color: AppTheme.lavender,
-                  ),
+                _buildStatTile(
+                  context,
+                  label: 'Routines',
+                  value: '${skincareData['totalRoutines'] ?? 0}',
+                  subtitle: 'COMPLETED',
+                  icon: Icons.spa,
+                  color: AppTheme.lavender,
                 ),
-                ResponsiveConfig.widthBox(12),
-                Expanded(
-                  child: _buildStatTile(
-                    context,
-                    label: 'Products',
-                    value: '${skincareData['totalProducts'] ?? 0}',
-                    subtitle: 'IN INVENTORY',
-                    icon: Icons.inventory_2,
-                  ),
+                ResponsiveConfig.heightBox(12),
+                _buildStatTile(
+                  context,
+                  label: 'Products',
+                  value: '${skincareData['totalProducts'] ?? 0}',
+                  subtitle: 'IN INVENTORY',
+                  icon: Icons.inventory_2,
                 ),
-                ResponsiveConfig.widthBox(12),
-                Expanded(
-                  child: _buildStatTile(
-                    context,
-                    label: 'Per Week',
-                    value:
-                        '${skincareData['averageRoutinesPerWeek']?.toStringAsFixed(1) ?? '0'}',
-                    subtitle: 'FREQUENCY',
-                    icon: Icons.calendar_view_week,
-                    color: AppTheme.infoBlue,
-                  ),
+                ResponsiveConfig.heightBox(12),
+                _buildStatTile(
+                  context,
+                  label: 'Per Week',
+                  value:
+                      '${skincareData['averageRoutinesPerWeek']?.toStringAsFixed(1) ?? '0'}',
+                  subtitle: 'FREQUENCY',
+                  icon: Icons.calendar_view_week,
+                  color: AppTheme.infoBlue,
                 ),
               ],
             ),

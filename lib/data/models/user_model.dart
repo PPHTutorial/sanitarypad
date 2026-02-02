@@ -6,6 +6,13 @@ class UserModel extends Equatable {
   final String userId;
   final String email;
   final String? displayName;
+  final String? fullName;
+  final String? username;
+  final String? photoUrl;
+  final String? address;
+  final String? gender;
+  final DateTime? dateOfBirth;
+  final String? phoneNumber;
   final DateTime createdAt;
   final DateTime? lastLoginAt;
   final UserSettings settings;
@@ -16,6 +23,13 @@ class UserModel extends Equatable {
     required this.userId,
     required this.email,
     this.displayName,
+    this.fullName,
+    this.username,
+    this.photoUrl,
+    this.address,
+    this.gender,
+    this.dateOfBirth,
+    this.phoneNumber,
     required this.createdAt,
     this.lastLoginAt,
     required this.settings,
@@ -32,6 +46,15 @@ class UserModel extends Equatable {
       userId: userId,
       email: data['email'] as String,
       displayName: data['displayName'] as String?,
+      fullName: data['fullName'] as String?,
+      username: data['username'] as String?,
+      photoUrl: data['photoUrl'] as String?,
+      address: data['address'] as String?,
+      gender: data['gender'] as String?,
+      dateOfBirth: data['dateOfBirth'] != null
+          ? (data['dateOfBirth'] as Timestamp).toDate()
+          : null,
+      phoneNumber: data['phoneNumber'] as String?,
       createdAt: (data['createdAt'] as Timestamp).toDate(),
       lastLoginAt: data['lastLoginAt'] != null
           ? (data['lastLoginAt'] as Timestamp).toDate()
@@ -50,6 +73,14 @@ class UserModel extends Equatable {
       'userId': userId, // Include userId in document data for security rules
       'email': email,
       'displayName': displayName,
+      'fullName': fullName,
+      'username': username,
+      'photoUrl': photoUrl,
+      'address': address,
+      'gender': gender,
+      'dateOfBirth':
+          dateOfBirth != null ? Timestamp.fromDate(dateOfBirth!) : null,
+      'phoneNumber': phoneNumber,
       'createdAt': Timestamp.fromDate(createdAt),
       'lastLoginAt':
           lastLoginAt != null ? Timestamp.fromDate(lastLoginAt!) : null,
@@ -63,6 +94,13 @@ class UserModel extends Equatable {
   UserModel copyWith({
     String? email,
     String? displayName,
+    String? fullName,
+    String? username,
+    String? photoUrl,
+    String? address,
+    String? gender,
+    DateTime? dateOfBirth,
+    String? phoneNumber,
     DateTime? lastLoginAt,
     UserSettings? settings,
     UserSubscription? subscription,
@@ -72,6 +110,13 @@ class UserModel extends Equatable {
       userId: userId,
       email: email ?? this.email,
       displayName: displayName ?? this.displayName,
+      fullName: fullName ?? this.fullName,
+      username: username ?? this.username,
+      photoUrl: photoUrl ?? this.photoUrl,
+      address: address ?? this.address,
+      gender: gender ?? this.gender,
+      dateOfBirth: dateOfBirth ?? this.dateOfBirth,
+      phoneNumber: phoneNumber ?? this.phoneNumber,
       createdAt: createdAt,
       lastLoginAt: lastLoginAt ?? this.lastLoginAt,
       settings: settings ?? this.settings,
@@ -85,6 +130,13 @@ class UserModel extends Equatable {
         userId,
         email,
         displayName,
+        fullName,
+        username,
+        photoUrl,
+        address,
+        gender,
+        dateOfBirth,
+        phoneNumber,
         createdAt,
         lastLoginAt,
         settings,
@@ -102,6 +154,8 @@ class UserSettings extends Equatable {
   final bool biometricLock;
   final String? pinHash;
   final bool teenMode;
+  final int cycleLength;
+  final int periodLength;
   final UserUnits units;
 
   const UserSettings({
@@ -112,8 +166,36 @@ class UserSettings extends Equatable {
     this.biometricLock = false,
     this.pinHash,
     this.teenMode = false,
+    this.cycleLength = 28,
+    this.periodLength = 5,
     required this.units,
   });
+
+  UserSettings copyWith({
+    String? theme,
+    String? language,
+    bool? notificationsEnabled,
+    bool? anonymousMode,
+    bool? biometricLock,
+    String? pinHash,
+    bool? teenMode,
+    int? cycleLength,
+    int? periodLength,
+    UserUnits? units,
+  }) {
+    return UserSettings(
+      theme: theme ?? this.theme,
+      language: language ?? this.language,
+      notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
+      anonymousMode: anonymousMode ?? this.anonymousMode,
+      biometricLock: biometricLock ?? this.biometricLock,
+      pinHash: pinHash ?? this.pinHash,
+      teenMode: teenMode ?? this.teenMode,
+      cycleLength: cycleLength ?? this.cycleLength,
+      periodLength: periodLength ?? this.periodLength,
+      units: units ?? this.units,
+    );
+  }
 
   factory UserSettings.fromMap(Map<String, dynamic> map) {
     return UserSettings(
@@ -124,6 +206,8 @@ class UserSettings extends Equatable {
       biometricLock: map['biometricLock'] as bool? ?? false,
       pinHash: map['pinHash'] as String?,
       teenMode: map['teenMode'] as bool? ?? false,
+      cycleLength: map['cycleLength'] as int? ?? 28,
+      periodLength: map['periodLength'] as int? ?? 5,
       units: UserUnits.fromMap(
         map['units'] as Map<String, dynamic>? ?? {},
       ),
@@ -139,6 +223,8 @@ class UserSettings extends Equatable {
       'biometricLock': biometricLock,
       'pinHash': pinHash,
       'teenMode': teenMode,
+      'cycleLength': cycleLength,
+      'periodLength': periodLength,
       'units': units.toMap(),
     };
   }
@@ -152,6 +238,8 @@ class UserSettings extends Equatable {
         biometricLock,
         pinHash,
         teenMode,
+        cycleLength,
+        periodLength,
         units,
       ];
 }
@@ -251,10 +339,26 @@ class UserPrivacy extends Equatable {
   final DateTime? lastExportDate;
   final bool? deletionRequested;
 
+  // Visibility Flags
+  final bool showFullName;
+  final bool showUsername;
+  final bool showPhoto;
+  final bool showAddress;
+  final bool showGender;
+  final bool showAge;
+  final bool showHealthStats;
+
   const UserPrivacy({
     this.dataEncrypted = true,
     this.lastExportDate,
     this.deletionRequested = false,
+    this.showFullName = false,
+    this.showUsername = true,
+    this.showPhoto = true,
+    this.showAddress = false,
+    this.showGender = false,
+    this.showAge = false,
+    this.showHealthStats = false,
   });
 
   factory UserPrivacy.fromMap(Map<String, dynamic> map) {
@@ -264,6 +368,13 @@ class UserPrivacy extends Equatable {
           ? (map['lastExportDate'] as Timestamp).toDate()
           : null,
       deletionRequested: map['deletionRequested'] as bool? ?? false,
+      showFullName: map['showFullName'] as bool? ?? false,
+      showUsername: map['showUsername'] as bool? ?? true,
+      showPhoto: map['showPhoto'] as bool? ?? true,
+      showAddress: map['showAddress'] as bool? ?? false,
+      showGender: map['showGender'] as bool? ?? false,
+      showAge: map['showAge'] as bool? ?? false,
+      showHealthStats: map['showHealthStats'] as bool? ?? false,
     );
   }
 
@@ -273,9 +384,27 @@ class UserPrivacy extends Equatable {
       'lastExportDate':
           lastExportDate != null ? Timestamp.fromDate(lastExportDate!) : null,
       'deletionRequested': deletionRequested ?? false,
+      'showFullName': showFullName,
+      'showUsername': showUsername,
+      'showPhoto': showPhoto,
+      'showAddress': showAddress,
+      'showGender': showGender,
+      'showAge': showAge,
+      'showHealthStats': showHealthStats,
     };
   }
 
   @override
-  List<Object?> get props => [dataEncrypted, lastExportDate, deletionRequested];
+  List<Object?> get props => [
+        dataEncrypted,
+        lastExportDate,
+        deletionRequested,
+        showFullName,
+        showUsername,
+        showPhoto,
+        showAddress,
+        showGender,
+        showAge,
+        showHealthStats,
+      ];
 }

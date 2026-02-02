@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../../core/config/responsive_config.dart';
-import '../../../../core/theme/app_theme.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../services/security_service.dart';
 
@@ -84,7 +83,7 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
               Icon(
                 Icons.pin,
                 size: ResponsiveConfig.iconSize(64),
-                color: AppTheme.primaryPink,
+                color: Theme.of(context).colorScheme.primary,
               ),
               ResponsiveConfig.heightBox(32),
               Text(
@@ -101,7 +100,7 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
                     : 'Re-enter your PIN to confirm',
                 style: ResponsiveConfig.textStyle(
                   size: 16,
-                  color: AppTheme.mediumGray,
+                  color: Theme.of(context).textTheme.bodySmall?.color,
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -154,8 +153,12 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
                     width: 16,
                     height: 16,
                     decoration: BoxDecoration(
-                      color:
-                          isFilled ? AppTheme.primaryPink : AppTheme.palePink,
+                      color: isFilled
+                          ? Theme.of(context).colorScheme.primary
+                          : Theme.of(context)
+                              .colorScheme
+                              .primaryContainer
+                              .withOpacity(0.3),
                       shape: BoxShape.circle,
                     ),
                   );

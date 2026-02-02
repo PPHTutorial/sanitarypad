@@ -260,7 +260,7 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
                       right: ResponsiveConfig.width(20),
                       child: InkWell(
                         onTap: () {
-                          context.push('/movies', extra: widget.movie);
+                          context.push('/movies/play', extra: widget.movie);
                         },
                         child: Container(
                           width: ResponsiveConfig.width(60),

@@ -1,4 +1,3 @@
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:logger/logger.dart';
 import 'package:sanitarypad/core/providers/auth_provider.dart';
@@ -389,21 +388,56 @@ class SkincareEnhancedService {
   }
 
   Future<String> getAIIngredients(dynamic ref, String ing) async {
-    final user = ref.read(currentUserStreamProvider).value;
-    final aiService = AIService();
-    final response = ing.isEmpty
-        ? "**Enter an ingredient name to see details.**"
-        : await aiService.sendMessage(
-            userId: user.userId,
-            category: "ingredient",
-            message: 'Look up for this ingredient $ing',
-            conversationHistory: [],
-            context: {"ingridient": ing},
-          );
+    if (ing.isEmpty) return "**Enter an ingredient name to see details.**";
 
-    Logger().e(response);
+    try {
+      // 1. Check database first (case-insensitive search if possible, or exact match)
+      final normalizedIng = ing.trim().toLowerCase();
+      final snapshot = await _firestore
+          .collection(AppConstants.collectionIngredients)
+          .where('name', isGreaterThanOrEqualTo: normalizedIng)
+          .where('name', isLessThanOrEqualTo: '$normalizedIng\uf8ff')
+          .limit(1)
+          .get();
 
-    return response;
+      if (snapshot.docs.isNotEmpty) {
+        final ingredient = Ingredient.fromFirestore(snapshot.docs.first);
+        if (ingredient.description != null &&
+            ingredient.description!.isNotEmpty) {
+          return ingredient.description!;
+        }
+      }
+
+      // 2. Not found in DB, use AI
+      final user = ref.read(currentUserStreamProvider).value;
+      final aiService = AIService();
+      final response = await aiService.sendMessage(
+        userId: user.userId,
+        category: "ingredient",
+        message: 'Look up for this ingredient $ing',
+        conversationHistory: [],
+        context: {"ingredient": ing},
+      );
+
+      // 3. Save to database for future use
+      if (response.isNotEmpty && !response.contains("Error")) {
+        final newIngredient = Ingredient(
+          name: ing,
+          category: "General", // AI could be asked to provide this too
+          description: response,
+          createdAt: DateTime.now(),
+        );
+
+        await _firestore
+            .collection(AppConstants.collectionIngredients)
+            .add(newIngredient.toFirestore());
+      }
+
+      return response;
+    } catch (e) {
+      Logger().e("Error in getAIIngredients: $e");
+      return "Error fetching ingredient information: $e";
+    }
   }
 
   // Acne tracker

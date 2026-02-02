@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:local_auth/local_auth.dart';
 import '../../../../core/config/responsive_config.dart';
-import '../../../../core/theme/app_theme.dart';
 import '../../../../services/security_service.dart';
 
 /// Biometric setup screen
@@ -112,7 +111,7 @@ class _BiometricSetupScreenState extends State<BiometricSetupScreen> {
               Icon(
                 Icons.fingerprint,
                 size: ResponsiveConfig.iconSize(80),
-                color: AppTheme.primaryPink,
+                color: Theme.of(context).colorScheme.primary,
               ),
               ResponsiveConfig.heightBox(24),
               Text(
@@ -126,14 +125,14 @@ class _BiometricSetupScreenState extends State<BiometricSetupScreen> {
               ResponsiveConfig.heightBox(16),
               if (!_isAvailable)
                 Card(
-                  color: AppTheme.warningOrange.withOpacity(0.1),
+                  color: Theme.of(context).colorScheme.error.withOpacity(0.1),
                   child: Padding(
                     padding: ResponsiveConfig.padding(all: 16),
                     child: Row(
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.info_outline,
-                          color: AppTheme.warningOrange,
+                          color: Theme.of(context).colorScheme.error,
                         ),
                         ResponsiveConfig.widthBox(12),
                         Expanded(
@@ -165,7 +164,7 @@ class _BiometricSetupScreenState extends State<BiometricSetupScreen> {
                         children: [
                           Icon(
                             Icons.check_circle,
-                            color: AppTheme.successGreen,
+                            color: Theme.of(context).colorScheme.primary,
                             size: ResponsiveConfig.iconSize(20),
                           ),
                           ResponsiveConfig.widthBox(8),

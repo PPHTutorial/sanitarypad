@@ -76,6 +76,7 @@ dependencies:
 
   # Permissions
   permission_handler: ^12.0.1
+  file_picker: ^8.0.0
 
   # Biometric Auth
   local_auth: ^2.3.0

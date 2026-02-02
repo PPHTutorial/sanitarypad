@@ -2,8 +2,9 @@ import 'dart:async';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:in_app_purchase_android/in_app_purchase_android.dart';
 import 'package:in_app_purchase_storekit/in_app_purchase_storekit.dart';
-import '../core/constants/app_constants.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../core/firebase/firebase_service.dart';
+import 'subscription_service.dart';
 
 /// IAP Product IDs
 class IAPProductIds {
@@ -258,25 +259,31 @@ class IAPService {
   ) async {
     try {
       final productId = purchaseDetails.productID;
-      final transactionDate = purchaseDetails.transactionDate;
+      final transactionDateStr = purchaseDetails.transactionDate;
+      final transactionDate = transactionDateStr is String
+          ? DateTime.tryParse(transactionDateStr) ?? DateTime.now()
+          : (transactionDateStr as DateTime?) ?? DateTime.now();
 
-      // Map product ID to subscription plan
-      final plan = _getPlanFromProductId(productId);
-      final startDate = transactionDate is String
-          ? DateTime.tryParse(transactionDate) ?? DateTime.now()
-          : (transactionDate as DateTime?) ?? DateTime.now();
-      final endDate = _calculateEndDate(startDate, plan);
+      final userId = FirebaseAuth.instance.currentUser?.uid;
+      if (userId == null) {
+        throw Exception('User must be logged in to update subscription');
+      }
 
-      // This will be handled by the subscription service
-      // We'll emit an event that the subscription service can listen to
-      // For now, we'll just log it
+      // Delegate persistence to SubscriptionService
+      final subscriptionService = SubscriptionService();
+      await subscriptionService.createSubscriptionFromIAP(
+        userId: userId,
+        productId: productId,
+        transactionId: purchaseDetails.purchaseID ?? 'unknown',
+        transactionDate: transactionDate,
+      );
+
+      // Log analytics
       await FirebaseService.logEvent(
-        name: 'subscription_updated_from_iap',
+        name: 'subscription_updated_from_iap_success',
         parameters: {
           'product_id': productId,
-          'plan': plan,
-          'start_date': startDate.toIso8601String(),
-          'end_date': endDate.toIso8601String(),
+          'user_id': userId,
         },
       );
     } catch (e) {
@@ -285,32 +292,6 @@ class IAPService {
         null,
         reason: 'updateSubscriptionFromPurchase',
       );
-    }
-  }
-
-  /// Get plan from product ID
-  String _getPlanFromProductId(String productId) {
-    if (productId.contains('monthly')) {
-      return AppConstants.planMonthly;
-    } else if (productId.contains('quarterly')) {
-      return AppConstants.planQuarterly;
-    } else if (productId.contains('yearly')) {
-      return AppConstants.planYearly;
-    }
-    return AppConstants.planMonthly;
-  }
-
-  /// Calculate end date based on plan
-  DateTime _calculateEndDate(DateTime startDate, String plan) {
-    switch (plan) {
-      case AppConstants.planMonthly:
-        return startDate.add(const Duration(days: 30));
-      case AppConstants.planQuarterly:
-        return startDate.add(const Duration(days: 90));
-      case AppConstants.planYearly:
-        return startDate.add(const Duration(days: 365));
-      default:
-        return startDate.add(const Duration(days: 30));
     }
   }
 

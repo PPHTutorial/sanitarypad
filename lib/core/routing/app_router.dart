@@ -13,6 +13,8 @@ import '../../presentation/screens/calendar/calendar_screen.dart';
 import '../../presentation/screens/insights/insights_screen.dart';
 import '../../presentation/screens/wellness/wellness_screen.dart';
 import '../../presentation/screens/profile/profile_screen.dart';
+import '../../presentation/screens/profile/edit_profile_screen.dart';
+import '../../presentation/screens/profile/settings/cycle_settings_screen.dart';
 import '../../presentation/screens/cycle/log_period_screen.dart';
 import '../../presentation/screens/cycle/cycles_list_screen.dart';
 import '../../presentation/screens/pads/pad_management_screen.dart';
@@ -62,6 +64,7 @@ import '../../presentation/screens/movie/presentation/screens/favorites/favorite
     as movie_favorites;
 import '../../presentation/screens/movie/presentation/screens/detail/movie_detail_screen.dart'
     as movie_detail;
+import '../../presentation/screens/movie/movies.dart' as movie_player;
 import 'package:sanitarypad/data/models/user_model.dart';
 import '../../core/providers/auth_provider.dart';
 import '../../core/providers/onboarding_provider.dart';
@@ -222,6 +225,16 @@ class AppRouter {
           path: '/profile',
           name: 'profile',
           builder: (context, state) => const ProfileScreen(),
+        ),
+        GoRoute(
+          path: '/edit-profile',
+          name: 'edit-profile',
+          builder: (context, state) => const EditProfileScreen(),
+        ),
+        GoRoute(
+          path: '/cycle-settings',
+          name: 'cycle-settings',
+          builder: (context, state) => const CycleSettingsScreen(),
         ),
 
         // Feature Screens - Protected routes
@@ -486,6 +499,19 @@ class AppRouter {
           path: '/movies/favorites',
           name: 'movie-favorites',
           builder: (context, state) => const movie_favorites.FavoritesScreen(),
+        ),
+        GoRoute(
+          path: '/movies/play',
+          name: 'movie-play',
+          builder: (context, state) {
+            final movie = state.extra as movie_model.Movie?;
+            if (movie == null) {
+              return const Scaffold(
+                body: Center(child: Text('Movie not found')),
+              );
+            }
+            return movie_player.MovieScreen(movie: movie);
+          },
         ),
         GoRoute(
           path: '/movies/detail',

@@ -17,6 +17,9 @@ class PolicyViewerScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Scaffold(
       appBar: AppBar(
         title: Text(title),
@@ -38,22 +41,25 @@ class PolicyViewerScreen extends StatelessWidget {
             h2: ResponsiveConfig.textStyle(
               size: 20,
               weight: FontWeight.bold,
-              color: Colors.black87,
+              color: isDark ? Colors.white : Colors.black87,
             ).copyWith(height: 1.5),
             h3: ResponsiveConfig.textStyle(
               size: 16,
               weight: FontWeight.bold,
-              color: Colors.black87,
+              color: isDark ? Colors.white70 : Colors.black54,
             ).copyWith(height: 1.4),
             p: ResponsiveConfig.textStyle(
               size: 14,
-              color: AppTheme.mediumGray,
+              color: isDark ? Colors.grey[400] : AppTheme.mediumGray,
             ).copyWith(height: 1.5),
             listBullet: ResponsiveConfig.textStyle(
               size: 14,
-              color: AppTheme.mediumGray,
+              color: isDark ? Colors.grey[400] : AppTheme.mediumGray,
             ),
-            strong: const TextStyle(fontWeight: FontWeight.bold),
+            strong: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: isDark ? Colors.white : Colors.black,
+            ),
           ),
           onTapLink: (text, href, title) {
             // Handle link taps if any
