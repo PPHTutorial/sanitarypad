@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/config/responsive_config.dart';
@@ -8,6 +9,8 @@ import '../../../core/providers/theme_provider.dart';
 import '../../../services/data_export_service.dart';
 import '../../../core/widgets/femcare_bottom_nav.dart';
 import '../../../core/widgets/back_button_handler.dart';
+import '../../../core/constants/legal_constants.dart';
+import 'policy_viewer_screen.dart';
 
 /// Profile screen
 class ProfileScreen extends ConsumerWidget {
@@ -47,6 +50,11 @@ class ProfileScreen extends ConsumerWidget {
 
                     // Account Actions
                     _buildAccountActions(context, ref),
+                    ResponsiveConfig.heightBox(16),
+
+                    // Legal Section
+                    _buildLegalSection(context),
+                    ResponsiveConfig.heightBox(32), // Bottom padding
                   ],
                 ),
               ),
@@ -161,7 +169,7 @@ class ProfileScreen extends ConsumerWidget {
         children: [
           _buildSettingsTile(
             context,
-            icon: Icons.calendar_today,
+            icon: FontAwesomeIcons.calendar,
             title: 'Cycle Settings',
             onTap: () {
               ScaffoldMessenger.of(context).showSnackBar(
@@ -175,7 +183,7 @@ class ProfileScreen extends ConsumerWidget {
           const Divider(),
           _buildSettingsTile(
             context,
-            icon: Icons.notifications_outlined,
+            icon: FontAwesomeIcons.bell,
             title: 'Notifications',
             onTap: () {
               context.push('/notification-settings');
@@ -184,7 +192,7 @@ class ProfileScreen extends ConsumerWidget {
           const Divider(),
           _buildSettingsTile(
             context,
-            icon: Icons.lock_outline,
+            icon: FontAwesomeIcons.lock,
             title: 'Privacy & Security',
             onTap: () {
               _showSecurityOptions(context);
@@ -193,7 +201,7 @@ class ProfileScreen extends ConsumerWidget {
           const Divider(),
           _buildSettingsTile(
             context,
-            icon: Icons.storage_outlined,
+            icon: FontAwesomeIcons.database,
             title: 'Data Management',
             onTap: () {
               _showDataManagementOptions(context, ref);
@@ -202,7 +210,7 @@ class ProfileScreen extends ConsumerWidget {
           const Divider(),
           _buildSettingsTile(
             context,
-            icon: Icons.phone_outlined,
+            icon: FontAwesomeIcons.phone,
             title: 'Emergency Contacts',
             onTap: () {
               context.push('/emergency-contacts');
@@ -211,7 +219,7 @@ class ProfileScreen extends ConsumerWidget {
           const Divider(),
           _buildSettingsTile(
             context,
-            icon: Icons.warning_amber,
+            icon: FontAwesomeIcons.triangleExclamation,
             title: 'Health Alerts',
             onTap: () {
               context.push('/red-flag-alerts');
@@ -220,7 +228,7 @@ class ProfileScreen extends ConsumerWidget {
           const Divider(),
           _buildSettingsTile(
             context,
-            icon: Icons.description,
+            icon: FontAwesomeIcons.fileMedical,
             title: 'Health Reports',
             onTap: () {
               context.push('/health-report');
@@ -229,7 +237,7 @@ class ProfileScreen extends ConsumerWidget {
           const Divider(),
           _buildSettingsTile(
             context,
-            icon: Icons.article_outlined,
+            icon: FontAwesomeIcons.newspaper,
             title: 'Manage Wellness Content',
             onTap: () {
               context.push('/wellness-content-management');
@@ -238,7 +246,7 @@ class ProfileScreen extends ConsumerWidget {
           const Divider(),
           _buildSettingsTile(
             context,
-            icon: Icons.help_outline,
+            icon: FontAwesomeIcons.circleQuestion,
             title: 'Help & Support',
             onTap: () {
               ScaffoldMessenger.of(context).showSnackBar(
@@ -249,7 +257,7 @@ class ProfileScreen extends ConsumerWidget {
           const Divider(),
           _buildSettingsTile(
             context,
-            icon: Icons.info_outline,
+            icon: FontAwesomeIcons.circleInfo,
             title: 'About',
             onTap: () {
               _showAboutDialog(context);
@@ -267,9 +275,9 @@ class ProfileScreen extends ConsumerWidget {
     required VoidCallback onTap,
   }) {
     return ListTile(
-      leading: Icon(icon, color: AppTheme.primaryPink),
+      leading: FaIcon(icon, color: AppTheme.primaryPink, size: 20),
       title: Text(title),
-      trailing: const Icon(Icons.chevron_right),
+      trailing: const FaIcon(FontAwesomeIcons.chevronRight, size: 16),
       onTap: onTap,
     );
   }
@@ -283,21 +291,21 @@ class ProfileScreen extends ConsumerWidget {
 
     switch (themeMode) {
       case ThemeMode.light:
-        themeIcon = Icons.light_mode;
+        themeIcon = FontAwesomeIcons.sun;
         themeLabel = 'Light Mode';
         break;
       case ThemeMode.dark:
-        themeIcon = Icons.dark_mode;
+        themeIcon = FontAwesomeIcons.moon;
         themeLabel = 'Dark Mode';
         break;
       case ThemeMode.system:
-        themeIcon = Icons.brightness_auto;
+        themeIcon = FontAwesomeIcons.circleHalfStroke;
         themeLabel = 'System Default';
         break;
     }
 
     return ListTile(
-      leading: Icon(themeIcon, color: AppTheme.primaryPink),
+      leading: FaIcon(themeIcon, color: AppTheme.primaryPink, size: 20),
       title: const Text('Theme'),
       subtitle: Text(themeLabel),
       trailing: Switch(
@@ -390,7 +398,8 @@ class ProfileScreen extends ConsumerWidget {
       child: Column(
         children: [
           ListTile(
-            leading: const Icon(Icons.logout, color: AppTheme.errorRed),
+            leading: const FaIcon(FontAwesomeIcons.rightFromBracket,
+                color: AppTheme.errorRed, size: 20),
             title: Text(
               'Sign Out',
               style: ResponsiveConfig.textStyle(
@@ -402,7 +411,8 @@ class ProfileScreen extends ConsumerWidget {
           ),
           const Divider(),
           ListTile(
-            leading: const Icon(Icons.delete_outline, color: AppTheme.errorRed),
+            leading: const FaIcon(FontAwesomeIcons.trash,
+                color: AppTheme.errorRed, size: 20),
             title: Text(
               'Delete Account',
               style: ResponsiveConfig.textStyle(
@@ -435,25 +445,25 @@ class ProfileScreen extends ConsumerWidget {
             ),
             ResponsiveConfig.heightBox(16),
             ListTile(
-              leading: const Icon(Icons.pin),
+              leading: const FaIcon(FontAwesomeIcons.key, size: 20),
               title: const Text('PIN Lock'),
-              trailing: const Icon(Icons.chevron_right),
+              trailing: const FaIcon(FontAwesomeIcons.chevronRight, size: 16),
               onTap: () {
                 Navigator.pop(context);
                 context.push('/pin-setup');
               },
             ),
             ListTile(
-              leading: const Icon(Icons.fingerprint),
+              leading: const FaIcon(FontAwesomeIcons.fingerprint, size: 20),
               title: const Text('Biometric Lock'),
-              trailing: const Icon(Icons.chevron_right),
+              trailing: const FaIcon(FontAwesomeIcons.chevronRight, size: 16),
               onTap: () {
                 Navigator.pop(context);
                 context.push('/biometric-setup');
               },
             ),
             ListTile(
-              leading: const Icon(Icons.visibility_off),
+              leading: const FaIcon(FontAwesomeIcons.eyeSlash, size: 20),
               title: const Text('Anonymous Mode'),
               trailing: Switch(
                 value: false,
@@ -488,7 +498,7 @@ class ProfileScreen extends ConsumerWidget {
             ),
             ResponsiveConfig.heightBox(16),
             ListTile(
-              leading: const Icon(Icons.download),
+              leading: const FaIcon(FontAwesomeIcons.download, size: 20),
               title: const Text('Export Data'),
               onTap: () {
                 Navigator.pop(context);
@@ -496,7 +506,7 @@ class ProfileScreen extends ConsumerWidget {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.delete_forever),
+              leading: const FaIcon(FontAwesomeIcons.trashCan, size: 20),
               title: Text(
                 'Delete All Data',
                 style: ResponsiveConfig.textStyle(
@@ -547,6 +557,64 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 
+  Widget _buildLegalSection(BuildContext context) {
+    return Card(
+      shadowColor: Colors.black.withValues(alpha: 0.08),
+      margin: const EdgeInsets.only(bottom: 0),
+      child: Column(
+        children: [
+          _buildSettingsTile(
+            context,
+            icon: FontAwesomeIcons.shieldHalved,
+            title: 'Privacy Policy',
+            onTap: () => _navigateToPolicy(
+                context, 'Privacy Policy', LegalConstants.privacyPolicy),
+          ),
+          const Divider(),
+          _buildSettingsTile(
+            context,
+            icon: FontAwesomeIcons.fileContract,
+            title: 'Terms of Service',
+            onTap: () => _navigateToPolicy(
+                context, 'Terms of Service', LegalConstants.termsOfService),
+          ),
+          const Divider(),
+          _buildSettingsTile(
+            context,
+            icon: FontAwesomeIcons.scaleBalanced,
+            title: 'EULA',
+            onTap: () => _navigateToPolicy(
+                context, 'End User License Agreement', LegalConstants.eula),
+          ),
+          const Divider(),
+          _buildSettingsTile(
+            context,
+            icon: FontAwesomeIcons.userDoctor,
+            title: 'Medical Disclaimer',
+            onTap: () => _navigateToPolicy(context, 'Medical Disclaimer',
+                LegalConstants.medicalDisclaimer),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _navigateToPolicy(BuildContext context, String title, String content) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => PolicyViewerScreen(
+          title: title,
+          markdownContent: content,
+        ),
+      ),
+    );
+  }
+
+  void _showAboutDialog(BuildContext context) {
+    // Navigate to full About screen policy
+    _navigateToPolicy(context, 'About FemCare+', LegalConstants.about);
+  }
+
   void _showDeleteAccountDialog(BuildContext context, WidgetRef ref) {
     showDialog(
       context: context,
@@ -582,26 +650,6 @@ class ProfileScreen extends ConsumerWidget {
               backgroundColor: AppTheme.errorRed,
             ),
             child: const Text('Delete Account'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showAboutDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('About FemCare+'),
-        content: const Text(
-          'FemCare+ v1.0.0\n\n'
-          'Your trusted wellness companion for menstrual health, cycle tracking, and self-care.\n\n'
-          'Built with ❤️ for women\'s health and wellness.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
           ),
         ],
       ),

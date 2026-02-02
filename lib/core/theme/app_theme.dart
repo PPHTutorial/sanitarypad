@@ -314,6 +314,7 @@ class AppTheme {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
         ),
+        side: const BorderSide(color: lightPink, width: 1),
       ),
 
       // Bottom Navigation Bar Theme
@@ -663,6 +664,7 @@ class AppTheme {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
         ),
+        side: BorderSide(color: lightPink.withOpacity(0.3), width: 1),
       ),
 
       // Bottom Navigation Bar Theme

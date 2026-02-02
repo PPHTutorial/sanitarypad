@@ -7,7 +7,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import 'package:logger/web.dart';
 
 import '../../../core/config/responsive_config.dart';
 import '../../../core/providers/auth_provider.dart';
@@ -191,10 +190,35 @@ class _SkincareTrackingScreenState extends ConsumerState<SkincareTrackingScreen>
   Widget _buildAppBarAction(String userId) {
     switch (_tabController.index) {
       case 0:
-        return IconButton(
-          icon: const FaIcon(FontAwesomeIcons.circlePlus),
-          tooltip: 'Quick Actions',
-          onPressed: () => _showQuickActionsSheet(context, userId),
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              icon: const FaIcon(FontAwesomeIcons.shareNodes),
+              tooltip: 'Share Dashboard',
+              onPressed: () {
+                showDialog(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text('Coming Soon'),
+                    content: const Text(
+                        'Dashboard sharing functionality is under development.'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('OK'),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+            IconButton(
+              icon: const FaIcon(FontAwesomeIcons.circlePlus),
+              tooltip: 'Quick Actions',
+              onPressed: () => _showQuickActionsSheet(context, userId),
+            ),
+          ],
         );
       case 1:
         return IconButton(
@@ -415,124 +439,130 @@ class _SkincareTrackingScreenState extends ConsumerState<SkincareTrackingScreen>
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (context) {
-        return Padding(
-          padding: EdgeInsets.only(
-            left: 16,
-            right: 16,
-            top: 24,
-            bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-          ),
-          child: SingleChildScrollView(
-            child: Form(
-              key: formKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'New journal entry',
-                    style: ResponsiveConfig.textStyle(
-                      size: 18,
-                      weight: FontWeight.bold,
-                    ),
-                  ),
-                  ResponsiveConfig.heightBox(38),
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: const FaIcon(FontAwesomeIcons.calendarDays),
-                    title:
-                        Text(DateFormat('EEEE, MMM d, y').format(selectedDate)),
-                    onTap: () async {
-                      final picked = await showDatePicker(
-                        context: context,
-                        initialDate: selectedDate,
-                        firstDate:
-                            DateTime.now().subtract(const Duration(days: 365)),
-                        lastDate: DateTime.now(),
-                      );
-                      if (picked != null) {
-                        selectedDate = picked;
-                        setState(() {});
-                      }
-                    },
-                  ),
-                  ResponsiveConfig.heightBox(12),
-                  DropdownButtonFormField<String>(
-                    value: condition,
-                    decoration: const InputDecoration(labelText: 'Skin feel'),
-                    items: const [
-                      DropdownMenuItem(
-                          value: 'balanced', child: Text('Balanced')),
-                      DropdownMenuItem(value: 'dry', child: Text('Dry')),
-                      DropdownMenuItem(value: 'oily', child: Text('Oily')),
-                      DropdownMenuItem(
-                          value: 'sensitive', child: Text('Sensitive/Red')),
-                    ],
-                    onChanged: (value) => condition = value,
-                  ),
-                  ResponsiveConfig.heightBox(12),
-                  _SliderInput(
-                    label: 'Hydration level',
-                    initialValue: hydration,
-                    onChanged: (value) => hydration = value,
-                  ),
-                  ResponsiveConfig.heightBox(12),
-                  _SliderInput(
-                    label: 'Oiliness level',
-                    initialValue: oiliness,
-                    onChanged: (value) => oiliness = value,
-                  ),
-                  ResponsiveConfig.heightBox(12),
-                  TextField(
-                    controller: sleepController,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(labelText: 'Sleep hours'),
-                  ),
-                  ResponsiveConfig.heightBox(12),
-                  TextField(
-                    controller: concernsController,
-                    decoration: const InputDecoration(
-                      labelText: 'Concerns (comma separated)',
-                    ),
-                  ),
-                  ResponsiveConfig.heightBox(12),
-                  TextField(
-                    controller: notesController,
-                    decoration: const InputDecoration(labelText: 'Notes'),
-                    maxLines: 3,
-                  ),
-                  ResponsiveConfig.heightBox(20),
-                  ElevatedButton(
-                    onPressed: () async {
-                      if (!formKey.currentState!.validate()) return;
-                      final entry = SkinJournalEntry(
-                        userId: userId,
-                        date: selectedDate,
-                        skinCondition: condition,
-                        hydrationLevel: hydration.round(),
-                        oilinessLevel: oiliness.round(),
-                        concerns: concernsController.text
-                            .split(',')
-                            .map((e) => e.trim())
-                            .where((e) => e.isNotEmpty)
-                            .toList(),
-                        notes: notesController.text.trim().isEmpty
-                            ? null
-                            : notesController.text.trim(),
-                        sleepHours: sleepController.text.trim().isEmpty
-                            ? null
-                            : int.tryParse(sleepController.text.trim()),
-                        createdAt: DateTime.now(),
-                      );
-                      await _enhancedService.logSkinJournal(entry);
-                      if (mounted) Navigator.of(context).pop();
-                    },
-                    child: const Text('Save entry'),
-                  ),
-                ],
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 16,
+                right: 16,
+                top: 24,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 24,
               ),
-            ),
-          ),
+              child: SingleChildScrollView(
+                child: Form(
+                  key: formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'New journal entry',
+                        style: ResponsiveConfig.textStyle(
+                          size: 18,
+                          weight: FontWeight.bold,
+                        ),
+                      ),
+                      ResponsiveConfig.heightBox(38),
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: const FaIcon(FontAwesomeIcons.calendarDays),
+                        title: Text(
+                            DateFormat('EEEE, MMM d, y').format(selectedDate)),
+                        onTap: () async {
+                          final picked = await showDatePicker(
+                            context: context,
+                            initialDate: selectedDate,
+                            firstDate: DateTime.now()
+                                .subtract(const Duration(days: 365)),
+                            lastDate: DateTime.now(),
+                          );
+                          if (picked != null) {
+                            selectedDate = picked;
+                            setState(() {});
+                          }
+                        },
+                      ),
+                      ResponsiveConfig.heightBox(16),
+                      DropdownButtonFormField<String>(
+                        value: condition,
+                        decoration:
+                            const InputDecoration(labelText: 'Skin feel'),
+                        items: const [
+                          DropdownMenuItem(
+                              value: 'balanced', child: Text('Balanced')),
+                          DropdownMenuItem(value: 'dry', child: Text('Dry')),
+                          DropdownMenuItem(value: 'oily', child: Text('Oily')),
+                          DropdownMenuItem(
+                              value: 'sensitive', child: Text('Sensitive/Red')),
+                        ],
+                        onChanged: (value) => condition = value,
+                      ),
+                      ResponsiveConfig.heightBox(16),
+                      _SliderInput(
+                        label: 'Hydration level',
+                        initialValue: hydration,
+                        onChanged: (value) => hydration = value,
+                      ),
+                      ResponsiveConfig.heightBox(16),
+                      _SliderInput(
+                        label: 'Oiliness level',
+                        initialValue: oiliness,
+                        onChanged: (value) => oiliness = value,
+                      ),
+                      ResponsiveConfig.heightBox(16),
+                      TextField(
+                        controller: sleepController,
+                        keyboardType: TextInputType.number,
+                        decoration:
+                            const InputDecoration(labelText: 'Sleep hours'),
+                      ),
+                      ResponsiveConfig.heightBox(16),
+                      TextField(
+                        controller: concernsController,
+                        decoration: const InputDecoration(
+                          labelText: 'Concerns (comma separated)',
+                        ),
+                      ),
+                      ResponsiveConfig.heightBox(16),
+                      TextField(
+                        controller: notesController,
+                        decoration: const InputDecoration(labelText: 'Notes'),
+                        maxLines: 3,
+                      ),
+                      ResponsiveConfig.heightBox(20),
+                      ElevatedButton(
+                        onPressed: () async {
+                          if (!formKey.currentState!.validate()) return;
+                          final entry = SkinJournalEntry(
+                            userId: userId,
+                            date: selectedDate,
+                            skinCondition: condition,
+                            hydrationLevel: hydration.round(),
+                            oilinessLevel: oiliness.round(),
+                            concerns: concernsController.text
+                                .split(',')
+                                .map((e) => e.trim())
+                                .where((e) => e.isNotEmpty)
+                                .toList(),
+                            notes: notesController.text.trim().isEmpty
+                                ? null
+                                : notesController.text.trim(),
+                            sleepHours: sleepController.text.trim().isEmpty
+                                ? null
+                                : int.tryParse(sleepController.text.trim()),
+                            createdAt: DateTime.now(),
+                          );
+                          await _enhancedService.logSkinJournal(entry);
+                          if (mounted) Navigator.of(context).pop();
+                        },
+                        child: const Text('Save entry'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
         );
       },
     );
@@ -588,7 +618,7 @@ class _SkincareTrackingScreenState extends ConsumerState<SkincareTrackingScreen>
                               ? 'Required'
                               : null,
                     ),
-                    ResponsiveConfig.heightBox(12),
+                    ResponsiveConfig.heightBox(16),
                     DropdownButtonFormField<String>(
                       value: routineType,
                       decoration:
@@ -603,27 +633,27 @@ class _SkincareTrackingScreenState extends ConsumerState<SkincareTrackingScreen>
                       ],
                       onChanged: (value) => routineType = value ?? 'morning',
                     ),
-                    ResponsiveConfig.heightBox(12),
+                    ResponsiveConfig.heightBox(16),
                     TextFormField(
                       controller: skinTypeController,
                       decoration:
                           const InputDecoration(labelText: 'Target skin type'),
                     ),
-                    ResponsiveConfig.heightBox(12),
+                    ResponsiveConfig.heightBox(16),
                     TextField(
                       controller: concernsController,
                       decoration: const InputDecoration(
                         labelText: 'Target concerns (comma separated)',
                       ),
                     ),
-                    ResponsiveConfig.heightBox(12),
+                    ResponsiveConfig.heightBox(16),
                     TextField(
                       controller: productsController,
                       decoration: const InputDecoration(
                         labelText: 'Product IDs or names (comma separated)',
                       ),
                     ),
-                    ResponsiveConfig.heightBox(12),
+                    ResponsiveConfig.heightBox(16),
                     TextField(
                       controller: notesController,
                       decoration: const InputDecoration(labelText: 'Notes'),
@@ -822,10 +852,8 @@ class _SkincareTrackingScreenState extends ConsumerState<SkincareTrackingScreen>
                       future: _enhancedService.getAIIngredients(ref, query),
                       builder: (context, snapshot) {
                         final ingredients = snapshot.data;
-                        Logger().t(ingredients);
-                        setState(() {
-                          loading = false;
-                        });
+                        // Logger().t(ingredients);
+                        // setState removed to prevent build loop
 
                         if (ingredients == null) {
                           return Text(query.isEmpty
@@ -877,94 +905,105 @@ class _SkincareTrackingScreenState extends ConsumerState<SkincareTrackingScreen>
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (context) {
-        return Padding(
-          padding: EdgeInsets.only(
-            left: 16,
-            right: 16,
-            top: 24,
-            bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-          ),
-          child: SingleChildScrollView(
-            child: Form(
-              key: formKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'Log breakout',
-                    style: ResponsiveConfig.textStyle(
-                      size: 18,
-                      weight: FontWeight.bold,
-                    ),
-                  ),
-                  DropdownButtonFormField<String>(
-                    value: type,
-                    decoration: const InputDecoration(labelText: 'Type'),
-                    items: const [
-                      DropdownMenuItem(value: 'papule', child: Text('Papule')),
-                      DropdownMenuItem(
-                          value: 'pustule', child: Text('Pustule')),
-                      DropdownMenuItem(value: 'cyst', child: Text('Cyst')),
-                      DropdownMenuItem(
-                          value: 'whitehead', child: Text('Whitehead')),
-                      DropdownMenuItem(
-                          value: 'blackhead', child: Text('Blackhead')),
-                    ],
-                    onChanged: (value) => type = value ?? 'papule',
-                  ),
-                  TextFormField(
-                    controller: locationController,
-                    decoration: const InputDecoration(labelText: 'Location'),
-                    validator: (value) => value == null || value.trim().isEmpty
-                        ? 'Required'
-                        : null,
-                  ),
-                  Slider(
-                    value: severity,
-                    min: 1,
-                    max: 5,
-                    divisions: 4,
-                    label: 'Severity ${severity.round()}',
-                    onChanged: (value) => setState(() => severity = value),
-                  ),
-                  TextField(
-                    controller: treatmentController,
-                    decoration: const InputDecoration(
-                      labelText: 'Treatment used (optional)',
-                    ),
-                  ),
-                  TextField(
-                    controller: notesController,
-                    decoration: const InputDecoration(labelText: 'Notes'),
-                    maxLines: 2,
-                  ),
-                  ResponsiveConfig.heightBox(20),
-                  ElevatedButton(
-                    onPressed: () async {
-                      if (!formKey.currentState!.validate()) return;
-                      final entry = AcneEntry(
-                        userId: userId,
-                        date: DateTime.now(),
-                        location: locationController.text.trim(),
-                        type: type,
-                        severity: severity.round(),
-                        treatmentUsed: treatmentController.text.trim().isEmpty
-                            ? null
-                            : treatmentController.text.trim(),
-                        notes: notesController.text.trim().isEmpty
-                            ? null
-                            : notesController.text.trim(),
-                        createdAt: DateTime.now(),
-                      );
-                      await _enhancedService.logAcneEntry(entry);
-                      if (mounted) Navigator.of(context).pop();
-                    },
-                    child: const Text('Save breakout'),
-                  ),
-                ],
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 16,
+                right: 16,
+                top: 24,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 24,
               ),
-            ),
-          ),
+              child: SingleChildScrollView(
+                child: Form(
+                  key: formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Log breakout',
+                        style: ResponsiveConfig.textStyle(
+                          size: 18,
+                          weight: FontWeight.bold,
+                        ),
+                      ),
+                      DropdownButtonFormField<String>(
+                        value: type,
+                        decoration: const InputDecoration(labelText: 'Type'),
+                        items: const [
+                          DropdownMenuItem(
+                              value: 'papule', child: Text('Papule')),
+                          DropdownMenuItem(
+                              value: 'pustule', child: Text('Pustule')),
+                          DropdownMenuItem(value: 'cyst', child: Text('Cyst')),
+                          DropdownMenuItem(
+                              value: 'whitehead', child: Text('Whitehead')),
+                          DropdownMenuItem(
+                              value: 'blackhead', child: Text('Blackhead')),
+                        ],
+                        onChanged: (value) => type = value ?? 'papule',
+                      ),
+                      ResponsiveConfig.heightBox(16),
+                      TextFormField(
+                        controller: locationController,
+                        decoration:
+                            const InputDecoration(labelText: 'Location'),
+                        validator: (value) =>
+                            value == null || value.trim().isEmpty
+                                ? 'Required'
+                                : null,
+                      ),
+                      Slider(
+                        value: severity,
+                        min: 1,
+                        max: 5,
+                        divisions: 4,
+                        label: 'Severity ${severity.round()}',
+                        onChanged: (value) => setState(() => severity = value),
+                      ),
+                      ResponsiveConfig.heightBox(16),
+                      TextField(
+                        controller: treatmentController,
+                        decoration: const InputDecoration(
+                          labelText: 'Treatment used (optional)',
+                        ),
+                      ),
+                      ResponsiveConfig.heightBox(16),
+                      TextField(
+                        controller: notesController,
+                        decoration: const InputDecoration(labelText: 'Notes'),
+                        maxLines: 2,
+                      ),
+                      ResponsiveConfig.heightBox(20),
+                      ElevatedButton(
+                        onPressed: () async {
+                          if (!formKey.currentState!.validate()) return;
+                          final entry = AcneEntry(
+                            userId: userId,
+                            date: DateTime.now(),
+                            location: locationController.text.trim(),
+                            type: type,
+                            severity: severity.round(),
+                            treatmentUsed:
+                                treatmentController.text.trim().isEmpty
+                                    ? null
+                                    : treatmentController.text.trim(),
+                            notes: notesController.text.trim().isEmpty
+                                ? null
+                                : notesController.text.trim(),
+                            createdAt: DateTime.now(),
+                          );
+                          await _enhancedService.logAcneEntry(entry);
+                          if (mounted) Navigator.of(context).pop();
+                        },
+                        child: const Text('Save breakout'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
         );
       },
     );
@@ -1016,11 +1055,13 @@ class _SkincareTrackingScreenState extends ConsumerState<SkincareTrackingScreen>
                       return null;
                     },
                   ),
+                  ResponsiveConfig.heightBox(16),
                   TextField(
                     controller: notesController,
                     decoration: const InputDecoration(
                         labelText: 'Protection used (optional)'),
                   ),
+                  ResponsiveConfig.heightBox(16),
                   ResponsiveConfig.heightBox(20),
                   ElevatedButton(
                     onPressed: () async {
@@ -1061,77 +1102,86 @@ class _SkincareTrackingScreenState extends ConsumerState<SkincareTrackingScreen>
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (context) {
-        return Padding(
-          padding: EdgeInsets.only(
-            left: 16,
-            right: 16,
-            top: 24,
-            bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-          ),
-          child: SingleChildScrollView(
-            child: Form(
-              key: formKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'Add skin goal',
-                    style: ResponsiveConfig.textStyle(
-                      size: 18,
-                      weight: FontWeight.bold,
-                    ),
-                  ),
-                  TextFormField(
-                    controller: goalController,
-                    decoration: const InputDecoration(labelText: 'Goal'),
-                    validator: (value) => value == null || value.trim().isEmpty
-                        ? 'Required'
-                        : null,
-                  ),
-                  TextField(
-                    controller: descriptionController,
-                    decoration: const InputDecoration(
-                        labelText: 'Description (optional)'),
-                  ),
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: const FaIcon(FontAwesomeIcons.calendarDays),
-                    title: Text(DateFormat('MMM d, y').format(targetDate)),
-                    onTap: () async {
-                      final picked = await showDatePicker(
-                        context: context,
-                        initialDate: targetDate,
-                        firstDate: DateTime.now(),
-                        lastDate: DateTime.now().add(const Duration(days: 365)),
-                      );
-                      if (picked != null) {
-                        targetDate = picked;
-                        setState(() {});
-                      }
-                    },
-                  ),
-                  ResponsiveConfig.heightBox(20),
-                  ElevatedButton(
-                    onPressed: () async {
-                      if (!formKey.currentState!.validate()) return;
-                      final goal = SkinGoal(
-                        userId: userId,
-                        goal: goalController.text.trim(),
-                        description: descriptionController.text.trim().isEmpty
-                            ? null
-                            : descriptionController.text.trim(),
-                        targetDate: targetDate,
-                        createdAt: DateTime.now(),
-                      );
-                      await _enhancedService.createSkinGoal(goal);
-                      if (mounted) Navigator.of(context).pop();
-                    },
-                    child: const Text('Save goal'),
-                  ),
-                ],
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 16,
+                right: 16,
+                top: 24,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 24,
               ),
-            ),
-          ),
+              child: SingleChildScrollView(
+                child: Form(
+                  key: formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Add skin goal',
+                        style: ResponsiveConfig.textStyle(
+                          size: 18,
+                          weight: FontWeight.bold,
+                        ),
+                      ),
+                      TextFormField(
+                        controller: goalController,
+                        decoration: const InputDecoration(labelText: 'Goal'),
+                        validator: (value) =>
+                            value == null || value.trim().isEmpty
+                                ? 'Required'
+                                : null,
+                      ),
+                      ResponsiveConfig.heightBox(16),
+                      TextField(
+                        controller: descriptionController,
+                        decoration: const InputDecoration(
+                            labelText: 'Description (optional)'),
+                      ),
+                      ResponsiveConfig.heightBox(16),
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: const FaIcon(FontAwesomeIcons.calendarDays),
+                        title: Text(DateFormat('MMM d, y').format(targetDate)),
+                        onTap: () async {
+                          final picked = await showDatePicker(
+                            context: context,
+                            initialDate: targetDate,
+                            firstDate: DateTime.now(),
+                            lastDate:
+                                DateTime.now().add(const Duration(days: 365)),
+                          );
+                          if (picked != null) {
+                            targetDate = picked;
+                            setState(() {});
+                          }
+                        },
+                      ),
+                      ResponsiveConfig.heightBox(20),
+                      ElevatedButton(
+                        onPressed: () async {
+                          if (!formKey.currentState!.validate()) return;
+                          final goal = SkinGoal(
+                            userId: userId,
+                            goal: goalController.text.trim(),
+                            description:
+                                descriptionController.text.trim().isEmpty
+                                    ? null
+                                    : descriptionController.text.trim(),
+                            targetDate: targetDate,
+                            createdAt: DateTime.now(),
+                          );
+                          await _enhancedService.createSkinGoal(goal);
+                          if (mounted) Navigator.of(context).pop();
+                        },
+                        child: const Text('Save goal'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
         );
       },
     );
@@ -1321,7 +1371,7 @@ class _JournalTab extends StatelessWidget {
         final entries = snapshot.data ?? [];
         if (entries.isEmpty) {
           return _EmptyState(
-            icon: Icons.book_outlined,
+            icon: FontAwesomeIcons.bookOpen,
             title: 'No journal entries yet',
             message:
                 'Log how your skin feels, hydration, sleep, and notes to begin.',
@@ -1627,7 +1677,7 @@ class _SkinTypeCard extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  const Icon(Icons.science_outlined,
+                  const FaIcon(FontAwesomeIcons.magnifyingGlassChart,
                       color: AppTheme.primaryPink),
                   ResponsiveConfig.widthBox(8),
                   Text(
@@ -1785,7 +1835,7 @@ class _HydrationCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                const Icon(Icons.water_drop_outlined,
+                const FaIcon(FontAwesomeIcons.glassWaterDroplet,
                     color: AppTheme.primaryPink),
                 ResponsiveConfig.widthBox(8),
                 Text(
@@ -1865,17 +1915,17 @@ class _HydrationCard extends StatelessWidget {
               children: [
                 OutlinedButton.icon(
                   onPressed: onSchedule,
-                  icon: const Icon(Icons.alarm_add_outlined),
+                  icon: const FaIcon(FontAwesomeIcons.bell),
                   label: const Text('Schedule reminder'),
                 ),
                 FilledButton.icon(
                   onPressed: onLogHydration,
-                  icon: const Icon(Icons.water_drop_outlined),
+                  icon: const FaIcon(FontAwesomeIcons.glassWaterDroplet),
                   label: const Text('Log hydration'),
                 ),
                 TextButton.icon(
                   onPressed: onViewHydrationLogs,
-                  icon: const Icon(Icons.list_alt_outlined),
+                  icon: const FaIcon(FontAwesomeIcons.list),
                   label: const Text('View logs'),
                 ),
               ],
@@ -1931,7 +1981,7 @@ class _InventoryCard extends StatelessWidget {
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.add_circle_outline),
+                  icon: const FaIcon(FontAwesomeIcons.circlePlus),
                   color: AppTheme.primaryPink,
                   onPressed: onAddProduct,
                   tooltip: 'Add product',
@@ -1946,7 +1996,7 @@ class _InventoryCard extends StatelessWidget {
                   children: [
                     Expanded(
                       child: _InventoryStatTile(
-                        icon: Icons.inventory_2_outlined,
+                        icon: FontAwesomeIcons.boxOpen,
                         label: 'Active products',
                         value: products.length.toString(),
                         onTap: () =>
@@ -1956,7 +2006,7 @@ class _InventoryCard extends StatelessWidget {
                     ResponsiveConfig.widthBox(12),
                     Expanded(
                       child: _InventoryStatTile(
-                        icon: Icons.local_offer_outlined,
+                        icon: FontAwesomeIcons.tag,
                         label: 'Brands',
                         value: brands.toString(),
                         onTap: () =>
@@ -1970,7 +2020,7 @@ class _InventoryCard extends StatelessWidget {
                   children: [
                     Expanded(
                       child: _InventoryStatTile(
-                        icon: Icons.attach_money_outlined,
+                        icon: FontAwesomeIcons.dollarSign,
                         label: 'Total amount',
                         value: totalAmount == 0
                             ? '\$0'
@@ -1982,7 +2032,7 @@ class _InventoryCard extends StatelessWidget {
                     ResponsiveConfig.widthBox(12),
                     Expanded(
                       child: _InventoryStatTile(
-                        icon: Icons.alarm_on_outlined,
+                        icon: FontAwesomeIcons.clock,
                         label: 'Expiring soon',
                         value: expiringSoon.toString(),
                         onTap: () =>
@@ -2035,7 +2085,7 @@ class _InventoryCard extends StatelessWidget {
                  */
                 OutlinedButton.icon(
                   onPressed: onManageProducts,
-                  icon: const Icon(Icons.manage_search_outlined),
+                  icon: const FaIcon(FontAwesomeIcons.listCheck),
                   label: const Text('Manage inventory'),
                 ),
               ],
@@ -2089,8 +2139,8 @@ class _ProductPreviewTile extends StatelessWidget {
                 color: AppTheme.primaryPink.withOpacity(0.12),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Icon(
-                Icons.inventory_2_outlined,
+              child: const FaIcon(
+                FontAwesomeIcons.boxOpen,
                 color: AppTheme.primaryPink,
               ),
             ),
@@ -2109,7 +2159,7 @@ class _ProductPreviewTile extends StatelessWidget {
         ),
       ),
       trailing: IconButton(
-        icon: const Icon(Icons.launch_outlined),
+        icon: const FaIcon(FontAwesomeIcons.upRightFromSquare),
         tooltip: 'Open inventory manager',
         onPressed: onManage,
       ),
@@ -2144,7 +2194,7 @@ class _InventoryStatTile extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, color: AppTheme.primaryPink),
+            FaIcon(icon, color: AppTheme.primaryPink),
             ResponsiveConfig.heightBox(8),
             Text(
               value,
@@ -2225,8 +2275,8 @@ class _AcneCard extends StatelessWidget {
               ...entries.take(3).map(
                     (entry) => ListTile(
                       contentPadding: EdgeInsets.zero,
-                      leading: Icon(
-                        Icons.healing_outlined,
+                      leading: FaIcon(
+                        FontAwesomeIcons.faceSadTear,
                         color: entry.severity >= 3
                             ? AppTheme.warningOrange
                             : AppTheme.primaryPink,
@@ -2274,7 +2324,7 @@ class _UVOverviewCard extends StatelessWidget {
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.sunny_snowing),
+                  icon: const FaIcon(FontAwesomeIcons.solidSun),
                   color: AppTheme.primaryPink,
                   onPressed: onLogUV,
                   tooltip: 'Log UV index',
@@ -2302,7 +2352,7 @@ class _UVOverviewCard extends StatelessWidget {
                               ? 'High'
                               : 'Very high';
                   return Chip(
-                    avatar: const Icon(Icons.sunny, size: 16),
+                    avatar: const FaIcon(FontAwesomeIcons.sun, size: 16),
                     label: Text(
                       '${DateFormat('MMM d').format(entry.date)} • UV ${entry.uvIndex} ($risk)',
                     ),
@@ -2345,7 +2395,7 @@ class _GoalCard extends StatelessWidget {
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.flag_outlined),
+                    icon: const FaIcon(FontAwesomeIcons.flag),
                     color: AppTheme.primaryPink,
                     onPressed: onAddGoal,
                     tooltip: 'Add goal',
@@ -2394,10 +2444,10 @@ class _GoalCard extends StatelessWidget {
             ...goals.take(3).map((goal) {
               return ListTile(
                 contentPadding: EdgeInsets.zero,
-                leading: Icon(
+                leading: FaIcon(
                   goal.status == 'achieved'
-                      ? Icons.check_circle
-                      : Icons.flag_outlined,
+                      ? FontAwesomeIcons.circleCheck
+                      : FontAwesomeIcons.flag,
                   color: goal.status == 'achieved'
                       ? AppTheme.successGreen
                       : AppTheme.primaryPink,
@@ -2447,7 +2497,7 @@ class _BeautyTipsCard extends StatelessWidget {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Icons.check,
+                    const FaIcon(FontAwesomeIcons.check,
                         size: 18, color: AppTheme.primaryPink),
                     ResponsiveConfig.widthBox(8),
                     Expanded(child: Text(tip)),
@@ -2494,13 +2544,13 @@ class _CommunityCard extends StatelessWidget {
               children: [
                 ElevatedButton.icon(
                   onPressed: () => context.push('/groups', extra: 'skincare'),
-                  icon: const Icon(Icons.groups_outlined),
+                  icon: const FaIcon(FontAwesomeIcons.users),
                   label: const Text('Join forum'),
                 ),
                 ResponsiveConfig.heightBox(8),
                 OutlinedButton.icon(
                   onPressed: () => context.push('/events', extra: 'skincare'),
-                  icon: const Icon(Icons.event_outlined),
+                  icon: const FaIcon(FontAwesomeIcons.calendarCheck),
                   label: const Text('Upcoming events'),
                 ),
               ],
@@ -2543,7 +2593,7 @@ class _RoutineReminderCard extends StatelessWidget {
             ResponsiveConfig.heightBox(12),
             OutlinedButton.icon(
               onPressed: onSchedule,
-              icon: const Icon(Icons.notifications_active_outlined),
+              icon: const FaIcon(FontAwesomeIcons.bell),
               label: const Text('Schedule routine alerts'),
             ),
           ],
@@ -2577,7 +2627,7 @@ class _IngredientScannerCard extends StatelessWidget {
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.search),
+                  icon: const FaIcon(FontAwesomeIcons.magnifyingGlass),
                   onPressed: onSearch,
                 ),
               ],
@@ -2635,7 +2685,7 @@ class _ClimateAdjusterCard extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(vertical: 4),
                 child: Row(
                   children: [
-                    const Icon(Icons.cloud_outlined,
+                    const FaIcon(FontAwesomeIcons.cloud,
                         size: 18, color: AppTheme.primaryPink),
                     ResponsiveConfig.widthBox(8),
                     Expanded(child: Text(tip)),
@@ -2681,14 +2731,44 @@ class _DermatologistCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 ElevatedButton.icon(
-                  onPressed: () {},
-                  icon: const Icon(Icons.video_call_outlined),
+                  onPressed: () {
+                    showDialog(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: const Text('Coming Soon'),
+                        content: const Text(
+                            'Video consultation booking is under development and will be available in the next update.'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text('OK'),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                  icon: const FaIcon(FontAwesomeIcons.video),
                   label: const Text('Book video call'),
                 ),
                 ResponsiveConfig.heightBox(8),
                 OutlinedButton.icon(
-                  onPressed: () {},
-                  icon: const Icon(Icons.picture_as_pdf_outlined),
+                  onPressed: () {
+                    showDialog(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: const Text('Coming Soon'),
+                        content: const Text(
+                            'Journal export functionality is under development.'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text('OK'),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                  icon: const FaIcon(FontAwesomeIcons.filePdf),
                   label: const Text('Export journal'),
                 ),
               ],
@@ -2787,7 +2867,7 @@ class _RoutineHistoryCard extends StatelessWidget {
             ResponsiveConfig.heightBox(12),
             ...recent.map((entry) => ListTile(
                   contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.check_circle_outline,
+                  leading: const FaIcon(FontAwesomeIcons.circleCheck,
                       color: AppTheme.primaryPink),
                   title: Text(
                     '${DateFormat('MMM d').format(entry.date)} • ${entry.timeOfDay}',
@@ -2955,9 +3035,21 @@ class _HydrationTrendChart extends StatelessWidget {
                       },
                     ),
                   ),
-                  gridData: const FlGridData(
+                  gridData: FlGridData(
                     show: true,
                     horizontalInterval: 2,
+                    getDrawingHorizontalLine: (value) {
+                      return FlLine(
+                        color: AppTheme.mediumGray.withOpacity(0.1),
+                        strokeWidth: 1,
+                      );
+                    },
+                    getDrawingVerticalLine: (value) {
+                      return FlLine(
+                        color: AppTheme.mediumGray.withOpacity(0.1),
+                        strokeWidth: 1,
+                      );
+                    },
                   ),
                   titlesData: FlTitlesData(
                     bottomTitles: AxisTitles(
@@ -3062,7 +3154,7 @@ class _SleepWellnessCard extends StatelessWidget {
                     .take(6)
                     .map(
                       (entry) => Chip(
-                        avatar: const Icon(Icons.nightlight_outlined, size: 16),
+                        avatar: const FaIcon(FontAwesomeIcons.moon, size: 16),
                         label: Text(
                           '${DateFormat('MMMd').format(entry.date)} • ${entry.sleepHours} h',
                         ),
@@ -3144,7 +3236,7 @@ class _RecommendationCard extends StatelessWidget {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Icons.lightbulb_outline,
+                    const FaIcon(FontAwesomeIcons.lightbulb,
                         color: AppTheme.primaryPink, size: 18),
                     ResponsiveConfig.widthBox(8),
                     Expanded(child: Text(rec)),
@@ -3190,7 +3282,7 @@ class _IngredientDictionaryCard extends StatelessWidget {
             ResponsiveConfig.heightBox(12),
             OutlinedButton.icon(
               onPressed: onSearch,
-              icon: const Icon(Icons.search),
+              icon: const FaIcon(FontAwesomeIcons.magnifyingGlass),
               label: const Text('Open dictionary'),
             ),
           ],
@@ -3227,7 +3319,7 @@ class _AIDermatologistCard extends StatelessWidget {
               onPressed: () {
                 context.push("/ai-chat/dermatologist");
               },
-              icon: const Icon(Icons.smart_toy_outlined),
+              icon: const FaIcon(FontAwesomeIcons.robot),
               label: const Text('Ask FermCare+'),
             ),
           ],
@@ -3261,8 +3353,23 @@ class _ARPreviewCard extends StatelessWidget {
             ),
             ResponsiveConfig.heightBox(12),
             OutlinedButton.icon(
-              onPressed: () {},
-              icon: const Icon(Icons.view_in_ar_outlined),
+              onPressed: () {
+                showDialog(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text('Coming Soon'),
+                    content: const Text(
+                        'AR Skin Preview is currently in beta testing and will be available soon.'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('OK'),
+                      ),
+                    ],
+                  ),
+                );
+              },
+              icon: const FaIcon(FontAwesomeIcons.glasses),
               label: const Text('Preview (beta)'),
             ),
           ],
@@ -3346,7 +3453,7 @@ class _EmptyState extends StatelessWidget {
                 color: AppTheme.lightPink.withOpacity(0.3),
                 shape: BoxShape.circle,
               ),
-              child: Icon(
+              child: FaIcon(
                 icon,
                 size: ResponsiveConfig.iconSize(56),
                 color: AppTheme.primaryPink,
