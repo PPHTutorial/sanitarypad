@@ -6,6 +6,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../services/wellness_content_service.dart';
 import '../../../core/widgets/back_button_handler.dart';
+import '../../../core/providers/auth_provider.dart';
 
 /// Screen for adding/editing wellness content
 class WellnessContentFormScreen extends ConsumerStatefulWidget {
@@ -99,6 +100,7 @@ class _WellnessContentFormScreenState
         // Update existing content
         final updated = WellnessContent(
           id: widget.content!.id,
+          userId: widget.content!.userId,
           title: _titleController.text.trim(),
           content: _contentController.text.trim(),
           type: _selectedType,
@@ -125,7 +127,10 @@ class _WellnessContentFormScreenState
         }
       } else {
         // Create new content
+        final user = ref.read(authServiceProvider).currentUser;
+
         final content = WellnessContent(
+          userId: user?.uid,
           title: _titleController.text.trim(),
           content: _contentController.text.trim(),
           type: _selectedType,
@@ -169,7 +174,7 @@ class _WellnessContentFormScreenState
   @override
   Widget build(BuildContext context) {
     return BackButtonHandler(
-      fallbackRoute: '/wellness-content-management',
+      fallbackRoute: '/wellness',
       child: Scaffold(
         backgroundColor: Colors.transparent,
         appBar: AppBar(

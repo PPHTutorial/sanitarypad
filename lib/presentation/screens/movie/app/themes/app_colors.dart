@@ -1,6 +1,5 @@
-import 'package:flutter/material.dart';
 
-/// Application color palette
+/* /// Application color palette
 class AppColors {
   // Dark Theme Colors (Primary)
   static const Color primaryColor = Color(0xFF1A1A2E);      // Deep navy
@@ -87,3 +86,4 @@ class AppColors {
   }
 }
 
+ */

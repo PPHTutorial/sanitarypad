@@ -4,17 +4,20 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/config/responsive_config.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/constants/app_constants.dart';
-import '../../../core/routing/app_router.dart';
 
 /// Onboarding screen with multiple pages
-class OnboardingScreen extends StatefulWidget {
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/providers/onboarding_provider.dart';
+
+/// Onboarding screen with multiple pages
+class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({super.key});
 
   @override
-  State<OnboardingScreen> createState() => _OnboardingScreenState();
+  ConsumerState<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
-class _OnboardingScreenState extends State<OnboardingScreen> {
+class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
 
@@ -57,37 +60,20 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   Future<void> _completeOnboarding() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
+      // Update the provider state
+      ref.read(onboardingCompleteProvider.notifier).state = true;
 
-      // Save the onboarding completion flag
+      // Save the onboarding completion flag to persistent storage
+      final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(AppConstants.prefsKeyOnboardingComplete, true);
 
-      // Clear the router cache to force a fresh check
-      AppRouter.clearOnboardingCache();
-
-      // Verify it was saved correctly
-      final saved = prefs.getBool(AppConstants.prefsKeyOnboardingComplete);
-      if (saved == true) {
-        // Small delay to ensure SharedPreferences is fully committed
-        await Future.delayed(const Duration(milliseconds: 200));
-
-        if (mounted) {
-          // Navigate to login - router will verify onboarding is complete
-          context.go('/login');
-        }
-      } else {
-        // Retry if verification failed
-        await prefs.setBool(AppConstants.prefsKeyOnboardingComplete, true);
-        AppRouter.clearOnboardingCache();
-        await Future.delayed(const Duration(milliseconds: 200));
-
-        if (mounted) {
-          context.go('/login');
-        }
+      if (mounted) {
+        // Navigate to login - router will verify onboarding is complete
+        context.go('/login');
       }
     } catch (e) {
-      // If there's an error, still try to navigate (user shouldn't be stuck)
-      AppRouter.clearOnboardingCache();
+      // Still update provider so user isn't stuck
+      ref.read(onboardingCompleteProvider.notifier).state = true;
       if (mounted) {
         context.go('/login');
       }

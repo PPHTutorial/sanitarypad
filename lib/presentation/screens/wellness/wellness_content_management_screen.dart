@@ -240,7 +240,7 @@ class _WellnessContentManagementScreenState
                   if (content.readTime != null)
                     Row(
                       children: [
-                        Icon(
+                        const Icon(
                           Icons.access_time,
                           size: 14,
                           color: AppTheme.mediumGray,

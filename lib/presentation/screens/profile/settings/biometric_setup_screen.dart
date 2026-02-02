@@ -131,7 +131,7 @@ class _BiometricSetupScreenState extends State<BiometricSetupScreen> {
                     padding: ResponsiveConfig.padding(all: 16),
                     child: Row(
                       children: [
-                        Icon(
+                        const Icon(
                           Icons.info_outline,
                           color: AppTheme.warningOrange,
                         ),
@@ -178,7 +178,7 @@ class _BiometricSetupScreenState extends State<BiometricSetupScreen> {
                         ],
                       ),
                     );
-                  }).toList(),
+                  }),
                   ResponsiveConfig.heightBox(24),
                 ],
                 Card(

@@ -147,7 +147,7 @@ class _HealthReportScreenState extends ConsumerState<HealthReportScreen> {
                     children: [
                       Row(
                         children: [
-                          Icon(
+                          const Icon(
                             Icons.description,
                             color: AppTheme.primaryPink,
                           ),

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import '../../../app/themes/app_colors.dart';
+import 'package:sanitarypad/core/theme/app_theme.dart';
 import '../../../app/themes/app_text_styles.dart';
 import '../../../services/permissions/permission_service.dart';
 import '../../widgets/app_logo.dart';
@@ -42,12 +42,13 @@ class _SplashScreenState extends State<SplashScreen>
     try {
       // Wait at least 2 seconds for splash animation
       await Future.delayed(const Duration(seconds: 2));
-      
+
       // Request all permissions with context
       if (mounted) {
-        await PermissionService.instance.requestAllPermissions(context: context);
+        await PermissionService.instance
+            .requestAllPermissions(context: context);
       }
-      
+
       // Navigate to home
       if (mounted) {
         Navigator.of(context).pushReplacement(
@@ -78,13 +79,12 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.darkBackground,
       body: Center(
         child: FadeTransition(
           opacity: _fadeAnimation,
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
-            children:  [
+            children: [
               // App Logo
               AppLogo(
                 height: 120.h,
@@ -95,7 +95,7 @@ class _SplashScreenState extends State<SplashScreen>
               Text(
                 'Cinematic Wallpapers',
                 style: AppTextStyles.bodyMedium.copyWith(
-                  color: AppColors.textSecondary,
+                  color: AppTheme.primaryPink,
                   fontSize: 16.sp,
                 ),
               ),
@@ -107,7 +107,7 @@ class _SplashScreenState extends State<SplashScreen>
                 child: const CircularProgressIndicator(
                   strokeWidth: 3,
                   valueColor: AlwaysStoppedAnimation<Color>(
-                    AppColors.accentColor,
+                    AppTheme.accentCoral,
                   ),
                 ),
               ),
@@ -118,4 +118,3 @@ class _SplashScreenState extends State<SplashScreen>
     );
   }
 }
-

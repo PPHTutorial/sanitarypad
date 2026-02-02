@@ -9,10 +9,12 @@ import '../../../services/group_service.dart';
 
 class GroupFormScreen extends ConsumerStatefulWidget {
   final String? category;
+  final GroupModel? editGroup;
 
   const GroupFormScreen({
     super.key,
     this.category,
+    this.editGroup,
   });
 
   @override
@@ -28,12 +30,19 @@ class _GroupFormScreenState extends ConsumerState<GroupFormScreen> {
   bool _isPublic = true;
   bool _isLoading = false;
 
+  bool get _isEditMode => widget.editGroup != null;
+
   @override
   void initState() {
     super.initState();
-    print('Group category ${widget.category}');
 
-    if (widget.category != null) {
+    if (_isEditMode) {
+      final group = widget.editGroup!;
+      _nameController.text = group.name;
+      _descriptionController.text = group.description;
+      _selectedCategory = group.category;
+      _isPublic = group.isPublic;
+    } else if (widget.category != null) {
       const allowed = {
         'general',
         'pregnancy',
@@ -68,25 +77,52 @@ class _GroupFormScreenState extends ConsumerState<GroupFormScreen> {
 
     try {
       final now = DateTime.now();
-      final group = GroupModel(
-        name: _nameController.text.trim(),
-        description: _descriptionController.text.trim(),
-        category: _selectedCategory,
-        imageUrl: null,
-        createdBy: user.userId,
-        adminId: user.userId,
-        createdAt: now,
-        updatedAt: now,
-        isPublic: _isPublic,
-      );
 
-      await _groupService.createGroup(group);
+      if (_isEditMode) {
+        final editGroup = widget.editGroup!;
+        print('(GroupFormScreen) Editing group: ${editGroup.id}');
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Group created successfully')),
+        if (editGroup.id == null) {
+          throw Exception('Cannot update group without ID');
+        }
+
+        final updatedGroup = editGroup.copyWith(
+          name: _nameController.text.trim(),
+          description: _descriptionController.text.trim(),
+          category: _selectedCategory,
+          isPublic: _isPublic,
+          updatedAt: now,
         );
-        context.pop();
+
+        await _groupService.updateGroup(updatedGroup);
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Group updated successfully')),
+          );
+          context.pop();
+        }
+      } else {
+        final group = GroupModel(
+          name: _nameController.text.trim(),
+          description: _descriptionController.text.trim(),
+          category: _selectedCategory,
+          imageUrl: null,
+          createdBy: user.userId,
+          adminId: user.userId,
+          createdAt: now,
+          updatedAt: now,
+          isPublic: _isPublic,
+        );
+
+        await _groupService.createGroup(group);
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Group created successfully')),
+          );
+          context.pop();
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -107,7 +143,7 @@ class _GroupFormScreenState extends ConsumerState<GroupFormScreen> {
       fallbackRoute: '/home',
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Create Group'),
+          title: Text(_isEditMode ? 'Edit Group' : 'Create Group'),
         ),
         body: SingleChildScrollView(
           padding: ResponsiveConfig.padding(all: 16),
@@ -192,7 +228,7 @@ class _GroupFormScreenState extends ConsumerState<GroupFormScreen> {
                             width: 20,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
-                        : const Text('Create Group'),
+                        : Text(_isEditMode ? 'Save Changes' : 'Create Group'),
                   ),
                 ),
               ],

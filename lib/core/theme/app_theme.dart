@@ -41,7 +41,7 @@ class AppTheme {
 
   /// Light Theme
   static ThemeData get lightTheme {
-    final colorScheme = ColorScheme.light(
+    const colorScheme = ColorScheme.light(
       primary: primaryPink,
       primaryContainer: lightPink,
       secondary: lavender,
@@ -71,13 +71,13 @@ class AppTheme {
           statusBarColor: Colors.transparent, // Transparent status bar
           statusBarIconBrightness: Brightness.dark,
         ),
-        titleTextStyle: TextStyle(
+        titleTextStyle: const TextStyle(
           color: darkGray,
           fontSize: 20,
           fontWeight: FontWeight.w600,
           letterSpacing: 0.5,
         ),
-        iconTheme: IconThemeData(
+        iconTheme: const IconThemeData(
           color: primaryPink,
           size: 24,
         ),
@@ -178,7 +178,7 @@ class AppTheme {
         ),
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-        hintStyle: TextStyle(
+        hintStyle: const TextStyle(
           color: mediumGray,
           fontSize: 16,
         ),
@@ -317,17 +317,17 @@ class AppTheme {
       ),
 
       // Bottom Navigation Bar Theme
-      bottomNavigationBarTheme: BottomNavigationBarThemeData(
+      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
         backgroundColor: Colors.white,
         selectedItemColor: primaryPink,
         unselectedItemColor: mediumGray,
-        selectedIconTheme: const IconThemeData(size: 28),
-        unselectedIconTheme: const IconThemeData(size: 24),
-        selectedLabelStyle: const TextStyle(
+        selectedIconTheme: IconThemeData(size: 28),
+        unselectedIconTheme: IconThemeData(size: 24),
+        selectedLabelStyle: TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.w600,
         ),
-        unselectedLabelStyle: const TextStyle(
+        unselectedLabelStyle: TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.normal,
         ),

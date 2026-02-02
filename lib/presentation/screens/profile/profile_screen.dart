@@ -5,9 +5,9 @@ import '../../../core/config/responsive_config.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/providers/auth_provider.dart';
 import '../../../core/providers/theme_provider.dart';
-import '../../../services/auth_service.dart';
 import '../../../services/data_export_service.dart';
 import '../../../core/widgets/femcare_bottom_nav.dart';
+import '../../../core/widgets/back_button_handler.dart';
 
 /// Profile screen
 class ProfileScreen extends ConsumerWidget {
@@ -18,36 +18,39 @@ class ProfileScreen extends ConsumerWidget {
     final userAsync = ref.watch(currentUserStreamProvider);
     final user = userAsync.value;
 
-    return Scaffold(
-      backgroundColor: Colors.transparent, // Use theme background
-      appBar: AppBar(
-        title: const Text('Profile'),
-      ),
-      bottomNavigationBar: const FemCareBottomNav(currentRoute: '/profile'),
-      body: user == null
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: ResponsiveConfig.padding(all: 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Profile Header
-                  _buildProfileHeader(context, user),
-                  ResponsiveConfig.heightBox(16),
+    return BackButtonHandler(
+      fallbackRoute: '/home',
+      child: Scaffold(
+        backgroundColor: Colors.transparent, // Use theme background
+        appBar: AppBar(
+          title: const Text('Profile'),
+        ),
+        bottomNavigationBar: const FemCareBottomNav(currentRoute: '/profile'),
+        body: user == null
+            ? const Center(child: CircularProgressIndicator())
+            : SingleChildScrollView(
+                padding: ResponsiveConfig.padding(all: 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Profile Header
+                    _buildProfileHeader(context, user),
+                    ResponsiveConfig.heightBox(16),
 
-                  // Subscription Card
-                  _buildSubscriptionCard(context, user),
-                  ResponsiveConfig.heightBox(16),
+                    // Subscription Card
+                    _buildSubscriptionCard(context, user),
+                    ResponsiveConfig.heightBox(16),
 
-                  // Settings Sections
-                  _buildSettingsSection(context, ref),
-                  ResponsiveConfig.heightBox(16),
+                    // Settings Sections
+                    _buildSettingsSection(context, ref),
+                    ResponsiveConfig.heightBox(16),
 
-                  // Account Actions
-                  _buildAccountActions(context, ref),
-                ],
+                    // Account Actions
+                    _buildAccountActions(context, ref),
+                  ],
+                ),
               ),
-            ),
+      ),
     );
   }
 
@@ -161,7 +164,10 @@ class ProfileScreen extends ConsumerWidget {
             icon: Icons.calendar_today,
             title: 'Cycle Settings',
             onTap: () {
-              // Navigate to cycle settings
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                    content: Text('Advanced cycle settings coming soon')),
+              );
             },
           ),
           const Divider(),
@@ -235,7 +241,9 @@ class ProfileScreen extends ConsumerWidget {
             icon: Icons.help_outline,
             title: 'Help & Support',
             onTap: () {
-              // Navigate to help
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Support: support@femcare.app')),
+              );
             },
           ),
           const Divider(),
@@ -448,9 +456,11 @@ class ProfileScreen extends ConsumerWidget {
               leading: const Icon(Icons.visibility_off),
               title: const Text('Anonymous Mode'),
               trailing: Switch(
-                value: false, // TODO: Get from user settings
+                value: false,
                 onChanged: (value) {
-                  // TODO: Update anonymous mode
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Anonymous mode coming soon')),
+                  );
                 },
               ),
             ),
@@ -553,7 +563,7 @@ class ProfileScreen extends ConsumerWidget {
           ElevatedButton(
             onPressed: () async {
               try {
-                final authService = AuthService();
+                final authService = ref.read(authServiceProvider);
                 await authService.deleteAccount();
                 if (context.mounted) {
                   Navigator.pop(context);
@@ -669,7 +679,7 @@ class ProfileScreen extends ConsumerWidget {
 
     if (confirmed == true) {
       try {
-        final authService = AuthService();
+        final authService = ref.read(authServiceProvider);
         await authService.signOut();
         if (context.mounted) {
           context.go('/onboarding');

@@ -1,7 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sanitarypad/data/models/cycle_model.dart';
-import 'package:sanitarypad/presentation/screens/movie/movies.dart';
+import 'package:sanitarypad/presentation/screens/movie/domain/entities/movie.dart'
+    as movie_model;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/constants/app_constants.dart';
 import '../../presentation/screens/onboarding/onboarding_screen.dart';
@@ -32,6 +33,7 @@ import '../../presentation/screens/settings/notification_settings_screen.dart';
 import '../../presentation/screens/reminders/reminders_list_screen.dart';
 import '../../presentation/screens/pregnancy/pregnancy_tracking_screen.dart';
 import '../../presentation/screens/pregnancy/pregnancy_form_screen.dart';
+import '../../presentation/screens/pregnancy/partner_dashboard_screen.dart';
 import '../../data/models/pregnancy_model.dart';
 import '../../presentation/screens/fertility/fertility_tracking_screen.dart';
 import '../../presentation/screens/fertility/fertility_entry_form_screen.dart';
@@ -43,6 +45,7 @@ import '../../presentation/screens/skincare/skincare_routine_form_screen.dart';
 import '../../data/models/skincare_model.dart';
 import '../../presentation/screens/alerts/red_flag_alerts_screen.dart';
 import '../../presentation/screens/reports/health_report_screen.dart';
+import '../../data/models/group_model.dart';
 import '../../presentation/screens/community/groups_list_screen.dart';
 import '../../presentation/screens/community/group_detail_screen.dart';
 import '../../presentation/screens/community/group_chat_screen.dart';
@@ -51,7 +54,17 @@ import '../../presentation/screens/community/events_list_screen.dart';
 import '../../presentation/screens/community/event_detail_screen.dart';
 import '../../presentation/screens/community/event_form_screen.dart';
 import '../../presentation/screens/ai/ai_chat_screen.dart';
+import '../../presentation/screens/movie/presentation/screens/home/home_screen.dart'
+    as movie_home;
+import '../../presentation/screens/movie/presentation/screens/search/search_screen.dart'
+    as movie_search;
+import '../../presentation/screens/movie/presentation/screens/favorites/favorites_screen.dart'
+    as movie_favorites;
+import '../../presentation/screens/movie/presentation/screens/detail/movie_detail_screen.dart'
+    as movie_detail;
+import 'package:sanitarypad/data/models/user_model.dart';
 import '../../core/providers/auth_provider.dart';
+import '../../core/providers/onboarding_provider.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 
@@ -89,12 +102,6 @@ class AppRouter {
     }
   }
 
-  /// Clear onboarding cache (call after completing onboarding)
-  static void clearOnboardingCache() {
-    _cachedOnboardingState = null;
-    _cacheTimestamp = null;
-  }
-
   // Expose for RouterRefreshNotifier
   static Future<bool> isOnboardingComplete() => _isOnboardingComplete();
 
@@ -118,31 +125,31 @@ class AppRouter {
           ),
         ),
       ),
-      redirect: (context, state) async {
-        final isOnboardingComplete = await _isOnboardingComplete();
+      redirect: (context, state) {
+        final isOnboardingComplete = ref.read(onboardingCompleteProvider);
 
         // Check Firebase Auth directly for immediate auth state (persisted)
-        final asyncUser = ref.watch(currentUserStreamProvider);
-        final isAuthenticated = ref.watch(isAuthenticatedProvider);
-
-        print('Group auth is, $isAuthenticated');
+        final isAuthenticated = ref.read(isAuthenticatedProvider);
 
         final currentLocation = state.matchedLocation;
 
-        final isSplasingRoute = currentLocation == '/splash';
+        final isSplashRoute = currentLocation == '/splash';
         final isOnboardingRoute = currentLocation == '/onboarding';
         final isAuthRoute =
             currentLocation == '/login' || currentLocation == '/signup';
         final isProtectedRoute =
-            !isOnboardingRoute && !isAuthRoute && !isSplasingRoute;
+            !isOnboardingRoute && !isAuthRoute && !isSplashRoute;
 
-        // While loading → don't redirect yet
-        if (asyncUser.isLoading) {
-          return '/splash';
+        // If on splash, determine where to go next
+        if (isSplashRoute) {
+          if (!isOnboardingComplete) return '/onboarding';
+          if (!isAuthenticated) return '/login';
+          return '/home';
         }
+
         // If onboarding is complete and user is on onboarding route, redirect to login
         if (isOnboardingComplete && isOnboardingRoute) {
-          return '/login';
+          return isAuthenticated ? '/home' : '/login';
         }
 
         // If onboarding not complete and not on onboarding route, redirect to onboarding
@@ -156,12 +163,7 @@ class AppRouter {
         }
 
         // If authenticated and on auth routes, redirect to home
-        if (isAuthenticated && isAuthRoute) {
-          return '/home';
-        }
-
-        // If authenticated and on onboarding route, redirect to home
-        if (isAuthenticated && isOnboardingRoute) {
+        if (isAuthenticated && (isAuthRoute || isOnboardingRoute)) {
           return '/home';
         }
 
@@ -169,7 +171,7 @@ class AppRouter {
       },
 
       refreshListenable: RouterRefreshNotifier(ref),
-      initialLocation: '/onboarding', // Will be redirected by redirect logic
+      initialLocation: '/splash', // Start at splash to determine destination
       routes: [
         // Onboarding
         GoRoute(
@@ -253,11 +255,6 @@ class AppRouter {
           path: '/wellness-journal-list',
           name: 'wellness-journal-list',
           builder: (context, state) => const WellnessJournalListScreen(),
-        ),
-        GoRoute(
-          path: '/movies',
-          name: 'movies',
-          builder: (context, state) => const MovieScreen(),
         ),
 
         // Settings - Protected routes
@@ -357,6 +354,14 @@ class AppRouter {
             return PregnancyFormScreen(pregnancy: pregnancy);
           },
         ),
+        GoRoute(
+          path: '/pregnancy/partner/:id',
+          name: 'pregnancy-partner',
+          builder: (context, state) {
+            final id = state.pathParameters['id']!;
+            return PartnerDashboardScreen(pregnancyId: id);
+          },
+        ),
 
         // Fertility Tracking - Protected routes
         GoRoute(
@@ -425,6 +430,20 @@ class AppRouter {
           },
         ),
         GoRoute(
+          path: '/groups/edit',
+          name: 'group-edit',
+          builder: (context, state) {
+            final group = state.extra as GroupModel?;
+            print('(Route) Group edit: id=${group?.id}, name=${group?.name}');
+            if (group == null) {
+              return const Scaffold(
+                body: Center(child: Text('No group data provided')),
+              );
+            }
+            return GroupFormScreen(editGroup: group);
+          },
+        ),
+        GoRoute(
           path: '/groups/:id',
           name: 'group-detail',
           builder: (context, state) {
@@ -449,6 +468,36 @@ class AppRouter {
           builder: (context, state) {
             final category = state.extra as String? ?? 'all';
             return EventsListScreen(category: category);
+          },
+        ),
+
+        // Movie Module - Protected routes
+        GoRoute(
+          path: '/movies',
+          name: 'movies',
+          builder: (context, state) => const movie_home.MovieMovieHomeScreen(),
+        ),
+        GoRoute(
+          path: '/movies/search',
+          name: 'movie-search',
+          builder: (context, state) => const movie_search.SearchScreen(),
+        ),
+        GoRoute(
+          path: '/movies/favorites',
+          name: 'movie-favorites',
+          builder: (context, state) => const movie_favorites.FavoritesScreen(),
+        ),
+        GoRoute(
+          path: '/movies/detail',
+          name: 'movie-detail',
+          builder: (context, state) {
+            final movie = state.extra as movie_model.Movie?;
+            if (movie == null) {
+              return const Scaffold(
+                body: Center(child: Text('Movie not found')),
+              );
+            }
+            return movie_detail.MovieDetailScreen(movie: movie);
           },
         ),
         GoRoute(
@@ -516,11 +565,37 @@ class RouterRefreshNotifier extends ChangeNotifier {
   StreamSubscription? _subscription;
 
   RouterRefreshNotifier(this._ref) {
-    // Listen to auth state changes
-    final authService = _ref.read(authServiceProvider);
-    _subscription = authService.authStateChanges.listen((_) {
-      notifyListeners();
-    });
+    // Listen to both auth state changes and profile loading state
+    // This ensures redirect logic re-runs when profile finishes loading
+    // Listen to authentication status specifically
+    _ref.listen<bool>(
+      isAuthenticatedProvider,
+      (previous, next) {
+        if (previous != next) {
+          notifyListeners();
+        }
+      },
+    );
+
+    // Profile loading state listener
+    _ref.listen<AsyncValue<UserModel?>>(
+      currentUserStreamProvider,
+      (previous, next) {
+        if (previous?.isLoading != next.isLoading) {
+          notifyListeners();
+        }
+      },
+    );
+
+    // Onboarding state listener
+    _ref.listen<bool>(
+      onboardingCompleteProvider,
+      (previous, next) {
+        if (previous != next) {
+          notifyListeners();
+        }
+      },
+    );
   }
 
   @override

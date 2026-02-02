@@ -100,7 +100,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                                     radius: 32,
                                     backgroundColor:
                                         AppTheme.primaryPink.withOpacity(0.1),
-                                    child: Icon(
+                                    child: const Icon(
                                       Icons.event,
                                       size: 32,
                                       color: AppTheme.primaryPink,
@@ -142,7 +142,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                               if (event.location != null) ...[
                                 Row(
                                   children: [
-                                    Icon(Icons.location_on,
+                                    const Icon(Icons.location_on,
                                         size: 16, color: AppTheme.mediumGray),
                                     ResponsiveConfig.widthBox(8),
                                     Text(
@@ -160,7 +160,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                                   event.onlineLink != null) ...[
                                 Row(
                                   children: [
-                                    Icon(Icons.link,
+                                    const Icon(Icons.link,
                                         size: 16, color: AppTheme.mediumGray),
                                     ResponsiveConfig.widthBox(8),
                                     Expanded(
@@ -179,7 +179,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                               if (event.maxAttendees > 0) ...[
                                 Row(
                                   children: [
-                                    Icon(Icons.people_outline,
+                                    const Icon(Icons.people_outline,
                                         size: 16, color: AppTheme.mediumGray),
                                     ResponsiveConfig.widthBox(8),
                                     Text(

@@ -4,6 +4,7 @@ import '../core/constants/app_constants.dart';
 /// Wellness content model
 class WellnessContent {
   final String? id;
+  final String? userId; // Author ID
   final String title;
   final String content;
   final String type;
@@ -17,6 +18,7 @@ class WellnessContent {
 
   WellnessContent({
     this.id,
+    this.userId,
     required this.title,
     required this.content,
     required this.type,
@@ -31,6 +33,7 @@ class WellnessContent {
 
   Map<String, dynamic> toMap() {
     return {
+      'userId': userId,
       'title': title,
       'content': content,
       'type': type,
@@ -47,6 +50,7 @@ class WellnessContent {
   factory WellnessContent.fromMap(Map<String, dynamic> map, String id) {
     return WellnessContent(
       id: id,
+      userId: map['userId'] as String?,
       title: map['title'] as String,
       content: map['content'] as String,
       type: map['type'] as String,

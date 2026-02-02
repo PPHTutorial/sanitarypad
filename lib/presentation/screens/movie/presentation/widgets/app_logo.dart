@@ -21,7 +21,7 @@ class AppLogo extends StatelessWidget {
     return Padding(
       padding: padding ?? EdgeInsets.zero,
       child: Image.asset(
-        'assets/images/moviewalls.png',
+        'assets/images/logo.png',
         height: height ?? 40.h,
         width: width,
         fit: BoxFit.contain,
@@ -30,7 +30,7 @@ class AppLogo extends StatelessWidget {
           return Container(
             height: height ?? 40.h,
             width: width,
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               color: Colors.transparent,
             ),
             child: Icon(

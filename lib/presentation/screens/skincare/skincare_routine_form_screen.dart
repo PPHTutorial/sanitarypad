@@ -306,7 +306,7 @@ class _SkincareRoutineFormScreenState
                                 });
                               },
                             );
-                          }).toList(),
+                          }),
                         ResponsiveConfig.heightBox(16),
 
                         // Skin Condition
@@ -375,7 +375,7 @@ class _SkincareRoutineFormScreenState
                                   ),
                                 ],
                               );
-                            }).toList(),
+                            }),
                             GestureDetector(
                               onTap: _pickImage,
                               child: Container(

@@ -1,32 +1,53 @@
-import 'dart:collection';
+import 'dart:async';
+import 'dart:convert';
 
-import 'package:chewie/chewie.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
-import 'package:go_router/go_router.dart';
 import 'package:logger/logger.dart';
 import 'package:sanitarypad/core/config/responsive_config.dart';
+import 'package:sanitarypad/presentation/screens/movie/core/constants/tmdb_endpoints.dart';
 import 'package:sanitarypad/presentation/screens/movie/customplayer.dart';
-import 'package:video_player/video_player.dart';
+import 'package:sanitarypad/presentation/screens/movie/domain/entities/movie.dart';
+import 'package:sanitarypad/presentation/screens/movie/presentation/widgets/cached_image_widget.dart';
+import 'package:palette_generator/palette_generator.dart';
 
 class MovieScreen extends StatefulWidget {
-  const MovieScreen({super.key});
+  const MovieScreen({super.key, required this.movie});
+  final Movie movie;
 
   @override
   State<MovieScreen> createState() => _MovieScreenState();
 }
 
 Future<String?> getFullHtml(InAppWebViewController controller) async {
-  String html = await controller.evaluateJavascript(
-      source:
-          "document.documentElement.innerHTML = document.documentElement.outerHTML;");
-  Logger().d(html);
-  return html;
+  Map<dynamic, dynamic> html =
+      await controller.evaluateJavascript(source: "document.body;");
+  debugPrint(jsonEncode(html));
+  return (jsonEncode(html));
 }
 
 enableWebDegging() async {
   await InAppWebViewController.setWebContentsDebuggingEnabled(true);
+}
+
+Future<void> updateStatusBarBrightness(ImageProvider image) async {
+  final palette = await PaletteGenerator.fromImageProvider(
+    image,
+    size: const Size(200, 100), // speed optimization
+  );
+
+  final brightness = palette.dominantColor?.color.computeLuminance();
+
+  print("Brightness: $brightness");
+
+  if (brightness == null) return;
+
+  SystemChrome.setSystemUIOverlayStyle(
+    brightness > 0.5
+        ? SystemUiOverlayStyle.light // dark background -> light icons
+        : SystemUiOverlayStyle.dark, // light background -> dark icons
+  );
 }
 
 class _MovieScreenState extends State<MovieScreen> {
@@ -36,11 +57,49 @@ class _MovieScreenState extends State<MovieScreen> {
   String vidUrl = "";
 
   @override
+  void initState() {
+    super.initState();
+    _loadAndCalculateBrightness();
+  }
+
+  Future<void> _loadAndCalculateBrightness() async {
+    final image = NetworkImage(
+      TMDBEndpoints.posterUrl(
+        widget.movie.posterPath!,
+        size: PosterSize.w780,
+      ),
+    );
+
+    // REQUIRED for NetworkImage — force full load in memory
+    const config = ImageConfiguration();
+    final Completer<void> completer = Completer();
+
+    final listener = ImageStreamListener((_, __) {
+      completer.complete();
+    });
+
+    final stream = image.resolve(config);
+    stream.addListener(listener);
+
+    await completer.future;
+    stream.removeListener(listener);
+
+    // NOW SAFE TO USE palette generator
+    updateStatusBarBrightness(image);
+  }
+
+  @override
   Widget build(BuildContext context) {
+    updateStatusBarBrightness(NetworkImage(TMDBEndpoints.posterUrl(
+        widget.movie.posterPath!,
+        size: PosterSize.w780)));
+
     enableWebDegging();
     return Scaffold(
+        extendBody: true,
+        extendBodyBehindAppBar: true,
         appBar: AppBar(
-          title: const Text("InAppWebView Demo"),
+          title: Text(widget.movie.title),
           actions: [
             ActionIcons(
               icon: Icons.list,
@@ -52,10 +111,9 @@ class _MovieScreenState extends State<MovieScreen> {
               icon: Icons.developer_board,
               action: () async => {
                 await controller?.evaluateJavascript(source: """
-(function() {
-                    document.querySelector("#pl_but").click()
-                          
-})();
+                    (function() {
+                      document.querySelector("#pl_but").click()                                              
+                    })();
                   """)
               },
               controller: controller,
@@ -66,9 +124,8 @@ class _MovieScreenState extends State<MovieScreen> {
         body: Column(children: [
           if (vidUrl.isNotEmpty)
             Expanded(
-              child: CustomVideoPlayer(url: vidUrl
-                  // 'https://tmstr4.thrumbleandjaxon.com/pl/H4sIAAAAAAAAAxXIy3KDIBQA0F8C8qh0V4OaMZGUK9xUdgloiYrTzqSp8es7PcvTuXXbuRXhzrfrbZK8sO4_Opcw7smWv7pn8kBSkopxWxXzs977u9_xY2XGCekoGgYHz0BpATcs5NKOsoBh01SE99CP2vXw3QyK1miDy.zlhDmeRfixWW7c2Qf3vIMaaNNqr.2IEcxcaJ0WlZBEYRBSW3Wg_nDK_RmiIyjC7RpDqVZywVV5hOFzAZJtYI.NwVHquGaw2C3m5QMzGj2ZB_vx9mhFOrkojdL.t6b5u1zS1FNk11jNlynd2.GLXm68cJPf1YZSRDQ1Df0fVAxyNCEBAAA-/master.m3u8',
-                  ),
+              child: CustomVideoPlayer(
+                  url: vidUrl, movieId: widget.movie.id.toString()),
             ),
           if (vidUrl == "")
             Expanded(
@@ -82,7 +139,7 @@ class _MovieScreenState extends State<MovieScreen> {
                   ),
                   initialUrlRequest: URLRequest(
                       url: WebUri(
-                          "https://vidsrc-embed.ru/embed/movie?tmdb=1084242&autoplay=1&muted=1")),
+                          "https://vidsrc-embed.ru/embed/movie?tmdb=${widget.movie.id}")),
                   onWebViewCreated: (ctrl) => {
                     controller?.addJavaScriptHandler(
                       handlerName: "elementTapped",
@@ -158,7 +215,15 @@ class _MovieScreenState extends State<MovieScreen> {
                   child: Container(
                     height: ResponsiveConfig.screenHeight,
                     width: ResponsiveConfig.screenWidth,
-                    color: Theme.of(context).colorScheme.primary,
+                    color:
+                        Theme.of(context).colorScheme.primary.withOpacity(0.5),
+                    child: CachedImageWidget(
+                      imageUrl: TMDBEndpoints.posterUrl(
+                        widget.movie.posterPath!,
+                        size: PosterSize.w780,
+                      ),
+                      fit: BoxFit.cover,
+                    ),
                   ),
                 )
               ]),

@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import '../../../app/themes/app_colors.dart';
+import 'package:sanitarypad/core/theme/app_theme.dart';
 import '../../../app/themes/app_text_styles.dart';
 import '../../../app/themes/app_dimensions.dart';
 import '../../../core/constants/app_constants.dart';
+
 /// Pro upgrade screen
 class ProUpgradeScreen extends StatefulWidget {
   const ProUpgradeScreen({super.key});
@@ -30,7 +31,7 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
       'period': '/year',
       'subtext': '\$8.33/month',
       'badge': 'SAVE 33%',
-      'badgeColor': AppColors.success,
+      'badgeColor': AppTheme.deepPink,
     },
     {
       'id': AppConstants.iapLifetime,
@@ -38,14 +39,13 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
       'price': '\$254.99',
       'period': 'one-time',
       'badge': 'BEST VALUE',
-      'badgeColor': AppColors.goldColor,
+      'badgeColor': AppTheme.accentRose,
     },
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.darkBackground,
       appBar: AppBar(
         title: Text(
           'Go Pro',
@@ -65,10 +65,10 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
                       width: AppDimensions.proIconSize,
                       height: AppDimensions.proIconSize,
                       decoration: BoxDecoration(
-                        gradient: const LinearGradient(
+                        gradient:  LinearGradient(
                           colors: [
-                            AppColors.proGradientStart,
-                            AppColors.proGradientEnd,
+                            Theme.of(context).colorScheme.primary,
+                            Theme.of(context).colorScheme.onPrimary,
                           ],
                         ),
                         shape: BoxShape.circle,
@@ -107,7 +107,7 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
             Container(
               padding: EdgeInsets.all(AppDimensions.space16),
               decoration: BoxDecoration(
-                color: AppColors.darkCard,
+                color: Theme.of(context).colorScheme.primary,
                 borderRadius: BorderRadius.vertical(
                   top: Radius.circular(AppDimensions.radiusLarge),
                 ),
@@ -145,7 +145,7 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
                     child: Text(
                       'Restore Purchases',
                       style: AppTextStyles.bodyMedium.copyWith(
-                        color: AppColors.accentColor,
+                        
                       ),
                     ),
                   ),
@@ -177,7 +177,7 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
           children: [
             Icon(
               benefit['icon'] as IconData,
-              color: AppColors.success,
+              color: Theme.of(context).colorScheme.secondary,
               size: AppDimensions.proBenefitIconSize,
             ),
             SizedBox(width: AppDimensions.space12),
@@ -203,9 +203,9 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
           margin: EdgeInsets.only(bottom: AppDimensions.space12),
           padding: EdgeInsets.all(AppDimensions.space16),
           decoration: BoxDecoration(
-            color: isSelected ? AppColors.darkCard : Colors.transparent,
+            color: isSelected ? Theme.of(context).colorScheme.primary : Colors.transparent,
             border: Border.all(
-              color: isSelected ? AppColors.accentColor : AppColors.borderColor,
+              color: isSelected ?  Theme.of(context).colorScheme.outline.withOpacity(0.2): Theme.of(context).colorScheme.outline.withOpacity(0.07),
               width: isSelected ? 2 : 1,
             ),
             borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
@@ -218,7 +218,7 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
                     ? Icons.radio_button_checked
                     : Icons.radio_button_unchecked,
                 color:
-                    isSelected ? AppColors.accentColor : AppColors.textDisabled,
+                    isSelected ?  Theme.of(context).colorScheme.primary: Theme.of(context).colorScheme.onPrimary,
               ),
 
               SizedBox(width: AppDimensions.space12),
@@ -288,5 +288,4 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
       );
     }).toList();
   }
-
-  }
+}

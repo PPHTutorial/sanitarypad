@@ -45,32 +45,20 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
 
   GroupMessage? _replyTo;
   bool _isSending = false;
-  bool _showScrollToBottom = false;
 
   final List<_PendingAttachment> _pendingAttachments = [];
 
   @override
   void initState() {
     super.initState();
-    _scrollController.addListener(_handleScroll);
   }
 
   @override
   void dispose() {
     _messageController.dispose();
-    _scrollController.removeListener(_handleScroll);
     _scrollController.dispose();
     _inputFocusNode.dispose();
     super.dispose();
-  }
-
-  void _handleScroll() {
-    if (!_scrollController.hasClients) return;
-    final shouldShow =
-        _scrollController.offset > 400 && !_scrollController.position.atEdge;
-    if (shouldShow != _showScrollToBottom) {
-      setState(() => _showScrollToBottom = shouldShow);
-    }
   }
 
   @override
@@ -186,16 +174,6 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                                   );
                                 },
                               ),
-                              if (_showScrollToBottom)
-                                Positioned(
-                                  right: 16,
-                                  bottom: 16,
-                                  child: FloatingActionButton.small(
-                                    heroTag: 'scroll-bottom',
-                                    onPressed: _scrollToBottom,
-                                    child: const Icon(Icons.arrow_downward),
-                                  ),
-                                ),
                             ],
                           );
                         },
@@ -508,7 +486,7 @@ class _MessageBubble extends StatelessWidget {
           decoration: BoxDecoration(
             color: isOwnMessage
                 ? AppTheme.primaryPink.withOpacity(0.18)
-                : Theme.of(context).colorScheme.surfaceVariant,
+                : Theme.of(context).colorScheme.surfaceContainerHighest,
             borderRadius: BorderRadius.only(
               topLeft: const Radius.circular(18),
               topRight: const Radius.circular(18),

@@ -148,4 +148,10 @@ class AppConstants {
   // Privacy
   static const int pinLength = 4;
   static const int maxFailedPinAttempts = 5;
+
+  // Download Links
+  static const String playStoreUrl =
+      'https://play.google.com/store/apps/details?id=$packageName';
+  static const String appStoreUrl =
+      'https://apps.apple.com/app/femcare/id123456789'; // Placeholder ID
 }

@@ -43,7 +43,7 @@ class WatermarkService {
       }
       
       // Calculate watermark size and centered position
-      final watermarkText = AppConstants.watermarkText;
+      const watermarkText = AppConstants.watermarkText;
       final fontSize = (image.height * AppConstants.watermarkSize).toInt().clamp(12, 128);
       // crude text width estimate
       final textWidth = (watermarkText.length * fontSize ~/ 2);

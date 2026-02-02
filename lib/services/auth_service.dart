@@ -2,6 +2,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../core/constants/app_constants.dart';
 import '../data/models/user_model.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
 /// Authentication service
 class AuthService {
@@ -100,6 +102,100 @@ class AuthService {
       throw _handleAuthException(e);
     } catch (e) {
       throw Exception('Failed to sign in: ${e.toString()}');
+    }
+  }
+
+  /// Sign in with Google
+  Future<UserModel> signInWithGoogle() async {
+    try {
+      final googleSignIn = GoogleSignIn();
+      final googleUser = await googleSignIn.signIn();
+      if (googleUser == null) throw Exception('Google sign-in cancelled');
+
+      final googleAuth = await googleUser.authentication;
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      final userCredential = await _auth.signInWithCredential(credential);
+      final user = userCredential.user;
+      if (user == null) throw Exception('Failed to sign in with Google');
+
+      // Check if user exists in Firestore, if not create
+      final userDoc = await _firestore
+          .collection(AppConstants.collectionUsers)
+          .doc(user.uid)
+          .get();
+      if (!userDoc.exists) {
+        final userModel = UserModel(
+          userId: user.uid,
+          email: user.email ?? 'google@femcare.app',
+          displayName: user.displayName,
+          createdAt: DateTime.now(),
+          settings: const UserSettings(units: UserUnits()),
+          subscription: const UserSubscription(),
+          privacy: const UserPrivacy(),
+        );
+        await _firestore
+            .collection(AppConstants.collectionUsers)
+            .doc(user.uid)
+            .set(userModel.toFirestore());
+        return userModel;
+      }
+
+      return UserModel.fromFirestore(userDoc);
+    } catch (e) {
+      throw Exception('Google sign-in failed: ${e.toString()}');
+    }
+  }
+
+  /// Sign in with Apple
+  Future<UserModel> signInWithApple() async {
+    try {
+      final appleCredential = await SignInWithApple.getAppleIDCredential(
+        scopes: [
+          AppleIDAuthorizationScopes.email,
+          AppleIDAuthorizationScopes.fullName,
+        ],
+      );
+
+      final credential = OAuthProvider('apple.com').credential(
+        idToken: appleCredential.identityToken,
+        accessToken: appleCredential.authorizationCode,
+      );
+
+      final userCredential = await _auth.signInWithCredential(credential);
+      final user = userCredential.user;
+      if (user == null) throw Exception('Failed to sign in with Apple');
+
+      // Check if user exists in Firestore, if not create
+      final userDoc = await _firestore
+          .collection(AppConstants.collectionUsers)
+          .doc(user.uid)
+          .get();
+      if (!userDoc.exists) {
+        final userModel = UserModel(
+          userId: user.uid,
+          email: user.email ?? appleCredential.email ?? 'apple@femcare.app',
+          displayName: user.displayName ??
+              '${appleCredential.givenName ?? ''} ${appleCredential.familyName ?? ''}'
+                  .trim(),
+          createdAt: DateTime.now(),
+          settings: const UserSettings(units: UserUnits()),
+          subscription: const UserSubscription(),
+          privacy: const UserPrivacy(),
+        );
+        await _firestore
+            .collection(AppConstants.collectionUsers)
+            .doc(user.uid)
+            .set(userModel.toFirestore());
+        return userModel;
+      }
+
+      return UserModel.fromFirestore(userDoc);
+    } catch (e) {
+      throw Exception('Apple sign-in failed: ${e.toString()}');
     }
   }
 
@@ -212,6 +308,15 @@ class AuthService {
     } catch (e) {
       throw Exception('Failed to get user data: ${e.toString()}');
     }
+  }
+
+  /// Get user data stream
+  Stream<UserModel?> getUserStream(String userId) {
+    return _firestore
+        .collection(AppConstants.collectionUsers)
+        .doc(userId)
+        .snapshots()
+        .map((doc) => doc.exists ? UserModel.fromFirestore(doc) : null);
   }
 
   /// Update user data

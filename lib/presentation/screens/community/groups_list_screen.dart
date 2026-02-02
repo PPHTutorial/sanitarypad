@@ -77,7 +77,7 @@ class _GroupsListScreenState extends ConsumerState<GroupsListScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(
+                    const Icon(
                       Icons.groups_outlined,
                       size: 64,
                       color: AppTheme.mediumGray,
@@ -123,7 +123,7 @@ class _GroupsListScreenState extends ConsumerState<GroupsListScreen> {
                     contentPadding: ResponsiveConfig.padding(all: 16),
                     leading: CircleAvatar(
                       backgroundColor: AppTheme.primaryPink.withOpacity(0.1),
-                      child: Icon(
+                      child: const Icon(
                         Icons.groups,
                         color: AppTheme.primaryPink,
                       ),
@@ -151,7 +151,7 @@ class _GroupsListScreenState extends ConsumerState<GroupsListScreen> {
                         ResponsiveConfig.heightBox(8),
                         Row(
                           children: [
-                            Icon(
+                            const Icon(
                               Icons.people_outline,
                               size: 16,
                               color: AppTheme.mediumGray,
@@ -178,17 +178,6 @@ class _GroupsListScreenState extends ConsumerState<GroupsListScreen> {
               },
             );
           },
-        ),
-        floatingActionButton: FloatingActionButton.extended(
-          onPressed: () {
-            print('Group ${widget.category}');
-            context.push(
-              '/groups/create',
-              extra: widget.category == 'all' ? null : widget.category,
-            );
-          },
-          icon: const Icon(Icons.add),
-          label: const Text('Create Group'),
         ),
       ),
     );

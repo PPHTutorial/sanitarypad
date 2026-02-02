@@ -8,21 +8,17 @@ final authServiceProvider = Provider<AuthService>((ref) {
 });
 
 /// Current user stream provider
-final currentUserStreamProvider = StreamProvider<UserModel?>((ref) async* {
+final currentUserStreamProvider = StreamProvider<UserModel?>((ref) {
   final authService = ref.watch(authServiceProvider);
 
-  await for (final user in authService.authStateChanges) {
+  return authService.authStateChanges.asyncExpand((user) {
     if (user == null) {
-      yield null;
+      return Stream.value(null);
     } else {
-      try {
-        final userData = await authService.getUserData(user.uid);
-        yield userData;
-      } catch (e) {
-        yield null;
-      }
+      // Use asyncExpand to switch streams when auth state changes
+      return authService.getUserStream(user.uid);
     }
-  }
+  });
 });
 
 /// Current user provider
@@ -33,6 +29,12 @@ final currentUserProvider = Provider<UserModel?>((ref) {
 
 /// Is authenticated provider
 final isAuthenticatedProvider = Provider<bool>((ref) {
-  final user = ref.watch(currentUserProvider);
-  return user != null;
+  final userAsync = ref.watch(currentUserStreamProvider);
+
+  // Use synchronous check if stream is still loading or has no value yet
+  if (!userAsync.hasValue) {
+    return ref.watch(authServiceProvider).currentUser != null;
+  }
+
+  return userAsync.value != null;
 });

@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../app/themes/app_colors.dart';
+import 'package:go_router/go_router.dart';
 import '../../../app/themes/app_text_styles.dart';
 import '../../../app/themes/app_dimensions.dart';
 import '../../providers/favorites_provider.dart';
 import '../../widgets/error_widget.dart';
-import '../detail/movie_detail_screen.dart';
 import '../home/widgets/wallpaper_grid_item.dart';
 
 /// Favorites screen showing all favorited wallpapers
@@ -17,7 +16,6 @@ class FavoritesScreen extends ConsumerWidget {
     final favorites = ref.watch(favoritesProviders);
 
     return Scaffold(
-      backgroundColor: AppColors.darkBackground,
       appBar: AppBar(
         title: Text(
           'Favorites',
@@ -62,12 +60,7 @@ class FavoritesScreen extends ConsumerWidget {
                     return WallpaperGridItem(
                       movie: movie,
                       onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => MovieDetailScreen(movie: movie),
-                          ),
-                        );
+                        context.push('/movies/detail', extra: movie);
                       },
                     );
                   },
@@ -77,7 +70,7 @@ class FavoritesScreen extends ConsumerWidget {
             ),
     );
   }
-  
+
   void _showClearConfirmation(BuildContext context, WidgetRef ref) {
     showDialog(
       context: context,
@@ -97,7 +90,7 @@ class FavoritesScreen extends ConsumerWidget {
               Navigator.pop(context);
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.error,
+              backgroundColor: Theme.of(context).colorScheme.error,
             ),
             child: const Text('Clear All'),
           ),
@@ -106,4 +99,3 @@ class FavoritesScreen extends ConsumerWidget {
     );
   }
 }
-

@@ -50,7 +50,8 @@ class _EventsListScreenState extends ConsumerState<EventsListScreen> {
           ),
           actions: [
             IconButton(
-              icon: const Icon(Icons.add),
+              icon: const Icon(Icons.add_circle_outline),
+              tooltip: 'Create Event',
               onPressed: () =>
                   context.push('/events/create', extra: widget.category),
             ),
@@ -76,7 +77,7 @@ class _EventsListScreenState extends ConsumerState<EventsListScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(
+                    const Icon(
                       Icons.event_outlined,
                       size: 64,
                       color: AppTheme.mediumGray,
@@ -120,7 +121,7 @@ class _EventsListScreenState extends ConsumerState<EventsListScreen> {
                     contentPadding: ResponsiveConfig.padding(all: 16),
                     leading: CircleAvatar(
                       backgroundColor: AppTheme.primaryPink.withOpacity(0.1),
-                      child: Icon(
+                      child: const Icon(
                         Icons.event,
                         color: AppTheme.primaryPink,
                       ),
@@ -148,7 +149,7 @@ class _EventsListScreenState extends ConsumerState<EventsListScreen> {
                         ResponsiveConfig.heightBox(8),
                         Row(
                           children: [
-                            Icon(
+                            const Icon(
                               Icons.calendar_today,
                               size: 16,
                               color: AppTheme.mediumGray,
@@ -168,7 +169,7 @@ class _EventsListScreenState extends ConsumerState<EventsListScreen> {
                           ResponsiveConfig.heightBox(4),
                           Row(
                             children: [
-                              Icon(
+                              const Icon(
                                 Icons.people_outline,
                                 size: 16,
                                 color: AppTheme.mediumGray,
@@ -196,12 +197,6 @@ class _EventsListScreenState extends ConsumerState<EventsListScreen> {
               },
             );
           },
-        ),
-        floatingActionButton: FloatingActionButton.extended(
-          onPressed: () =>
-              context.push('/events/create', extra: widget.category),
-          icon: const Icon(Icons.add),
-          label: const Text('Create Event'),
         ),
       ),
     );

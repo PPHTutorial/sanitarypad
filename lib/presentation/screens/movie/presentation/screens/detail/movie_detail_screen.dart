@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:go_router/go_router.dart';
+import 'package:sanitarypad/core/config/responsive_config.dart';
+import 'package:sanitarypad/core/theme/app_theme.dart';
 import '../../../app/themes/app_colors.dart';
 import '../../../app/themes/app_text_styles.dart';
 import '../../../app/themes/app_dimensions.dart';
@@ -49,7 +52,6 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
   String? _certification;
   List<String> _genres = [];
 
-
   @override
   void initState() {
     super.initState();
@@ -66,7 +68,7 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
         id: widget.movie.id,
       );
       if (!mounted) return;
-    setState(() {
+      setState(() {
         _overview = map['overview'] as String?;
         _tagline = map['tagline'] as String?;
         _runtime = map['runtime'] as String?;
@@ -109,16 +111,14 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.darkBackground,
       appBar: AppBar(
-        backgroundColor: AppColors.darkBackground,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
-          Consumer(
+          /* Consumer(
             builder: (context, ref, child) {
               final isPro = ref.watch(isProUserProvider);
               return IconButton(
@@ -129,7 +129,7 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
                 },
               );
             },
-          ),
+          ), */
           Consumer(
             builder: (context, ref, child) {
               final isFavorite = ref.watch(isFavoriteProvider(widget.movie.id));
@@ -162,12 +162,11 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
         slivers: [
           // Sliver hero with overview overlay
           SliverAppBar(
-            backgroundColor: AppColors.darkBackground,
             elevation: 0,
             pinned: false,
             stretch: true,
             automaticallyImplyLeading: false,
-            expandedHeight: 340.h,
+            expandedHeight: ResponsiveConfig.height(400),
             flexibleSpace: FlexibleSpaceBar(
               background: Stack(
                 fit: StackFit.expand,
@@ -178,8 +177,8 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
                         widget.movie.backdropPath!,
                         size: BackdropSize.w1280,
                       ),
-                    fit: BoxFit.cover,
-                  )
+                      fit: BoxFit.cover,
+                    )
                   else if (widget.movie.hasPoster)
                     CachedImageWidget(
                       imageUrl: TMDBEndpoints.posterUrl(
@@ -189,7 +188,7 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
                       fit: BoxFit.cover,
                     )
                   else
-                    Container(color: AppColors.darkSurface),
+                    Container(color: Theme.of(context).colorScheme.surface),
                   Container(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
@@ -203,37 +202,41 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
                     ),
                   ),
                   // Overview overlay
+
                   Positioned(
                     left: AppDimensions.space20,
                     right: AppDimensions.space20,
-                    bottom: AppDimensions.space16,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+                    bottom: AppDimensions.space16 * 3,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        widget.movie.title,
-                        style: AppTextStyles.headline3,
+                      children: [
+                        Text(
+                          widget.movie.title,
+                          style: AppTextStyles.headline3
+                              .copyWith(color: Colors.white),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                      ),
-                      SizedBox(height: AppDimensions.space8),
-                      Row(
-                            children: [
-                              Icon(Icons.star,
-                                  size: 18.w, color: AppColors.ratingGold),
-                              SizedBox(width: 4.w),
+                        ),
+                        SizedBox(height: AppDimensions.space8),
+                        Row(
+                          children: [
+                            Icon(Icons.star,
+                                size: 18.w,
+                                color: Theme.of(context).colorScheme.primary),
+                            SizedBox(width: 4.w),
                             Text(widget.movie.formattedRating,
-                                style: AppTextStyles.bodyLarge
-                                    .copyWith(fontWeight: FontWeight.w600)),
+                                style: AppTextStyles.bodyLarge.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.white)),
                           ],
                         ),
-                if (_overview != null && _overview!.isNotEmpty) ...[
+                        if (_overview != null && _overview!.isNotEmpty) ...[
                           SizedBox(height: AppDimensions.space12),
                           Text(
                             _overview!,
-                            style:
-                                AppTextStyles.bodyMedium.copyWith(height: 1.5),
+                            style: AppTextStyles.bodyMedium
+                                .copyWith(height: 1.5, color: Colors.white70),
                             maxLines: 4,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -243,15 +246,43 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
                             child: Text(
                               'Read more',
                               style: AppTextStyles.bodyMedium.copyWith(
-                                color: AppColors.accentColor,
+                                color: AppTheme.deepPink,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
                           ),
                         ],
-                        ],
-                      ),
+                      ],
                     ),
+                  ),
+                  Positioned(
+                      bottom: ResponsiveConfig.height(20),
+                      right: ResponsiveConfig.width(20),
+                      child: InkWell(
+                        onTap: () {
+                          context.push('/movies', extra: widget.movie);
+                        },
+                        child: Container(
+                          width: ResponsiveConfig.width(60),
+                          height: ResponsiveConfig.height(60),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.primary,
+                            borderRadius: BorderRadius.circular(
+                              ResponsiveConfig.radius(100),
+                            ),
+                            boxShadow: const [
+                              BoxShadow(
+                                  color: Colors.black,
+                                  blurRadius: 2,
+                                  offset: Offset(0, 5),
+                                  spreadRadius: 2),
+                            ],
+                          ),
+                          child: Icon(Icons.play_arrow_rounded,
+                              color: Theme.of(context).colorScheme.onPrimary,
+                              size: 35),
+                        ),
+                      )),
                 ],
               ),
             ),
@@ -260,37 +291,39 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
           // Sticky tabs header
           //SizedBox(height: AppDimensions.space12),
           SliverPersistentHeader(
+            key: const ValueKey("123"),
             pinned: true,
             delegate: _StickyTabHeader(
-              minExtentHeight: 56.0,
-              maxExtentHeight: 56.0,
+              minExtentHeight: ResponsiveConfig.height(60),
+              maxExtentHeight: ResponsiveConfig.height(60),
               builder: (context) => Container(
-                height: 80.h,
-                color: AppColors.darkBackground,
+                height: ResponsiveConfig.height(80),
+                //color: AppColors.darkBackground,
                 //margin: EdgeInsets.only(top: AppDimensions.space4),
                 padding: EdgeInsets.symmetric(
                   horizontal: AppDimensions.space20,
                   //vertical: AppDimensions.space8
                 ),
-                  child: Container(
-                  height: 80.h,
-                    padding: EdgeInsets.all(4.w),
-                    decoration: BoxDecoration(
-                      color: AppColors.darkSurface,
-                      borderRadius:
-                          BorderRadius.circular(AppDimensions.radiusMedium),
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                            child: _buildTabButton(
-                                'Posters', 1, Icons.aspect_ratio)),
-                        Expanded(
+                child: Container(
+                  height: ResponsiveConfig.height(80),
+                  padding: ResponsiveConfig.padding(all: 4),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surface,
+                    borderRadius:
+                        BorderRadius.circular(AppDimensions.radiusMedium),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                          child: _buildTabButton(
+                              'Posters', 1, Icons.aspect_ratio)),
+                      SizedBox(width: ResponsiveConfig.width(8)),
+                      Expanded(
                           child: _buildTabButton('Backdrops', 0, Icons.photo)),
-                      ],
-                    ),
+                    ],
                   ),
                 ),
+              ),
             ),
           ),
 
@@ -308,7 +341,7 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
                   child: _buildGallery(),
                 ),
 
-                SizedBox(height: 100.h),
+                ResponsiveConfig.spacingBox(height: 100),
               ],
             ),
           ),
@@ -333,7 +366,9 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
       child: Container(
         padding: EdgeInsets.symmetric(vertical: AppDimensions.space12),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.accentColor : Colors.transparent,
+          color: isSelected
+              ? Theme.of(context).colorScheme.primary
+              : Theme.of(context).colorScheme.primaryContainer,
           borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
         ),
         child: Row(
@@ -341,12 +376,16 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Icon(icon,
-                color: isSelected ? Colors.white : AppColors.textSecondary),
-            SizedBox(width: 4.w),
+                color: isSelected
+                    ? Colors.white
+                    : Theme.of(context).colorScheme.surface),
+            SizedBox(width: ResponsiveConfig.width(4)),
             Text(
               label,
               style: AppTextStyles.button.copyWith(
-                color: isSelected ? Colors.white : AppColors.textSecondary,
+                color: isSelected
+                    ? Colors.white
+                    : Theme.of(context).colorScheme.surface,
               ),
             ),
           ],
@@ -373,7 +412,7 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
             Icon(
               Icons.image_not_supported,
               size: 48.w,
-              color: AppColors.textSecondary,
+              color: Theme.of(context).colorScheme.surface,
             ),
             SizedBox(height: AppDimensions.space16),
             Text(
@@ -384,7 +423,7 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
             Text(
               'Movie ID: ${widget.movie.id}',
               style: AppTextStyles.bodySmall.copyWith(
-                color: AppColors.textSecondary,
+                color: Theme.of(context).colorScheme.surface,
               ),
             ),
           ],
@@ -468,8 +507,8 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
   ) async {
     // Show confirmation dialog
     final shouldContinue = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
+      context: context,
+      builder: (context) => AlertDialog(
         title: const Text('Download All Images?'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -488,18 +527,18 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
             ),
           ],
         ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel'),
-            ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
           ElevatedButton(
-              onPressed: () => Navigator.pop(context, true),
+            onPressed: () => Navigator.pop(context, true),
             child: const Text('Continue Download'),
-            ),
-          ],
-        ),
-      );
+          ),
+        ],
+      ),
+    );
 
     if (shouldContinue != true) return;
 
@@ -509,46 +548,48 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
   Future<void> _downloadAllImages(List<String> imagePaths) async {
     if (!mounted) return;
 
-      await PermissionService.instance.requestAllPermissions();
-      if (!await PermissionService.instance.hasStoragePermission()) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Storage permission denied')),
-          );
-        }
-        return;
+    await PermissionService.instance.requestAllPermissions();
+    if (!await PermissionService.instance.hasStoragePermission()) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Storage permission denied')),
+        );
       }
+      return;
+    }
 
     final isProUser = ref.read(isProUserProvider);
-    
+
     // Build URLs with original quality
     final imageUrls = <String>[];
     final imageNames = <String>[];
-    
+
     for (final path in imagePaths) {
       // Determine if it's a backdrop or poster based on which list it's in
       final isBackdrop = _allBackdrops.contains(path);
       final url = isBackdrop
           ? TMDBEndpoints.backdropUrl(path, size: BackdropSize.original)
           : TMDBEndpoints.posterUrl(path, size: PosterSize.original);
-      
+
       // Skip if already downloaded
       if (DownloadService.instance.isAlreadyDownloaded(url)) {
         continue;
       }
-      
+
       imageUrls.add(url);
-      imageNames.add(isBackdrop ? 'Backdrop ${_allBackdrops.indexOf(path) + 1}' : 'Poster ${_allPosters.indexOf(path) + 1}');
+      imageNames.add(isBackdrop
+          ? 'Backdrop ${_allBackdrops.indexOf(path) + 1}'
+          : 'Poster ${_allPosters.indexOf(path) + 1}');
     }
 
     if (imageUrls.isEmpty) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('All images already downloaded!')),
-          );
-        }
-        return;
+        );
       }
+      return;
+    }
 
     // Create progress streams
     final progressController = StreamController<double>.broadcast();
@@ -568,21 +609,21 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
 
     try {
       int completed = 0;
-      
+
       for (int i = 0; i < imageUrls.length; i++) {
         currentItemController.add(imageNames[i]);
-        
+
         try {
-      await DownloadService.instance.downloadWallpaper(
+          await DownloadService.instance.downloadWallpaper(
             imageUrl: imageUrls[i],
-        movieTitle: widget.movie.title,
-        isPro: isProUser,
+            movieTitle: widget.movie.title,
+            isPro: isProUser,
             onProgress: (progress) {
               final overallProgress = (i + progress) / imageUrls.length;
               progressController.add(overallProgress);
             },
           );
-          
+
           completed++;
           completedController.add(completed);
           progressController.add((i + 1) / imageUrls.length);
@@ -595,7 +636,8 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
         Navigator.of(context).pop(); // Close progress dialog
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Successfully downloaded $completed/${imageUrls.length} images!'),
+            content: Text(
+                'Successfully downloaded $completed/${imageUrls.length} images!'),
             backgroundColor: Colors.green,
           ),
         );
@@ -625,10 +667,10 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
       backgroundColor: Colors.transparent,
       builder: (context) => Container(
         constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(context).size.height * 0.75,
+          maxHeight: ResponsiveConfig.screenHeight * 0.60,
         ),
         decoration: BoxDecoration(
-          color: AppColors.darkSurface,
+          color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.vertical(
             top: Radius.circular(AppDimensions.radiusLarge),
           ),
@@ -638,11 +680,11 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
             // Handle bar
             Container(
               margin: EdgeInsets.only(top: AppDimensions.space12),
-              width: 40.w,
-              height: 4.h,
+              width: ResponsiveConfig.width(40),
+              height: ResponsiveConfig.height(4),
               decoration: BoxDecoration(
-                color: AppColors.textSecondary,
-                borderRadius: BorderRadius.circular(2.w),
+                color: Theme.of(context).colorScheme.surface,
+                borderRadius: BorderRadius.circular(ResponsiveConfig.radius(4)),
               ),
             ),
 
@@ -655,13 +697,19 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
               child: Row(
                 children: [
                   Container(
-                    width: 50.w,
-                    height: 50.h,
+                    width: ResponsiveConfig.width(50),
+                    height: ResponsiveConfig.height(50),
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: [
-                          AppColors.accentColor,
-                          AppColors.accentColor.withOpacity(0.7),
+                          Theme.of(context)
+                              .colorScheme
+                              .primary
+                              .withOpacity(0.1),
+                          Theme.of(context)
+                              .colorScheme
+                              .primary
+                              .withOpacity(0.2),
                         ],
                       ),
                       borderRadius:
@@ -669,8 +717,8 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
                     ),
                     child: Icon(
                       Icons.movie,
-                      color: Colors.white,
-                      size: 28.w,
+                      color: Theme.of(context).colorScheme.primary,
+                      size: ResponsiveConfig.iconSize(30),
                     ),
                   ),
                   SizedBox(width: AppDimensions.space16),
@@ -685,11 +733,14 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
                           overflow: TextOverflow.ellipsis,
                         ),
                         if (_tagline != null && _tagline!.isNotEmpty) ...[
-                          SizedBox(height: 4.h),
+                          SizedBox(height: ResponsiveConfig.height(4)),
                           Text(
                             _tagline!,
                             style: AppTextStyles.bodySmall.copyWith(
-                              color: AppColors.textSecondary,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .primary
+                                  .withOpacity(0.5),
                               fontStyle: FontStyle.italic,
                             ),
                             maxLines: 1,
@@ -700,7 +751,7 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
                     ),
                   ),
                   IconButton(
-                    icon: Icon(Icons.close),
+                    icon: const Icon(Icons.close),
                     onPressed: () => Navigator.pop(context),
                   ),
                 ],
@@ -720,7 +771,10 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
                       width: double.infinity,
                       padding: EdgeInsets.all(AppDimensions.space20),
                       decoration: BoxDecoration(
-                        color: AppColors.darkBackground,
+                        color: Theme.of(context)
+                            .colorScheme
+                            .outline
+                            .withOpacity(0.08),
                         borderRadius:
                             BorderRadius.circular(AppDimensions.radiusMedium),
                       ),
@@ -731,8 +785,8 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
                             children: [
                               Icon(
                                 Icons.format_quote,
-                                size: 24.w,
-                                color: AppColors.accentColor,
+                                size: ResponsiveConfig.width(24),
+                                //
                               ),
                               SizedBox(width: 8.w),
                               Text(
@@ -778,15 +832,18 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
                               _certification!.isNotEmpty)
                             Container(
                               padding: EdgeInsets.symmetric(
-                                horizontal: 14.w,
-                                vertical: 10.h,
+                                horizontal: ResponsiveConfig.width(14),
+                                vertical: ResponsiveConfig.height(10),
                               ),
                               decoration: BoxDecoration(
-                                color: AppColors.accentColor.withOpacity(0.2),
+                                color: Theme.of(context).colorScheme.primary,
                                 borderRadius: BorderRadius.circular(
                                     AppDimensions.radiusSmall),
                                 border: Border.all(
-                                  color: AppColors.accentColor.withOpacity(0.3),
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .primary
+                                      .withOpacity(0.3),
                                   width: 1,
                                 ),
                               ),
@@ -795,27 +852,27 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
                                 children: [
                                   Container(
                                     padding: EdgeInsets.symmetric(
-                                      horizontal: 8.w,
-                                      vertical: 4.h,
+                                      horizontal: ResponsiveConfig.width(8),
+                                      vertical: ResponsiveConfig.height(4),
                                     ),
                                     decoration: BoxDecoration(
-                                      color: AppColors.accentColor,
-                                      borderRadius: BorderRadius.circular(6.w),
+                                      borderRadius:
+                                          ResponsiveConfig.borderRadius(8),
                                     ),
                                     child: Text(
                                       _certification!,
                                       style: TextStyle(
                                         color: Colors.white,
-                                        fontSize: 12.sp,
+                                        fontSize: ResponsiveConfig.fontSize(12),
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),
                                   ),
-                                  SizedBox(width: 8.w),
+                                  ResponsiveConfig.spacingBox(width: 8),
                                   Text(
                                     'Rating',
                                     style: TextStyle(
-                                      fontSize: 14.sp,
+                                      fontSize: ResponsiveConfig.fontSize(14),
                                     ),
                                   ),
                                 ],
@@ -823,17 +880,19 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
                             ),
                           if (_releaseDate != null && _releaseDate!.isNotEmpty)
                             Container(
-                              padding: EdgeInsets.symmetric(
-                                horizontal: 14.w,
-                                vertical: 10.h,
+                              padding: ResponsiveConfig.padding(
+                                horizontal: 14,
+                                vertical: 10,
                               ),
                               decoration: BoxDecoration(
-                                color: AppColors.darkSurface,
+                                color: Theme.of(context).colorScheme.onPrimary,
                                 borderRadius: BorderRadius.circular(
                                     AppDimensions.radiusSmall),
                                 border: Border.all(
-                                  color:
-                                      AppColors.textSecondary.withOpacity(0.2),
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .outline
+                                      .withOpacity(0.1),
                                   width: 1,
                                 ),
                               ),
@@ -842,7 +901,9 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
                                 children: [
                                   Icon(Icons.calendar_today,
                                       size: 16.w,
-                                      color: AppColors.textSecondary),
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .primary),
                                   SizedBox(width: 8.w),
                                   Text(
                                     _releaseDate!,
@@ -858,12 +919,14 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
                                 vertical: 10.h,
                               ),
                               decoration: BoxDecoration(
-                                color: AppColors.darkSurface,
+                                color: Theme.of(context).colorScheme.surface,
                                 borderRadius: BorderRadius.circular(
                                     AppDimensions.radiusSmall),
                                 border: Border.all(
-                                  color:
-                                      AppColors.textSecondary.withOpacity(0.2),
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurface
+                                      .withOpacity(0.2),
                                   width: 1,
                                 ),
                               ),
@@ -872,7 +935,9 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
                                 children: [
                                   Icon(Icons.access_time,
                                       size: 16.w,
-                                      color: AppColors.textSecondary),
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .surface),
                                   SizedBox(width: 8.w),
                                   Text(
                                     _runtime!,
@@ -896,12 +961,14 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
                                 vertical: 10.h,
                               ),
                               decoration: BoxDecoration(
-                                color: AppColors.darkBackground,
+                                //color: AppColors.darkBackground,
                                 borderRadius: BorderRadius.circular(
                                     AppDimensions.radiusSmall),
                                 border: Border.all(
-                                  color:
-                                      AppColors.textSecondary.withOpacity(0.2),
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .primary
+                                      .withOpacity(0.2),
                                   width: 1,
                                 ),
                               ),
@@ -946,7 +1013,8 @@ class _ImageFullScreenView extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<_ImageFullScreenView> createState() => _ImageFullScreenViewState();
+  ConsumerState<_ImageFullScreenView> createState() =>
+      _ImageFullScreenViewState();
 }
 
 class _ImageFullScreenViewState extends ConsumerState<_ImageFullScreenView> {
@@ -969,7 +1037,8 @@ class _ImageFullScreenViewState extends ConsumerState<_ImageFullScreenView> {
 
       // Use TMDB original size URL directly
       final downloadUrl = widget.isBackdrop
-          ? TMDBEndpoints.backdropUrl(widget.rawPath, size: BackdropSize.original)
+          ? TMDBEndpoints.backdropUrl(widget.rawPath,
+              size: BackdropSize.original)
           : TMDBEndpoints.posterUrl(widget.rawPath, size: PosterSize.original);
 
       await DownloadService.instance.downloadWallpaper(
@@ -996,7 +1065,6 @@ class _ImageFullScreenViewState extends ConsumerState<_ImageFullScreenView> {
     }
   }
 
-
   Future<void> _setAsWallpaper() async {
     setState(() => _isSettingWallpaper = true);
 
@@ -1014,22 +1082,23 @@ class _ImageFullScreenViewState extends ConsumerState<_ImageFullScreenView> {
       // Use TMDB original size URL for wallpaper
       // Use original quality URL
       final wallpaperUrl = widget.isBackdrop
-          ? TMDBEndpoints.backdropUrl(widget.rawPath, size: BackdropSize.original)
+          ? TMDBEndpoints.backdropUrl(widget.rawPath,
+              size: BackdropSize.original)
           : TMDBEndpoints.posterUrl(widget.rawPath, size: PosterSize.original);
 
       // Set wallpaper directly from URL (uses original quality)
       final success = await WallpaperService.instance.setWallpaperFromUrl(
         imageUrl: wallpaperUrl,
-          location: WallpaperLocation.both,
-        );
+        location: WallpaperLocation.both,
+      );
 
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-                content: Text(success
-                    ? 'Wallpaper set successfully!'
-                    : 'Failed to set wallpaper')),
-          );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text(success
+                  ? 'Wallpaper set successfully!'
+                  : 'Failed to set wallpaper')),
+        );
       }
     } catch (e) {
       if (mounted) {
@@ -1047,7 +1116,7 @@ class _ImageFullScreenViewState extends ConsumerState<_ImageFullScreenView> {
   @override
   Widget build(BuildContext context) {
     final isPro = ref.watch(isProUserProvider);
-    
+
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
@@ -1058,10 +1127,10 @@ class _ImageFullScreenViewState extends ConsumerState<_ImageFullScreenView> {
       body: Stack(
         children: [
           InteractiveViewer(
-        child: CachedImageWidget(
-          imageUrl: widget.imageUrl,
-          fit: BoxFit.contain,
-        ),
+            child: CachedImageWidget(
+              imageUrl: widget.imageUrl,
+              fit: BoxFit.contain,
+            ),
           ),
           // Watermark overlay for free users
           if (!isPro)
@@ -1079,7 +1148,8 @@ class _ImageFullScreenViewState extends ConsumerState<_ImageFullScreenView> {
                   child: Text(
                     AppConstants.watermarkText,
                     style: TextStyle(
-                      color: Colors.white.withOpacity(AppConstants.watermarkOpacity),
+                      color: Colors.white
+                          .withOpacity(AppConstants.watermarkOpacity),
                       fontSize: 24.sp,
                       fontWeight: FontWeight.bold,
                       letterSpacing: 1.2,
@@ -1136,8 +1206,8 @@ class _ImageFullScreenViewState extends ConsumerState<_ImageFullScreenView> {
                     : const Icon(Icons.wallpaper),
                 label: const Text('Set Wallpaper'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.accentColor,
-                ),
+                    //background
+                    ),
               ),
             ),
           ],

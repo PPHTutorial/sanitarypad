@@ -1,44 +1,32 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+
+import 'package:sanitarypad/presentation/screens/movie/data/models/movie_model.dart';
 import 'core/theme/app_theme.dart';
 import 'core/config/responsive_config.dart';
 import 'core/storage/hive_storage.dart';
 import 'core/firebase/firebase_service.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'core/routing/app_router.dart';
 import 'core/utils/error_handler.dart';
 import 'core/widgets/splash_background_wrapper.dart';
 import 'core/widgets/double_back_to_exit.dart';
 import 'core/providers/theme_provider.dart';
 import 'services/notification_service.dart';
+import 'core/providers/notification_provider.dart';
+import 'services/ads_service.dart';
+import 'core/constants/app_constants.dart';
+
+import 'core/providers/onboarding_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // Load environment variables from .env file
-  // Note: .env file must be in the project root and listed in pubspec.yaml assets
-  try {
-    await dotenv.load();
-    debugPrint('✓ Environment variables loaded successfully');
-    if (dotenv.env['OPENAI_API_KEY'] == null ||
-        dotenv.env['OPENAI_API_KEY']!.isEmpty ||
-        dotenv.env['OPENAI_API_KEY'] == 'sk-your-api-key-here') {
-      debugPrint(
-          '⚠ Warning: OPENAI_API_KEY is not set or is using placeholder value');
-    }
-  } catch (e) {
-    // .env file not found or error loading - app will still run but AI features won't work
-    debugPrint('⚠ Warning: Could not load .env file: $e');
-    debugPrint(
-        '⚠ AI Assistant features will not be available without .env configuration.');
-    debugPrint('⚠ Steps to fix:');
-    debugPrint(
-        '   1. Create .env file in project root (same directory as pubspec.yaml)');
-    debugPrint('   2. Add: OPENAI_API_KEY=sk-your-actual-api-key-here');
-    debugPrint('   3. Ensure .env is listed in pubspec.yaml assets section');
-    debugPrint('   4. Run: flutter pub get');
-    debugPrint('   5. Restart the app');
+  // Initialize Hive for local storage
+  await Hive.initFlutter();
+  if (!Hive.isAdapterRegistered(0)) {
+    Hive.registerAdapter(MovieModelAdapter());
   }
 
   // Set preferred orientations
@@ -76,6 +64,23 @@ void main() async {
     // Initialize notifications
     final notificationService = NotificationService();
     await notificationService.initialize();
+
+    // Initialize SharedPreferences
+    final prefs = await SharedPreferences.getInstance();
+    final onboardingComplete =
+        prefs.getBool(AppConstants.prefsKeyOnboardingComplete) ?? false;
+
+    // Initialize Ads (fire and forget to not block app start)
+    AdsService().initialize();
+
+    runApp(
+      ProviderScope(
+        overrides: [
+          onboardingCompleteProvider.overrideWith((ref) => onboardingComplete),
+        ],
+        child: const MyApp(),
+      ),
+    );
   } catch (e, stackTrace) {
     // Handle initialization errors gracefully
     await ErrorHandler.handleError(
@@ -84,13 +89,14 @@ void main() async {
       context: 'App Initialization',
       fatal: false,
     );
-  }
 
-  runApp(
-    const ProviderScope(
-      child: MyApp(),
-    ),
-  );
+    // Still run the app even if some services fail
+    runApp(
+      const ProviderScope(
+        child: MyApp(),
+      ),
+    );
+  }
 }
 
 class MyApp extends ConsumerStatefulWidget {
@@ -101,8 +107,6 @@ class MyApp extends ConsumerStatefulWidget {
 }
 
 class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
-  final _notificationService = NotificationService();
-
   @override
   void initState() {
     super.initState();
@@ -112,7 +116,7 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    
+
     super.dispose();
   }
 
@@ -121,7 +125,10 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
     super.didChangeAppLifecycleState(state);
     if (state == AppLifecycleState.resumed) {
       // Check for due notifications when app comes to foreground
-      _notificationService.checkAndFireDueNotifications();
+      ref.read(notificationServiceProvider).checkAndFireDueNotifications();
+
+      // Show App Open Ad if available
+      AdsService().showAppOpenAdIfAvailable();
     }
   }
 
@@ -154,5 +161,4 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
       ),
     );
   }
-  
 }

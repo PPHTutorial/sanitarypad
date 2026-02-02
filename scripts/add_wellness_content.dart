@@ -6,6 +6,7 @@
 ///
 /// Note: This script requires Firebase Admin SDK or you can manually
 /// add the content via Firebase Console using the data structure below.
+library;
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 

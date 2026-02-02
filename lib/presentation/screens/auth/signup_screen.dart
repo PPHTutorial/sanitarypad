@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../../core/config/responsive_config.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/validators.dart';
@@ -23,7 +24,6 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   bool _obscurePassword = true;
-  bool _obscureConfirmPassword = true;
   bool _isLoading = false;
 
   @override
@@ -31,19 +31,11 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
     _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
-    _confirmPasswordController.dispose();
     super.dispose();
   }
 
   Future<void> _handleSignUp() async {
     if (!_formKey.currentState!.validate()) return;
-
-    if (_passwordController.text != _confirmPasswordController.text) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Passwords do not match')),
-      );
-      return;
-    }
 
     setState(() => _isLoading = true);
 
@@ -157,146 +149,220 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.transparent, // Use theme background
-      appBar: AppBar(
+      /* appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.go('/login'),
         ),
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: ResponsiveConfig.padding(all: 24),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  'Create Account',
-                  style: ResponsiveConfig.textStyle(
-                    size: 28,
-                    weight: FontWeight.bold,
-                    color: Theme.of(context).textTheme.displaySmall?.color,
-                  ),
-                ),
-                ResponsiveConfig.heightBox(8),
-                Text(
-                  'Join FemCare+ today',
-                  style: ResponsiveConfig.textStyle(
-                    size: 16,
-                    color: AppTheme.mediumGray,
-                  ),
-                ),
-                ResponsiveConfig.heightBox(32),
-                TextFormField(
-                  controller: _nameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Full Name',
-                    prefixIcon: Icon(Icons.person_outlined),
-                  ),
-                  validator: (value) =>
-                      Validators.required(value, fieldName: 'Name'),
-                ),
-                ResponsiveConfig.heightBox(16),
-                TextFormField(
-                  controller: _emailController,
-                  keyboardType: TextInputType.emailAddress,
-                  decoration: const InputDecoration(
-                    labelText: 'Email',
-                    prefixIcon: Icon(Icons.email_outlined),
-                  ),
-                  validator: Validators.email,
-                ),
-                ResponsiveConfig.heightBox(16),
-                TextFormField(
-                  controller: _passwordController,
-                  obscureText: _obscurePassword,
-                  decoration: InputDecoration(
-                    labelText: 'Password',
-                    prefixIcon: const Icon(Icons.lock_outlined),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _obscurePassword
-                            ? Icons.visibility_outlined
-                            : Icons.visibility_off_outlined,
-                      ),
-                      onPressed: () {
-                        setState(() => _obscurePassword = !_obscurePassword);
-                      },
-                    ),
-                  ),
-                  validator: Validators.password,
-                ),
-                ResponsiveConfig.heightBox(16),
-                TextFormField(
-                  controller: _confirmPasswordController,
-                  obscureText: _obscureConfirmPassword,
-                  decoration: InputDecoration(
-                    labelText: 'Confirm Password',
-                    prefixIcon: const Icon(Icons.lock_outlined),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _obscureConfirmPassword
-                            ? Icons.visibility_outlined
-                            : Icons.visibility_off_outlined,
-                      ),
-                      onPressed: () {
-                        setState(() =>
-                            _obscureConfirmPassword = !_obscureConfirmPassword);
-                      },
-                    ),
-                  ),
-                  validator: (value) =>
-                      Validators.required(value, fieldName: 'Confirm Password'),
-                ),
-                ResponsiveConfig.heightBox(24),
-                ElevatedButton(
-                  onPressed: _isLoading ? null : _handleSignUp,
-                  style: ElevatedButton.styleFrom(
-                    padding: ResponsiveConfig.padding(vertical: 16),
-                    minimumSize: const Size(double.infinity, 50),
-                  ),
-                  child: _isLoading
-                      ? Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor:
-                                    AlwaysStoppedAnimation<Color>(Colors.white),
-                              ),
-                            ),
-                            ResponsiveConfig.widthBox(12),
-                            const Text('Creating account...'),
-                          ],
-                        )
-                      : const Text('Sign Up'),
-                ),
-                ResponsiveConfig.heightBox(16),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+      ), */
+      body: Center(
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: ResponsiveConfig.padding(all: 24),
+            child: Center(
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Text(
-                      'Already have an account? ',
+                      'Create Account',
                       style: ResponsiveConfig.textStyle(
-                        size: 14,
+                        size: 28,
+                        weight: FontWeight.bold,
+                        color: Theme.of(context).textTheme.displaySmall?.color,
+                      ),
+                    ),
+                    ResponsiveConfig.heightBox(8),
+                    Text(
+                      'Join FemCare+ today',
+                      style: ResponsiveConfig.textStyle(
+                        size: 16,
                         color: AppTheme.mediumGray,
                       ),
                     ),
-                    TextButton(
-                      onPressed: () => context.go('/login'),
-                      child: const Text('Sign In'),
+                    ResponsiveConfig.heightBox(32),
+                    TextFormField(
+                      controller: _nameController,
+                      decoration: const InputDecoration(
+                        labelText: 'Full Name',
+                        prefixIcon: Icon(Icons.person_outlined),
+                      ),
+                      validator: (value) =>
+                          Validators.required(value, fieldName: 'Name'),
+                    ),
+                    ResponsiveConfig.heightBox(16),
+                    TextFormField(
+                      controller: _emailController,
+                      keyboardType: TextInputType.emailAddress,
+                      decoration: const InputDecoration(
+                        labelText: 'Email',
+                        prefixIcon: Icon(Icons.email_outlined),
+                      ),
+                      validator: Validators.email,
+                    ),
+                    ResponsiveConfig.heightBox(16),
+                    TextFormField(
+                      controller: _passwordController,
+                      obscureText: _obscurePassword,
+                      decoration: InputDecoration(
+                        labelText: 'Password',
+                        prefixIcon: const Icon(Icons.lock_outlined),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obscurePassword
+                                ? Icons.visibility_outlined
+                                : Icons.visibility_off_outlined,
+                          ),
+                          onPressed: () {
+                            setState(
+                                () => _obscurePassword = !_obscurePassword);
+                          },
+                        ),
+                      ),
+                      validator: Validators.password,
+                    ),
+                    ResponsiveConfig.heightBox(24),
+                    ElevatedButton(
+                      onPressed: _isLoading ? null : _handleSignUp,
+                      style: ElevatedButton.styleFrom(
+                        padding: ResponsiveConfig.padding(vertical: 16),
+                        minimumSize: const Size(double.infinity, 50),
+                      ),
+                      child: _isLoading
+                          ? Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                        Colors.white),
+                                  ),
+                                ),
+                                ResponsiveConfig.widthBox(12),
+                                const Text('Creating account...'),
+                              ],
+                            )
+                          : const Text('Sign Up'),
+                    ),
+                    ResponsiveConfig.heightBox(24),
+                    _buildSocialAuth(context),
+                    ResponsiveConfig.heightBox(16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          'Already have an account? ',
+                          style: ResponsiveConfig.textStyle(
+                            size: 14,
+                            color: AppTheme.mediumGray,
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () => context.go('/login'),
+                          child: const Text('Sign In'),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ],
+              ),
             ),
           ),
         ),
       ),
     );
+  }
+
+  Widget _buildSocialAuth(BuildContext context) {
+    return Column(
+      children: [
+        Row(
+          children: [
+            const Expanded(child: Divider()),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Text(
+                'Or continue with',
+                style: ResponsiveConfig.textStyle(
+                    size: 14, color: AppTheme.mediumGray),
+              ),
+            ),
+            const Expanded(child: Divider()),
+          ],
+        ),
+        ResponsiveConfig.heightBox(20),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _socialButton(
+              icon: FontAwesomeIcons.google,
+              onTap: () => _handleSocialSignIn(
+                  ref.read(authServiceProvider).signInWithGoogle),
+            ),
+            ResponsiveConfig.widthBox(20),
+            _socialButton(
+              icon: FontAwesomeIcons.apple,
+              onTap: () => _handleSocialSignIn(
+                  ref.read(authServiceProvider).signInWithApple),
+              isApple: true,
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _socialButton(
+      {required IconData icon,
+      required VoidCallback onTap,
+      bool isApple = false}) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: isDark ? AppTheme.darkGray.withOpacity(0.3) : Colors.white,
+          border: Border.all(color: AppTheme.mediumGray.withOpacity(0.1)),
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: FaIcon(
+          icon,
+          size: 28,
+          color: isApple
+              ? (isDark ? Colors.white : Colors.black)
+              : (isDark ? Colors.white : AppTheme.primaryPink),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _handleSocialSignIn(
+      Future<dynamic> Function() signInMethod) async {
+    setState(() => _isLoading = true);
+    try {
+      await signInMethod();
+      if (mounted) context.go('/home');
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 }

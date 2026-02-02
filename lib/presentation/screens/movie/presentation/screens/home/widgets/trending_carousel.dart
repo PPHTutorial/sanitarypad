@@ -2,13 +2,12 @@ import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
-import '../../../../app/themes/app_colors.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../app/themes/app_dimensions.dart';
 import '../../../../app/themes/app_text_styles.dart';
 import '../../../../core/constants/tmdb_endpoints.dart';
 import '../../../../domain/entities/movie.dart';
 import '../../../widgets/cached_image_widget.dart';
-import '../../search/search_screen.dart';
 
 /// Trending movies carousel
 class TrendingCarousel extends StatefulWidget {
@@ -74,8 +73,8 @@ class _TrendingCarouselState extends State<TrendingCarousel> {
           activeIndex: _currentIndex,
           count: carouselMovies.length + 1,
           effect: ExpandingDotsEffect(
-            activeDotColor: AppColors.accentColor,
-            dotColor: AppColors.textDisabled,
+            activeDotColor: Theme.of(context).colorScheme.primary,
+            dotColor: Theme.of(context).colorScheme.secondary,
             dotHeight: 8.h,
             dotWidth: 8.w,
             spacing: 4.w,
@@ -88,7 +87,7 @@ class _TrendingCarouselState extends State<TrendingCarousel> {
   Widget _buildCarouselItem(Movie movie) {
     return GestureDetector(
       onTap: () => widget.onMovieTap?.call(movie),
-      child: Container(       
+      child: Container(
         margin: EdgeInsets.symmetric(horizontal: AppDimensions.space4),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
@@ -124,11 +123,11 @@ class _TrendingCarouselState extends State<TrendingCarousel> {
                 )
               else
                 Container(
-                  color: AppColors.darkCard,
-                  child: const Center(
+                  color: Theme.of(context).colorScheme.primary,
+                  child: Center(
                     child: Icon(
                       Icons.movie_outlined,
-                      color: AppColors.textDisabled,
+                      color: Theme.of(context).colorScheme.onPrimary,
                       size: 60,
                     ),
                   ),
@@ -166,7 +165,6 @@ class _TrendingCarouselState extends State<TrendingCarousel> {
                           vertical: AppDimensions.space4,
                         ),
                         decoration: BoxDecoration(
-                          color: AppColors.accentColor,
                           borderRadius: BorderRadius.circular(
                             AppDimensions.radiusSmall,
                           ),
@@ -194,7 +192,8 @@ class _TrendingCarouselState extends State<TrendingCarousel> {
                       // Title
                       Text(
                         movie.title,
-                        style: AppTextStyles.headline5,
+                        style: AppTextStyles.headline5
+                            .copyWith(color: Colors.white),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -205,14 +204,14 @@ class _TrendingCarouselState extends State<TrendingCarousel> {
                           Icon(
                             Icons.star,
                             size: 18.w,
-                            color: AppColors.ratingGold,
+                            color: Theme.of(context).colorScheme.primary,
                           ),
                           SizedBox(width: 4.w),
                           Text(
                             movie.formattedRating,
                             style: AppTextStyles.bodyMedium.copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white),
                           ),
                           if (movie.releaseYear != null) ...[
                             SizedBox(width: 12.w),
@@ -237,15 +236,12 @@ class _TrendingCarouselState extends State<TrendingCarousel> {
   Widget _buildSeeMoreCard(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const SearchScreen()),
-        );
+        context.push('/movies/search');
       },
       child: Container(
         margin: EdgeInsets.symmetric(horizontal: AppDimensions.space4),
         decoration: BoxDecoration(
-          color: AppColors.darkCard,
+          color: Theme.of(context).colorScheme.primary,
           borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
         ),
         child: Center(

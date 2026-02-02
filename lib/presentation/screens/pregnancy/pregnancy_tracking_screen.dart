@@ -6,6 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import 'package:go_router/go_router.dart';
+import 'package:share_plus/share_plus.dart';
+import '../../../core/constants/app_constants.dart';
 import '../../../core/config/responsive_config.dart';
 import '../../../core/providers/auth_provider.dart';
 import '../../../core/theme/app_theme.dart';
@@ -80,6 +82,14 @@ class _PregnancyTrackingScreenState
             return Scaffold(
               appBar: AppBar(
                 title: const Text('Pregnancy Tracking'),
+                actions: [
+                  IconButton(
+                    icon: const Icon(Icons.add_circle_outline),
+                    tooltip: 'Start Tracking',
+                    onPressed: () =>
+                        Navigator.of(context).pushNamed('/pregnancy-form'),
+                  ),
+                ],
               ),
               body: _EmptyState(
                 icon: Icons.child_care_outlined,
@@ -89,12 +99,6 @@ class _PregnancyTrackingScreenState
                 actionLabel: 'Create pregnancy profile',
                 onAction: () =>
                     Navigator.of(context).pushNamed('/pregnancy-form'),
-              ),
-              floatingActionButton: FloatingActionButton.extended(
-                onPressed: () =>
-                    Navigator.of(context).pushNamed('/pregnancy-form'),
-                icon: const Icon(Icons.add),
-                label: const Text('Start Tracking'),
               ),
             );
           }
@@ -119,17 +123,23 @@ class _PregnancyTrackingScreenState
           return Scaffold(
             appBar: AppBar(
               title: const Text('Pregnancy Journey'),
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.add_circle_outline),
+                  tooltip: 'Quick Actions',
+                  onPressed: () =>
+                      _showQuickActionsMenu(context, user.userId, pregnancyId),
+                ),
+              ],
               bottom: PreferredSize(
                 preferredSize: const Size.fromHeight(72),
                 child: _buildModernTabSwitcher(context),
               ),
             ),
-            floatingActionButton:
-                _buildFab(user.userId, pregnancyId, pregnancy),
             body: TabBarView(
               controller: _tabController,
               children: [
-                _OverviewTab(
+                OverviewTab(
                   pregnancy: pregnancy,
                   kickStream: kickStream,
                   appointmentStream: appointmentStream,
@@ -222,18 +232,6 @@ class _PregnancyTrackingScreenState
       child: SingleChildScrollView(
         child: child,
       ),
-    );
-  }
-
-  FloatingActionButton? _buildFab(
-    String userId,
-    String pregnancyId,
-    Pregnancy pregnancy,
-  ) {
-    return FloatingActionButton.extended(
-      onPressed: () => _showQuickActionsMenu(context, userId, pregnancyId),
-      icon: const Icon(Icons.add_circle_outline),
-      label: const Text('Quick Actions'),
     );
   }
 
@@ -1254,10 +1252,10 @@ class _PregnancyTrackingScreenState
   }
 }
 
-// --- Overview Tab ---
+// --- Pregnancy Tabs ---
 
-class _OverviewTab extends StatelessWidget {
-  const _OverviewTab({
+class OverviewTab extends StatelessWidget {
+  const OverviewTab({super.key, 
     required this.pregnancy,
     required this.kickStream,
     required this.appointmentStream,
@@ -1265,48 +1263,51 @@ class _OverviewTab extends StatelessWidget {
     required this.onScheduleKickReminder,
     required this.onAddAppointment,
     required this.onAddMedication,
+    this.isReadOnly = false,
   });
 
   final Pregnancy pregnancy;
   final Stream<List<KickEntry>> kickStream;
   final Stream<List<PregnancyAppointment>> appointmentStream;
   final Stream<List<PregnancyMedication>> medicationStream;
-  final VoidCallback onScheduleKickReminder;
-  final VoidCallback onAddAppointment;
-  final VoidCallback onAddMedication;
+  final VoidCallback? onScheduleKickReminder;
+  final VoidCallback? onAddAppointment;
+  final VoidCallback? onAddMedication;
+  final bool isReadOnly;
 
   @override
   Widget build(BuildContext context) {
     final currentMilestone = PregnancyService().getCurrentMilestone(pregnancy);
-    final dueDays = pregnancy.dueDate != null
-        ? pregnancy.dueDate!.difference(DateTime.now()).inDays
-        : null;
+    final dueDays = pregnancy.dueDate?.difference(DateTime.now()).inDays;
 
     return SingleChildScrollView(
       padding: ResponsiveConfig.padding(all: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _ProgressCard(pregnancy: pregnancy, daysUntilDue: dueDays),
+          ProgressCard(pregnancy: pregnancy, daysUntilDue: dueDays),
           ResponsiveConfig.heightBox(16),
           if (currentMilestone != null)
-            _MilestoneCard(milestone: currentMilestone),
+            MilestoneCard(milestone: currentMilestone),
           ResponsiveConfig.heightBox(16),
           StreamBuilder<List<KickEntry>>(
             stream: kickStream,
             builder: (context, snapshot) {
-              return _KickSummaryCard(
-                  entries: snapshot.data ?? [],
-                  onSchedule: onScheduleKickReminder);
+              return KickSummaryCard(
+                entries: snapshot.data ?? [],
+                onSchedule: onScheduleKickReminder,
+                isReadOnly: isReadOnly,
+              );
             },
           ),
           ResponsiveConfig.heightBox(16),
           StreamBuilder<List<PregnancyAppointment>>(
             stream: appointmentStream,
             builder: (context, snapshot) {
-              return _UpcomingAppointmentsCard(
+              return UpcomingAppointmentsCard(
                 appointments: snapshot.data ?? [],
                 onAddAppointment: onAddAppointment,
+                isReadOnly: isReadOnly,
               );
             },
           ),
@@ -1314,30 +1315,34 @@ class _OverviewTab extends StatelessWidget {
           StreamBuilder<List<PregnancyMedication>>(
             stream: medicationStream,
             builder: (context, snapshot) {
-              return _MedicationReminderCard(
+              return MedicationReminderCard(
                 medications: snapshot.data ?? [],
                 onAddMedication: onAddMedication,
+                isReadOnly: isReadOnly,
               );
             },
           ),
           ResponsiveConfig.heightBox(16),
-          const _DailyTipsCard(),
+          const DailyTipsCard(),
           ResponsiveConfig.heightBox(16),
-          const _PartnerModeCard(),
+          if (!isReadOnly) ...[
+            PartnerModeCard(pregnancy: pregnancy),
+            ResponsiveConfig.heightBox(16),
+          ],
           ResponsiveConfig.heightBox(16),
-          const _BabyNameCard(),
+          const BabyNameCard(),
           ResponsiveConfig.heightBox(16),
-          const _NutritionPlannerCard(),
+          const NutritionPlannerCard(),
           ResponsiveConfig.heightBox(16),
-          const _CommunityCard(),
+          const CommunityCard(),
         ],
       ),
     );
   }
 }
 
-class _ProgressCard extends StatelessWidget {
-  const _ProgressCard({required this.pregnancy, required this.daysUntilDue});
+class ProgressCard extends StatelessWidget {
+  const ProgressCard({super.key, required this.pregnancy, required this.daysUntilDue});
 
   final Pregnancy pregnancy;
   final int? daysUntilDue;
@@ -1419,8 +1424,8 @@ class _ProgressCard extends StatelessWidget {
   }
 }
 
-class _MilestoneCard extends StatelessWidget {
-  const _MilestoneCard({required this.milestone});
+class MilestoneCard extends StatelessWidget {
+  const MilestoneCard({super.key, required this.milestone});
 
   final PregnancyMilestone milestone;
 
@@ -1455,11 +1460,16 @@ class _MilestoneCard extends StatelessWidget {
   }
 }
 
-class _KickSummaryCard extends StatelessWidget {
-  const _KickSummaryCard({required this.entries, required this.onSchedule});
+class KickSummaryCard extends StatelessWidget {
+  const KickSummaryCard({super.key, 
+    required this.entries,
+    required this.onSchedule,
+    this.isReadOnly = false,
+  });
 
   final List<KickEntry> entries;
-  final VoidCallback onSchedule;
+  final VoidCallback? onSchedule;
+  final bool isReadOnly;
 
   @override
   Widget build(BuildContext context) {
@@ -1484,11 +1494,12 @@ class _KickSummaryCard extends StatelessWidget {
                     weight: FontWeight.bold,
                   ),
                 ),
-                ElevatedButton.icon(
-                  onPressed: onSchedule,
-                  icon: const Icon(Icons.alarm_add_outlined),
-                  label: const Text('Remind me'),
-                ),
+                if (!isReadOnly && onSchedule != null)
+                  ElevatedButton.icon(
+                    onPressed: onSchedule,
+                    icon: const Icon(Icons.alarm_add_outlined),
+                    label: const Text('Remind me'),
+                  ),
               ],
             ),
             ResponsiveConfig.heightBox(12),
@@ -1506,6 +1517,13 @@ class _KickSummaryCard extends StatelessWidget {
                 height: 120,
                 child: BarChart(
                   BarChartData(
+                    borderData: FlBorderData(
+                      show: true,
+                      border: Border.all(
+                        color: AppTheme.mediumGray.withValues(alpha: 0.2),
+                        width: 1,
+                      ),
+                    ),
                     alignment: BarChartAlignment.spaceAround,
                     titlesData: FlTitlesData(
                       leftTitles: const AxisTitles(),
@@ -1525,9 +1543,9 @@ class _KickSummaryCard extends StatelessWidget {
                         ),
                       ),
                     ),
-                    gridData: FlGridData(show: false),
+                    gridData: const FlGridData(show: false),
                     barGroups: entries
-                        .take(7)
+                        .take(10)
                         .toList()
                         .asMap()
                         .entries
@@ -1539,7 +1557,8 @@ class _KickSummaryCard extends StatelessWidget {
                                 toY: item.value.kickCount.toDouble(),
                                 width: 12,
                                 color: AppTheme.primaryPink,
-                                borderRadius: BorderRadius.circular(4),
+                                borderRadius: BorderRadius.circular(
+                                    ResponsiveConfig.radius(4)),
                               ),
                             ],
                           ),
@@ -1561,14 +1580,16 @@ class _KickSummaryCard extends StatelessWidget {
   }
 }
 
-class _UpcomingAppointmentsCard extends StatelessWidget {
-  const _UpcomingAppointmentsCard({
+class UpcomingAppointmentsCard extends StatelessWidget {
+  const UpcomingAppointmentsCard({super.key, 
     required this.appointments,
     required this.onAddAppointment,
+    this.isReadOnly = false,
   });
 
   final List<PregnancyAppointment> appointments;
-  final VoidCallback onAddAppointment;
+  final VoidCallback? onAddAppointment;
+  final bool isReadOnly;
 
   @override
   Widget build(BuildContext context) {
@@ -1594,12 +1615,13 @@ class _UpcomingAppointmentsCard extends StatelessWidget {
                     weight: FontWeight.bold,
                   ),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.event_outlined),
-                  color: AppTheme.lightPink,
-                  tooltip: 'Add Appointment',
-                  onPressed: onAddAppointment,
-                ),
+                if (!isReadOnly && onAddAppointment != null)
+                  IconButton(
+                    icon: const Icon(Icons.event_outlined),
+                    color: AppTheme.lightPink,
+                    tooltip: 'Add Appointment',
+                    onPressed: onAddAppointment,
+                  ),
               ],
             ),
             ResponsiveConfig.heightBox(12),
@@ -1630,14 +1652,16 @@ class _UpcomingAppointmentsCard extends StatelessWidget {
   }
 }
 
-class _MedicationReminderCard extends StatelessWidget {
-  const _MedicationReminderCard({
+class MedicationReminderCard extends StatelessWidget {
+  const MedicationReminderCard({super.key, 
     required this.medications,
     required this.onAddMedication,
+    this.isReadOnly = false,
   });
 
   final List<PregnancyMedication> medications;
-  final VoidCallback onAddMedication;
+  final VoidCallback? onAddMedication;
+  final bool isReadOnly;
 
   @override
   Widget build(BuildContext context) {
@@ -1658,12 +1682,13 @@ class _MedicationReminderCard extends StatelessWidget {
                     weight: FontWeight.bold,
                   ),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.medication_liquid_outlined),
-                  color: AppTheme.lightPink,
-                  tooltip: 'Add Medication',
-                  onPressed: onAddMedication,
-                ),
+                if (!isReadOnly && onAddMedication != null)
+                  IconButton(
+                    icon: const Icon(Icons.medication_liquid_outlined),
+                    color: AppTheme.lightPink,
+                    tooltip: 'Add Medication',
+                    onPressed: onAddMedication,
+                  ),
               ],
             ),
             ResponsiveConfig.heightBox(12),
@@ -1694,8 +1719,8 @@ class _MedicationReminderCard extends StatelessWidget {
   }
 }
 
-class _DailyTipsCard extends StatelessWidget {
-  const _DailyTipsCard();
+class DailyTipsCard extends StatelessWidget {
+  const DailyTipsCard({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -1741,8 +1766,10 @@ class _DailyTipsCard extends StatelessWidget {
   }
 }
 
-class _PartnerModeCard extends StatelessWidget {
-  const _PartnerModeCard();
+class PartnerModeCard extends StatelessWidget {
+  const PartnerModeCard({super.key, required this.pregnancy});
+
+  final Pregnancy pregnancy;
 
   @override
   Widget build(BuildContext context) {
@@ -1770,11 +1797,12 @@ class _PartnerModeCard extends StatelessWidget {
             ResponsiveConfig.heightBox(12),
             OutlinedButton.icon(
               onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Partner dashboard link copied (demo).'),
-                  ),
-                );
+                final text =
+                    'Follow our pregnancy journey on FemCare+! View our live dashboard here: https://femcare.app/pregnancy/partner/${pregnancy.id}\n\n'
+                    'Don\'t have the app? Download it now:\n'
+                    'Android: ${AppConstants.playStoreUrl}\n'
+                    'iOS: ${AppConstants.appStoreUrl}';
+                Share.share(text, subject: 'Our Pregnancy Journey');
               },
               icon: const Icon(Icons.share_outlined),
               label: const Text('Share dashboard'),
@@ -1786,8 +1814,8 @@ class _PartnerModeCard extends StatelessWidget {
   }
 }
 
-class _BabyNameCard extends StatelessWidget {
-  const _BabyNameCard();
+class BabyNameCard extends StatelessWidget {
+  const BabyNameCard({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -1797,6 +1825,19 @@ class _BabyNameCard extends StatelessWidget {
           name: 'Sena', gender: 'girl', meaning: 'bringing heaven to earth'),
       const BabyName(name: 'Kwesi', gender: 'boy', meaning: 'born on Sunday'),
       const BabyName(name: 'Imani', gender: 'unisex', meaning: 'faith'),
+      const BabyName(name: 'Kwame', gender: 'boy', meaning: 'born on Saturday'),
+      const BabyName(
+          name: 'Liam', gender: 'boy', meaning: 'strong-willed warrior'),
+      const BabyName(name: 'Sofia', gender: 'girl', meaning: 'wisdom'),
+      const BabyName(
+          name: 'Yuki', gender: 'unisex', meaning: 'snow or happiness'),
+      const BabyName(name: 'Mateo', gender: 'boy', meaning: 'gift of God'),
+      const BabyName(
+          name: 'Amara',
+          gender: 'girl',
+          meaning: 'grace, immortal, or peaceful'),
+      const BabyName(
+          name: 'Kai', gender: 'unisex', meaning: 'sea, forgiveness, or food'),
     ];
 
     return Card(
@@ -1837,8 +1878,8 @@ class _BabyNameCard extends StatelessWidget {
   }
 }
 
-class _NutritionPlannerCard extends StatelessWidget {
-  const _NutritionPlannerCard();
+class NutritionPlannerCard extends StatelessWidget {
+  const NutritionPlannerCard({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -2079,6 +2120,13 @@ class _WeightTrendCard extends StatelessWidget {
                 height: 200,
                 child: LineChart(
                   LineChartData(
+                    borderData: FlBorderData(
+                      show: true,
+                      border: Border.all(
+                        color: AppTheme.mediumGray.withValues(alpha: 0.2),
+                        width: 1,
+                      ),
+                    ),
                     lineTouchData: LineTouchData(
                       touchTooltipData: LineTouchTooltipData(
                         getTooltipItems: (spots) {
@@ -2095,7 +2143,7 @@ class _WeightTrendCard extends StatelessWidget {
                         },
                       ),
                     ),
-                    gridData: FlGridData(show: false),
+                    gridData: const FlGridData(show: false),
                     titlesData: FlTitlesData(
                       bottomTitles: AxisTitles(
                         sideTitles: SideTitles(
@@ -2135,7 +2183,7 @@ class _WeightTrendCard extends StatelessWidget {
                         isCurved: false,
                         color: AppTheme.primaryPink,
                         barWidth: 3,
-                        dotData: FlDotData(show: true),
+                        dotData: const FlDotData(show: true),
                         belowBarData: BarAreaData(
                           show: true,
                           color: AppTheme.primaryPink.withOpacity(0.15),
@@ -2623,7 +2671,7 @@ class _KickTrendCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (entries.isEmpty) {
-      return _EmptyState(
+      return const _EmptyState(
         icon: Icons.favorite_outline,
         title: 'No kick data',
         message: 'Log kick sessions to monitor fetal movement patterns.',
@@ -2660,6 +2708,13 @@ class _KickTrendCard extends StatelessWidget {
               height: 300,
               child: LineChart(
                 LineChartData(
+                  borderData: FlBorderData(
+                    show: true,
+                    border: Border.all(
+                      color: AppTheme.mediumGray.withValues(alpha: 0.2),
+                      width: 1,
+                    ),
+                  ),
                   lineTouchData: LineTouchData(
                     touchTooltipData: LineTouchTooltipData(
                       getTooltipItems: (touchedSpots) {
@@ -2690,10 +2745,10 @@ class _KickTrendCard extends StatelessWidget {
                       isCurved: false,
                       color: AppTheme.primaryPink,
                       barWidth: 3,
-                      dotData: FlDotData(show: true),
+                      dotData: const FlDotData(show: true),
                     ),
                   ],
-                  gridData: FlGridData(show: false),
+                  gridData: const FlGridData(show: false),
                   titlesData: FlTitlesData(
                     bottomTitles: AxisTitles(
                       sideTitles: SideTitles(
@@ -2743,7 +2798,7 @@ class _ContractionTrendCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (entries.isEmpty) {
-      return _EmptyState(
+      return const _EmptyState(
         icon: Icons.timer_outlined,
         title: 'No contractions logged',
         message:
@@ -2793,7 +2848,7 @@ class _WeightSummaryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (entries.isEmpty) {
-      return _EmptyState(
+      return const _EmptyState(
         icon: Icons.monitor_weight_outlined,
         title: 'No weight data',
         message: 'Log weight from the journal tab to monitor healthy gain.',
@@ -2837,7 +2892,7 @@ class _SleepPatternCard extends StatelessWidget {
     final sleepEntries =
         entries.where((entry) => entry.sleepHours != null).take(7).toList();
     if (sleepEntries.isEmpty) {
-      return _EmptyState(
+      return const _EmptyState(
         icon: Icons.nightlight_outlined,
         title: 'No sleep logs',
         message: 'Record sleep hours to spot fatigue patterns.',
@@ -2937,7 +2992,7 @@ class _AIPregnancyAssistantCard extends StatelessWidget {
                 context.push('/ai-chat/pregnancy', extra: chatContext);
               },
               icon: const Icon(Icons.chat_bubble_outline),
-              label: const Text('Open AI assistant'),
+              label: const Text('Open FemCare+ assistant'),
             ),
           ],
         ),
@@ -3111,8 +3166,8 @@ class _SliderInput extends StatelessWidget {
   }
 }
 
-class _CommunityCard extends StatelessWidget {
-  const _CommunityCard();
+class CommunityCard extends StatelessWidget {
+  const CommunityCard({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -3131,7 +3186,7 @@ class _CommunityCard extends StatelessWidget {
             ),
             ResponsiveConfig.heightBox(8),
             Text(
-              'Get to interract with mothers and other pregnant women to share and gather experiences.',
+              'Get to interact with mothers and other pregnant women to share and gather experiences.',
               style: ResponsiveConfig.textStyle(
                 size: 14,
                 color: AppTheme.mediumGray,
@@ -3142,13 +3197,13 @@ class _CommunityCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 ElevatedButton.icon(
-                  onPressed: () => context.push('/groups', extra: 'pregnancy'),
+                  onPressed: () => context.push('/groups'),
                   icon: const Icon(Icons.groups_outlined),
                   label: const Text('Join forum'),
                 ),
                 ResponsiveConfig.heightBox(8),
                 OutlinedButton.icon(
-                  onPressed: () => context.push('/events', extra: 'pregnancy'),
+                  onPressed: () => context.push('/events'),
                   icon: const Icon(Icons.event_outlined),
                   label: const Text('Upcoming events'),
                 ),

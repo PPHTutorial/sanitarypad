@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import '../../../../app/themes/app_colors.dart';
+import 'package:sanitarypad/core/config/responsive_config.dart';
 import '../../../../app/themes/app_dimensions.dart';
 import '../../../../app/themes/app_text_styles.dart';
 import '../../../../core/constants/tmdb_endpoints.dart';
@@ -14,7 +14,7 @@ class WallpaperGridItem extends ConsumerWidget {
   final Movie movie;
   final VoidCallback? onTap;
   final bool showFavoriteButton;
-  
+
   const WallpaperGridItem({
     super.key,
     required this.movie,
@@ -54,36 +54,36 @@ class WallpaperGridItem extends ConsumerWidget {
                 )
               else
                 Container(
-                  color: AppColors.darkCard,
-                  child: const Center(
+                  color: Theme.of(context).colorScheme.primary,
+                  child: Center(
                     child: Icon(
                       Icons.movie_outlined,
-                      color: AppColors.textDisabled,
+                      color: Theme.of(context).colorScheme.error,
                       size: 40,
                     ),
                   ),
                 ),
-              
+
               // Gradient overlay
               Positioned(
                 bottom: 0,
                 left: 0,
                 right: 0,
                 child: Container(
-                  height: 105.h,
+                  height: ResponsiveConfig.height(105),
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                       colors: [
                         Colors.transparent,
-                        Colors.black.withOpacity(0.8),
+                        Colors.black.withOpacity(0.9),
                       ],
                     ),
                   ),
                 ),
               ),
-              
+
               // Movie info
               Positioned(
                 bottom: 0,
@@ -99,7 +99,16 @@ class WallpaperGridItem extends ConsumerWidget {
                       Text(
                         movie.title,
                         style: AppTextStyles.labelMedium.copyWith(
-                          color: AppColors.textPrimary,
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Text(
+                        movie.releaseDate.toString(),
+                        style: AppTextStyles.labelMedium.copyWith(
+                          color: Colors.white,
                           fontWeight: FontWeight.w600,
                         ),
                         maxLines: 2,
@@ -112,13 +121,13 @@ class WallpaperGridItem extends ConsumerWidget {
                           Icon(
                             Icons.star,
                             size: 14.w,
-                            color: AppColors.ratingGold,
+                            color: Colors.orange,
                           ),
                           SizedBox(width: 4.w),
                           Text(
                             movie.formattedRating,
                             style: AppTextStyles.caption.copyWith(
-                              color: AppColors.textPrimary,
+                              color: Theme.of(context).colorScheme.primary,
                             ),
                           ),
                           if (movie.releaseYear != null) ...[
@@ -126,7 +135,7 @@ class WallpaperGridItem extends ConsumerWidget {
                             Text(
                               '• ${movie.releaseYear}',
                               style: AppTextStyles.caption.copyWith(
-                                color: AppColors.textSecondary,
+                                color: Theme.of(context).colorScheme.primary,
                               ),
                             ),
                           ],
@@ -136,7 +145,7 @@ class WallpaperGridItem extends ConsumerWidget {
                   ),
                 ),
               ),
-              
+
               // Favorite button
               if (showFavoriteButton)
                 Positioned(
@@ -150,13 +159,17 @@ class WallpaperGridItem extends ConsumerWidget {
                     child: IconButton(
                       icon: Icon(
                         isFavorite ? Icons.favorite : Icons.favorite_border,
-                        color: isFavorite ? AppColors.error : Colors.white,
+                        color: isFavorite
+                            ? Theme.of(context).colorScheme.error
+                            : Colors.white,
                       ),
                       iconSize: 20.w,
                       padding: EdgeInsets.all(AppDimensions.space8),
                       constraints: const BoxConstraints(),
                       onPressed: () {
-                        ref.read(favoritesProviders.notifier).toggleFavorite(movie);
+                        ref
+                            .read(favoritesProviders.notifier)
+                            .toggleFavorite(movie);
                       },
                     ),
                   ),
@@ -168,4 +181,3 @@ class WallpaperGridItem extends ConsumerWidget {
     );
   }
 }
-

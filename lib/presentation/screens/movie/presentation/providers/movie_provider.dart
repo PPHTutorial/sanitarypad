@@ -164,8 +164,8 @@ class MovieScraperSource {
     final bodyStr = body.entries
         .map((e) => '${e.key}=${Uri.encodeComponent(e.value)}')
         .join('&');
-    final key = 'discover_${body['sort_by']}_${watchRegion}_page_${page}';
-    final url = 'https://www.themoviedb.org/discover/movie';
+    final key = 'discover_${body['sort_by']}_${watchRegion}_page_$page';
+    const url = 'https://www.themoviedb.org/discover/movie';
     final models = await _scraper.fetchAndCacheMoviesHtmlPaged(
       endpointKey: key,
       url: url,
@@ -240,7 +240,7 @@ class MovieScraperSource {
     final url = 'https://www.themoviedb.org/movie?$queryString';
     // endpointKey should NOT include page number - it's used for the cache box name
     // The page number is handled internally by fetchAndCacheMoviesHtmlPaged
-    final endpointKey = 'discover_movie_${sortBy}_${watchRegion}';
+    final endpointKey = 'discover_movie_${sortBy}_$watchRegion';
     final uniqueComposite = endpointKey; // Same for all pages of this query
 
     print('🌐 [getDiscoverViaMovieUrl] URL: $url');
@@ -300,7 +300,7 @@ class MovieScraperSource {
     final DateFormat fmt = DateFormat('yyyy-MM-dd');
     final now = DateTime.now();
     final gte = fmt.format(now);
-    final lte = fmt.format(now.add(Duration(days: 180)));
+    final lte = fmt.format(now.add(const Duration(days: 180)));
     final body = {
       'air_date.gte': '',
       'air_date.lte': '',
@@ -337,7 +337,7 @@ class MovieScraperSource {
         .join('&');
     final key =
         'release_date.gte=$gte&release_date.lte=$lte&show_me=everything&sort_by=popularity.desc';
-    final url = 'https://www.themoviedb.org/movie?${key}';
+    final url = 'https://www.themoviedb.org/movie?$key';
     final models = await _scraper.fetchAndCacheMoviesHtmlPaged(
       endpointKey: '',
       url: url,
@@ -351,7 +351,7 @@ class MovieScraperSource {
       uniqueComposite: '',
       forceNetwork: CachePolicyService.instance.consumeForceNetwork(),
     );
-    print('urls: ${url}');
+    print('urls: $url');
     return models.map((m) => m.toEntity()).toList();
   }
 }

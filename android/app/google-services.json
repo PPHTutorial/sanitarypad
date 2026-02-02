@@ -20,6 +20,22 @@
       ],
       "api_key": [
         {
+          "client_id": "494775919926-2bjp68s2i1vlkensmlciptub50vj61r4.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.codeink.stsl.sanitarypad",
+            "certificate_hash": "c7c45707c56e946b50370c2989e74fbaa7c0abbd"
+          }
+        },
+        {
+          "client_id": "1083709001383-oed72pcl1t9c16lmprcro5jf01d255lh.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.codeink.technologes.sanitarypad",
+            "certificate_hash": "242083940ec3592c9a3081cb13b7dde294eb95b6"
+          }
+        },
+        {
           "current_key": "AIzaSyAapYscVQleBPGKnN6A98cWeTMIr2a0jcQ"
         }
       ],

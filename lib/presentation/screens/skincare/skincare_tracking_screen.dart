@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:math';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -6,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:logger/web.dart';
 
 import '../../../core/config/responsive_config.dart';
 import '../../../core/providers/auth_provider.dart';
@@ -18,6 +20,8 @@ import '../../../services/reminder_service.dart';
 import '../../../services/skincare_service.dart';
 import '../reminders/create_reminder_dialog.dart';
 import 'skincare_product_management_screen.dart' show ProductInventoryView;
+import 'package:flutter_markdown/flutter_markdown.dart';
+import '../../../services/ads_service.dart';
 
 class SkincareTrackingScreen extends ConsumerStatefulWidget {
   const SkincareTrackingScreen({super.key});
@@ -40,6 +44,10 @@ class _SkincareTrackingScreenState extends ConsumerState<SkincareTrackingScreen>
     super.initState();
     _enhancedService = SkincareEnhancedService(FirebaseFirestore.instance);
     _tabController = TabController(length: 4, vsync: this);
+    _tabController.addListener(() {
+      if (!mounted) return;
+      setState(() {});
+    });
   }
 
   @override
@@ -83,12 +91,14 @@ class _SkincareTrackingScreenState extends ConsumerState<SkincareTrackingScreen>
       child: Scaffold(
         appBar: AppBar(
           title: const Text('SkinCare+ Hub'),
+          actions: [
+            _buildAppBarAction(user.userId),
+          ],
           bottom: PreferredSize(
             preferredSize: const Size.fromHeight(72),
             child: _buildModernTabSwitcher(context),
           ),
         ),
-        floatingActionButton: _buildFab(user.userId),
         body: TabBarView(
           controller: _tabController,
           children: [
@@ -103,9 +113,6 @@ class _SkincareTrackingScreenState extends ConsumerState<SkincareTrackingScreen>
               journalStream: journalStream,
               hydrationStream: hydrationStream,
               reminderService: _reminderService,
-              onAnalyzeSkin: () => _showSkinTypeSheet(context, user.userId),
-              onLogAcne: () => _showAcneSheet(context, user.userId),
-              onLogUV: () => _showUVSheet(context, user.userId),
               onAddGoal: () => _showGoalSheet(context, user.userId),
               onAddProduct: () => context.push('/skincare-product-form'),
               onManageProducts: () =>
@@ -114,6 +121,9 @@ class _SkincareTrackingScreenState extends ConsumerState<SkincareTrackingScreen>
                   _openProductManager(context, view: view),
               onLogHydration: () => context.push('/wellness-journal'),
               onViewHydrationLogs: () => context.push('/wellness-journal-list'),
+              onAnalyzeSkin: () => _showRewardedAnalysis(context),
+              onLogAcne: () => _showAcneSheet(context, user.userId),
+              onLogUV: () => _showUVSheet(context, user.userId),
             ),
             _JournalTab(
               userId: user.userId,
@@ -177,35 +187,48 @@ class _SkincareTrackingScreenState extends ConsumerState<SkincareTrackingScreen>
     );
   }
 
-  FloatingActionButton? _buildFab(String userId) {
+  Widget _buildAppBarAction(String userId) {
     switch (_tabController.index) {
       case 0:
-        return FloatingActionButton.extended(
-          onPressed: () => _showQuickActionsSheet(context, userId),
+        return IconButton(
           icon: const Icon(Icons.add_circle_outline),
-          label: const Text('Quick Actions'),
+          tooltip: 'Quick Actions',
+          onPressed: () => _showQuickActionsSheet(context, userId),
         );
       case 1:
-        return FloatingActionButton.extended(
-          onPressed: () => _showJournalSheet(context, userId),
+        return IconButton(
           icon: const Icon(Icons.edit_note_outlined),
-          label: const Text('Log Journal'),
+          tooltip: 'Log Journal',
+          onPressed: () => _showJournalSheet(context, userId),
         );
       case 2:
-        return FloatingActionButton.extended(
-          onPressed: () => _showRoutineTemplateSheet(context, userId),
+        return IconButton(
           icon: const Icon(Icons.auto_fix_high_outlined),
-          label: const Text('New Routine'),
+          tooltip: 'New Routine',
+          onPressed: () => _showRoutineTemplateSheet(context, userId),
         );
       case 3:
-        return FloatingActionButton.extended(
-          onPressed: () => _showQuickActionsSheet(context, userId),
+        return IconButton(
           icon: const Icon(Icons.playlist_add_outlined),
-          label: const Text('Quick Actions'),
+          tooltip: 'Quick Actions',
+          onPressed: () => _showQuickActionsSheet(context, userId),
         );
       default:
-        return null;
+        return const SizedBox.shrink();
     }
+  }
+
+  void _showRewardedAnalysis(BuildContext context) {
+    AdsService().showRewardedAd(
+      onUserEarnedReward: (reward) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text(
+                  'Reward earned: ${reward.amount} ${reward.type}! Unlocking analysis...')),
+        );
+        // Logic to trigger analysis could go here
+      },
+    );
   }
 
   Future<void> _scheduleHydrationReminder(String userId) async {
@@ -737,6 +760,7 @@ class _SkincareTrackingScreenState extends ConsumerState<SkincareTrackingScreen>
   Future<void> _showIngredientSearchSheet(BuildContext context) async {
     final searchController = TextEditingController();
     String query = '';
+    bool loading = false;
 
     await showModalBottomSheet(
       context: context,
@@ -754,63 +778,81 @@ class _SkincareTrackingScreenState extends ConsumerState<SkincareTrackingScreen>
           ),
           child: StatefulBuilder(
             builder: (context, setState) {
-              return SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextField(
+              Future<void> performSearch(String value) async {
+                setState(() {
+                  loading = true;
+                });
+
+                // Simulate an async search (replace with your actual search logic)
+                await Future.delayed(const Duration(seconds: 2));
+
+                setState(() {
+                  query = value.trim();
+                  loading = false;
+                });
+              }
+
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    "Ingredients Dictionary",
+                    style: ResponsiveConfig.textStyle(
+                        size: 25, weight: FontWeight.w900),
+                  ),
+                  ResponsiveConfig.heightBox(24),
+                  TextField(
                       controller: searchController,
                       decoration: InputDecoration(
                         labelText: 'Search ingredient',
                         suffixIcon: IconButton(
                           icon: const Icon(Icons.search),
-                          onPressed: () => setState(
-                              () => query = searchController.text.trim()),
+                          onPressed: () => loading
+                              ? null
+                              : performSearch(searchController.text.trim()),
                         ),
                       ),
                       onSubmitted: (value) =>
-                          setState(() => query = value.trim()),
-                    ),
-                    ResponsiveConfig.heightBox(16),
-                    StreamBuilder<List<Ingredient>>(
-                      stream: _enhancedService.getIngredients(
-                        searchTerm: query.isEmpty ? null : query,
-                      ),
+                          loading ? null : performSearch(value.trim())),
+                  ResponsiveConfig.heightBox(16),
+                  SizedBox(
+                    height: ResponsiveConfig.screenHeight * 0.55,
+                    child: FutureBuilder<String>(
+                      future: _enhancedService.getAIIngredients(ref, query),
                       builder: (context, snapshot) {
-                        final ingredients = snapshot.data ?? [];
-                        if (ingredients.isEmpty) {
+                        final ingredients = snapshot.data;
+                        Logger().t(ingredients);
+                        setState(() {
+                          loading = false;
+                        });
+
+                        if (ingredients == null) {
                           return Text(query.isEmpty
                               ? 'Enter an ingredient name to see details.'
                               : 'No ingredient found for "$query".');
                         }
-                        return SizedBox(
-                          height: min(ingredients.length * 60, 320),
-                          child: ListView.builder(
-                            itemCount: ingredients.length,
-                            itemBuilder: (context, index) {
-                              final ingredient = ingredients[index];
-                              return ListTile(
-                                title: Text(ingredient.name),
-                                subtitle: Text(
-                                  ingredient.benefits ?? 'No description',
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                trailing: ingredient.comedogenicRating != null
-                                    ? Chip(
-                                        label: Text(
-                                          'Comedo ${ingredient.comedogenicRating}',
-                                        ),
-                                      )
-                                    : null,
-                              );
-                            },
-                          ),
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          // Show loading spinner while waiting
+                          return const Center(
+                              child: CircularProgressIndicator());
+                        }
+                        if (snapshot.hasError) {
+                          // Show error message if something went wrong
+                          return Center(
+                            child: Text(
+                              'Error: ${snapshot.error}',
+                              style: const TextStyle(color: Colors.red),
+                            ),
+                          );
+                        }
+                        return SingleChildScrollView(
+                          child: MarkdownBody(data: ingredients),
                         );
                       },
                     ),
-                  ],
-                ),
+                  ),
+                ],
               );
             },
           ),
@@ -967,8 +1009,9 @@ class _SkincareTrackingScreenState extends ConsumerState<SkincareTrackingScreen>
                     validator: (value) {
                       final parsed = int.tryParse(value ?? '');
                       if (parsed == null) return 'Enter a number';
-                      if (parsed < 0 || parsed > 12)
+                      if (parsed < 0 || parsed > 12) {
                         return 'UV index must be 0-12';
+                      }
                       return null;
                     },
                   ),
@@ -2363,7 +2406,7 @@ class _GoalCard extends StatelessWidget {
                   'Target: ${DateFormat('MMM d, y').format(goal.targetDate)} • Status: ${goal.status}',
                 ),
               );
-            }).toList(),
+            }),
           ],
         ),
       ),
@@ -2911,7 +2954,7 @@ class _HydrationTrendChart extends StatelessWidget {
                       },
                     ),
                   ),
-                  gridData: FlGridData(
+                  gridData: const FlGridData(
                     show: true,
                     horizontalInterval: 2,
                   ),
@@ -2956,7 +2999,7 @@ class _HydrationTrendChart extends StatelessWidget {
                       isCurved: true,
                       color: AppTheme.primaryPink,
                       barWidth: 3,
-                      dotData: FlDotData(show: true),
+                      dotData: const FlDotData(show: true),
                       belowBarData: BarAreaData(
                         show: true,
                         color: AppTheme.primaryPink.withOpacity(0.15),
@@ -3175,14 +3218,16 @@ class _AIDermatologistCard extends StatelessWidget {
               ),
             ),
             ResponsiveConfig.heightBox(8),
-            Text(
-              'Coming soon: chat with FemCare+ AI to interpret logs, forecast flare ups, and suggest active ingredients.',
+            const Text(
+              'A Dermatologist persona system prompt, risk-free medical compliance version and a FemCare+ branded tone version, chat your FemCare AI now.',
             ),
             ResponsiveConfig.heightBox(12),
             ElevatedButton.icon(
-              onPressed: () {},
+              onPressed: () {
+                context.push("/ai-chat/dermatologist");
+              },
               icon: const Icon(Icons.smart_toy_outlined),
-              label: const Text('Join waitlist'),
+              label: const Text('Ask FermCare+'),
             ),
           ],
         ),
@@ -3210,7 +3255,7 @@ class _ARPreviewCard extends StatelessWidget {
               ),
             ),
             ResponsiveConfig.heightBox(8),
-            Text(
+            const Text(
               'Preview routine results with augmented reality overlays and shade matching (beta).',
             ),
             ResponsiveConfig.heightBox(12),
@@ -3261,7 +3306,7 @@ class _UVAnalyticsCard extends StatelessWidget {
               ),
             ),
             ResponsiveConfig.heightBox(12),
-            Text(
+            const Text(
               'Apply broad spectrum SPF 30+ when UV > 3 and reapply every two hours outdoors.',
             ),
           ],

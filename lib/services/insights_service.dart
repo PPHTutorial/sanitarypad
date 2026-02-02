@@ -1,3 +1,4 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/models/cycle_model.dart';
 import '../data/models/wellness_model.dart';
 import '../data/models/skincare_model.dart';
@@ -8,6 +9,10 @@ import 'fertility_service.dart';
 import 'skincare_service.dart';
 import 'pad_service.dart';
 import 'auth_service.dart';
+
+final insightsServiceProvider = Provider<InsightsService>((ref) {
+  return InsightsService();
+});
 
 /// Comprehensive insights service
 class InsightsService {

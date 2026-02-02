@@ -323,6 +323,13 @@ class _SkincareProductManagementScreenState
     return Scaffold(
       appBar: AppBar(
         title: Text(_viewTitle(widget.view)),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.add_circle_outline),
+            tooltip: 'Add product',
+            onPressed: () => _openEditor(context, null),
+          ),
+        ],
       ),
       body: userAsync.when(
         data: (user) {
@@ -449,8 +456,8 @@ class _SkincareProductManagementScreenState
                     children: [
                       searchSection,
                       if (insights != null) insights,
-                      Expanded(
-                        child: const _EmptyInventoryState(),
+                      const Expanded(
+                        child: _EmptyInventoryState(),
                       ),
                     ],
                   ),
@@ -493,11 +500,6 @@ class _SkincareProductManagementScreenState
         error: (err, _) => Center(
           child: Text('Error loading user: $err'),
         ),
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _openEditor(context, null),
-        icon: const Icon(Icons.add_circle_outline),
-        label: const Text('Add product'),
       ),
     );
   }

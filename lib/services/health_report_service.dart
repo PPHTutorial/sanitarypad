@@ -115,7 +115,7 @@ class HealthReportService {
         pw.SizedBox(height: 8),
         pw.Text(
           'Comprehensive Health & Wellness Analysis',
-          style: pw.TextStyle(fontSize: 14, color: PdfColors.grey700),
+          style: const pw.TextStyle(fontSize: 14, color: PdfColors.grey700),
         ),
       ],
     );
@@ -141,12 +141,12 @@ class HealthReportService {
           pw.SizedBox(height: 4),
           pw.Text(
             '${DateFormat('MMM dd, yyyy').format(startDate)} - ${DateFormat('MMM dd, yyyy').format(endDate)}',
-            style: pw.TextStyle(fontSize: 11),
+            style: const pw.TextStyle(fontSize: 11),
           ),
           pw.SizedBox(height: 4),
           pw.Text(
             'Generated: ${DateFormat('MMM dd, yyyy HH:mm').format(DateTime.now())}',
-            style: pw.TextStyle(fontSize: 10, color: PdfColors.grey600),
+            style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey600),
           ),
         ],
       ),
@@ -296,7 +296,7 @@ class HealthReportService {
               padding: const pw.EdgeInsets.only(bottom: 4),
               child: pw.Text(
                 '• $rec',
-                style: pw.TextStyle(fontSize: 11),
+                style: const pw.TextStyle(fontSize: 11),
               ),
             )),
       ],
@@ -322,7 +322,7 @@ class HealthReportService {
           pw.SizedBox(height: 4),
           pw.Text(
             label,
-            style: pw.TextStyle(fontSize: 9, color: PdfColors.grey700),
+            style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700),
           ),
         ],
       ),

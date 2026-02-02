@@ -29,9 +29,9 @@ class WellnessScreen extends ConsumerWidget {
             IconButton(
               icon: const Icon(Icons.add),
               onPressed: () {
-                context.push('/wellness-content-management');
+                context.push('/wellness-content-form');
               },
-              tooltip: 'Manage Content',
+              tooltip: 'Add Content',
             ),
           ],
           bottom: PreferredSize(
@@ -74,21 +74,24 @@ class WellnessScreen extends ConsumerWidget {
         bottomNavigationBar: const FemCareBottomNav(currentRoute: '/wellness'),
         body: TabBarView(
           children: [
-            _buildContentList(context, contentService, null, isPremium),
+            _buildContentList(context, ref, contentService, null, isPremium),
             _buildContentList(
               context,
+              ref,
               contentService,
               AppConstants.contentTypeTip,
               isPremium,
             ),
             _buildContentList(
               context,
+              ref,
               contentService,
               AppConstants.contentTypeArticle,
               isPremium,
             ),
             _buildContentList(
               context,
+              ref,
               contentService,
               AppConstants.contentTypeMeditation,
               isPremium,
@@ -101,6 +104,7 @@ class WellnessScreen extends ConsumerWidget {
 
   Widget _buildContentList(
     BuildContext context,
+    WidgetRef ref,
     WellnessContentService service,
     String? type,
     bool isPremium,
@@ -152,7 +156,7 @@ class WellnessScreen extends ConsumerWidget {
           itemCount: contents.length,
           itemBuilder: (context, index) {
             final content = contents[index];
-            return _buildContentCard(context, content, isPremium);
+            return _buildContentCard(context, ref, content, isPremium);
           },
         );
       },
@@ -161,6 +165,7 @@ class WellnessScreen extends ConsumerWidget {
 
   Widget _buildContentCard(
     BuildContext context,
+    WidgetRef ref,
     WellnessContent content,
     bool isPremium,
   ) {
@@ -189,15 +194,30 @@ class WellnessScreen extends ConsumerWidget {
               Row(
                 children: [
                   Expanded(
-                    child: Text(
-                      content.title,
-                      style: ResponsiveConfig.textStyle(
-                        size: 18,
-                        weight: FontWeight.bold,
-                      ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          content.title,
+                          style: ResponsiveConfig.textStyle(
+                            size: 18,
+                            weight: FontWeight.bold,
+                          ),
+                        ),
+                        if (content.category != null) ...[
+                          ResponsiveConfig.heightBox(4),
+                          Text(
+                            content.category!,
+                            style: ResponsiveConfig.textStyle(
+                              size: 12,
+                              color: AppTheme.primaryPink,
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
-                  if (showPremiumBadge)
+                  if (showPremiumBadge) ...[
                     Container(
                       padding: ResponsiveConfig.padding(
                         horizontal: 8,
@@ -216,19 +236,30 @@ class WellnessScreen extends ConsumerWidget {
                         ),
                       ),
                     ),
+                    ResponsiveConfig.widthBox(8),
+                  ],
+                  if (content.userId ==
+                      ref.read(authServiceProvider).currentUser?.uid) ...[
+                    IconButton(
+                      icon: const Icon(Icons.edit_outlined, size: 20),
+                      visualDensity: VisualDensity.compact,
+                      onPressed: () {
+                        context.push('/wellness-content-form', extra: content);
+                      },
+                      tooltip: 'Edit',
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline,
+                          size: 20, color: AppTheme.errorRed),
+                      visualDensity: VisualDensity.compact,
+                      onPressed: () =>
+                          _showDeleteConfirmation(context, ref, content),
+                      tooltip: 'Delete',
+                    ),
+                  ],
                 ],
               ),
-              if (content.category != null) ...[
-                ResponsiveConfig.heightBox(8),
-                Text(
-                  content.category!,
-                  style: ResponsiveConfig.textStyle(
-                    size: 12,
-                    color: AppTheme.primaryPink,
-                  ),
-                ),
-              ],
-              ResponsiveConfig.heightBox(8),
+              ResponsiveConfig.heightBox(12),
               Text(
                 content.content.length > 150
                     ? '${content.content.substring(0, 150)}...'
@@ -263,6 +294,48 @@ class WellnessScreen extends ConsumerWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  void _showDeleteConfirmation(
+      BuildContext context, WidgetRef ref, WellnessContent content) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Content'),
+        content: Text('Are you sure you want to delete "${content.title}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              try {
+                await WellnessContentService().deleteContent(content.id);
+                if (context.mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                        content: Text('Content deleted successfully')),
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error: ${e.toString()}'),
+                      backgroundColor: AppTheme.errorRed,
+                    ),
+                  );
+                }
+              }
+            },
+            child: const Text('Delete', style: TextStyle(color: AppTheme.errorRed)),
+          ),
+        ],
       ),
     );
   }

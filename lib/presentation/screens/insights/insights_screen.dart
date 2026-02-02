@@ -8,6 +8,7 @@ import '../../../core/providers/cycle_provider.dart';
 import '../../../core/widgets/femcare_bottom_nav.dart';
 import '../../../core/widgets/back_button_handler.dart';
 import '../../../services/insights_service.dart';
+import '../../../services/ads_service.dart';
 
 /// Comprehensive insights and analytics screen
 class InsightsScreen extends ConsumerStatefulWidget {
@@ -18,10 +19,9 @@ class InsightsScreen extends ConsumerStatefulWidget {
 }
 
 class _InsightsScreenState extends ConsumerState<InsightsScreen> {
-  final _insightsService = InsightsService();
-
   @override
   Widget build(BuildContext context) {
+    final insightsService = ref.watch(insightsServiceProvider);
     final cyclesAsync = ref.watch(cyclesStreamProvider);
     final cycles = cyclesAsync.value ?? [];
 
@@ -34,7 +34,7 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
         ),
         bottomNavigationBar: const FemCareBottomNav(currentRoute: '/insights'),
         body: FutureBuilder<Map<String, dynamic>>(
-          future: _insightsService.getComprehensiveInsights(),
+          future: insightsService.getComprehensiveInsights(),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());
@@ -90,6 +90,8 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
                       context,
                       insights['overallHealth'] as double,
                     ),
+                  ResponsiveConfig.heightBox(16),
+                  const NativeAdWidget(),
                   if (insights['overallHealth'] != null)
                     ResponsiveConfig.heightBox(16),
 
@@ -203,21 +205,23 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
     double score,
   ) {
     return Card(
-      shadowColor: Colors.black.withValues(alpha: 0.08),
-      margin: const EdgeInsets.only(bottom: 0),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: ResponsiveConfig.borderRadius(16),
+        side: BorderSide(color: AppTheme.mediumGray.withValues(alpha: 0.08)),
+      ),
       child: Padding(
         padding: ResponsiveConfig.padding(all: 20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Overall Health Score',
-              style: ResponsiveConfig.textStyle(
-                size: 18,
-                weight: FontWeight.w600,
-              ),
+            _buildCardHeader(
+              context,
+              title: 'Overall Health Score',
+              icon: Icons.health_and_safety,
+              color: _getScoreColor(score),
             ),
-            ResponsiveConfig.heightBox(24),
+            ResponsiveConfig.heightBox(4),
             Center(
               child: _buildCustomHealthScoreCircle(score),
             ),
@@ -228,6 +232,7 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
                 style: ResponsiveConfig.textStyle(
                   size: 14,
                   color: AppTheme.mediumGray,
+                  weight: FontWeight.w500,
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -258,66 +263,62 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
     List cycles,
   ) {
     return Card(
-      shadowColor: Colors.black.withValues(alpha: 0.08),
-      margin: const EdgeInsets.only(bottom: 0),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: ResponsiveConfig.borderRadius(16),
+        side: BorderSide(color: AppTheme.mediumGray.withValues(alpha: 0.08)),
+      ),
       child: Padding(
         padding: ResponsiveConfig.padding(all: 20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            _buildCardHeader(
+              context,
+              title: 'Cycle Statistics',
+              icon: Icons.calendar_today,
+              color: AppTheme.primaryPink,
+            ),
             Row(
               children: [
-                Icon(
-                  Icons.calendar_today,
-                  color: AppTheme.primaryPink,
-                  size: ResponsiveConfig.iconSize(24),
+                Expanded(
+                  child: _buildStatTile(
+                    context,
+                    label: 'Avg Cycle',
+                    value: '${cycleData['averageCycleLength'] ?? 0}',
+                    subtitle: 'DAYS',
+                    icon: Icons.timeline,
+                  ),
                 ),
-                ResponsiveConfig.widthBox(8),
-                Text(
-                  'Cycle Statistics',
-                  style: ResponsiveConfig.textStyle(
-                    size: 18,
-                    weight: FontWeight.w600,
+                ResponsiveConfig.widthBox(12),
+                Expanded(
+                  child: _buildStatTile(
+                    context,
+                    label: 'Avg Period',
+                    value: '${cycleData['averagePeriodLength'] ?? 0}',
+                    subtitle: 'DAYS',
+                    icon: Icons.water_drop,
+                  ),
+                ),
+                ResponsiveConfig.widthBox(12),
+                Expanded(
+                  child: _buildStatTile(
+                    context,
+                    label: 'History',
+                    value: '${cycleData['totalCycles'] ?? 0}',
+                    subtitle: 'CYCLES',
+                    icon: Icons.history,
                   ),
                 ),
               ],
             ),
-            ResponsiveConfig.heightBox(16),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildStatItem(
-                    context,
-                    'Avg Cycle',
-                    '${cycleData['averageCycleLength'] ?? 0} days',
-                    Icons.timeline,
-                  ),
-                ),
-                Expanded(
-                  child: _buildStatItem(
-                    context,
-                    'Avg Period',
-                    '${cycleData['averagePeriodLength'] ?? 0} days',
-                    Icons.water_drop,
-                  ),
-                ),
-                Expanded(
-                  child: _buildStatItem(
-                    context,
-                    'Total',
-                    '${cycleData['totalCycles'] ?? 0} cycles',
-                    Icons.history,
-                  ),
-                ),
-              ],
-            ),
-            ResponsiveConfig.heightBox(16),
+            ResponsiveConfig.heightBox(20),
             _buildRegularityIndicator(
               context,
               cycleData['regularity'] as String? ?? '',
             ),
             if (cycles.length >= 2) ...[
-              ResponsiveConfig.heightBox(16),
+              _buildDivider(),
               _buildCycleLengthChart(context, cycles),
             ],
           ],
@@ -331,113 +332,141 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
     Map<String, dynamic> wellnessData,
   ) {
     return Card(
-      shadowColor: Colors.black.withValues(alpha: 0.08),
-      margin: const EdgeInsets.only(bottom: 0),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: ResponsiveConfig.borderRadius(16),
+        side: BorderSide(color: AppTheme.mediumGray.withValues(alpha: 0.08)),
+      ),
       child: Padding(
         padding: ResponsiveConfig.padding(all: 20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            _buildCardHeader(
+              context,
+              title: 'Wellness Insights',
+              icon: Icons.auto_awesome,
+              color: AppTheme.infoBlue,
+            ),
             Row(
               children: [
-                Icon(
-                  Icons.favorite,
-                  color: AppTheme.primaryPink,
-                  size: ResponsiveConfig.iconSize(24),
+                Expanded(
+                  child: _buildStatTile(
+                    context,
+                    label: 'Hydration',
+                    value:
+                        '${wellnessData['averageHydration']?.toStringAsFixed(1) ?? '0'}',
+                    subtitle: 'GLASSES',
+                    icon: Icons.water_drop,
+                    color: AppTheme.infoBlue,
+                  ),
                 ),
-                ResponsiveConfig.widthBox(8),
-                Text(
-                  'Wellness Insights',
-                  style: ResponsiveConfig.textStyle(
-                    size: 18,
-                    weight: FontWeight.w600,
+                ResponsiveConfig.widthBox(12),
+                Expanded(
+                  child: _buildStatTile(
+                    context,
+                    label: 'Sleep',
+                    value:
+                        '${wellnessData['averageSleep']?.toStringAsFixed(1) ?? '0'}',
+                    subtitle: 'HOURS',
+                    icon: Icons.bedtime,
+                    color: AppTheme.lavender,
+                  ),
+                ),
+                ResponsiveConfig.widthBox(12),
+                Expanded(
+                  child: _buildStatTile(
+                    context,
+                    label: 'Energy',
+                    value:
+                        '${wellnessData['averageEnergy']?.toStringAsFixed(1) ?? '0'}',
+                    subtitle: '/ 5',
+                    icon: Icons.bolt,
+                    color: AppTheme.warningOrange,
                   ),
                 ),
               ],
             ),
-            ResponsiveConfig.heightBox(20),
+            ResponsiveConfig.heightBox(12),
             Row(
               children: [
                 Expanded(
-                  child: _buildStatItem(
+                  child: _buildStatTile(
                     context,
-                    'Hydration',
-                    '${wellnessData['averageHydration']?.toStringAsFixed(1) ?? '0'} glasses',
-                    Icons.water_drop,
+                    label: 'Wellness Score',
+                    value: '${wellnessData['wellnessScore']?.round() ?? 0}',
+                    subtitle: '/ 100',
+                    icon: Icons.star,
                   ),
                 ),
+                ResponsiveConfig.widthBox(12),
                 Expanded(
-                  child: _buildStatItem(
+                  child: _buildStatTile(
                     context,
-                    'Sleep',
-                    '${wellnessData['averageSleep']?.toStringAsFixed(1) ?? '0'} hrs',
-                    Icons.bedtime,
-                  ),
-                ),
-                Expanded(
-                  child: _buildStatItem(
-                    context,
-                    'Energy',
-                    '${wellnessData['averageEnergy']?.toStringAsFixed(1) ?? '0'}/5',
-                    Icons.bolt,
-                  ),
-                ),
-              ],
-            ),
-            ResponsiveConfig.heightBox(36),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildStatItem(
-                    context,
-                    'Wellness Score',
-                    '${wellnessData['wellnessScore']?.round() ?? 0}/100',
-                    Icons.star,
-                  ),
-                ),
-                Expanded(
-                  child: _buildStatItem(
-                    context,
-                    'Exercise',
-                    '${wellnessData['exerciseFrequency']?.toStringAsFixed(0) ?? '0'}%',
-                    Icons.fitness_center,
+                    label: 'Exercise',
+                    value:
+                        '${wellnessData['exerciseFrequency']?.toStringAsFixed(0) ?? '0'}%',
+                    subtitle: 'CONSISTENCY',
+                    icon: Icons.fitness_center,
+                    color: AppTheme.successGreen,
                   ),
                 ),
               ],
             ),
             if ((wellnessData['mostCommonMoods'] as List?)?.isNotEmpty ==
                 true) ...[
-              ResponsiveConfig.heightBox(24),
+              _buildDivider(),
               Text(
-                'Most Common Moods',
+                'DOMINANT MOODS',
                 style: ResponsiveConfig.textStyle(
-                  size: 14,
-                  weight: FontWeight.w600,
+                  size: 11,
+                  weight: FontWeight.w700,
+                  color: AppTheme.mediumGray,
+                  letterSpacing: 0.5,
                 ),
               ),
-              ResponsiveConfig.heightBox(8),
+              ResponsiveConfig.heightBox(16),
               ...(wellnessData['mostCommonMoods'] as List)
                   .take(3)
                   .map((mood) => Padding(
-                        padding: ResponsiveConfig.padding(vertical: 4),
+                        padding: ResponsiveConfig.padding(bottom: 12),
                         child: Row(
                           children: [
-                            Icon(
-                              Icons.mood,
-                              size: ResponsiveConfig.iconSize(16),
-                              color: AppTheme.primaryPink,
+                            Container(
+                              padding: ResponsiveConfig.padding(all: 6),
+                              decoration: BoxDecoration(
+                                color:
+                                    AppTheme.primaryPink.withValues(alpha: 0.1),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                Icons.mood,
+                                size: ResponsiveConfig.iconSize(14),
+                                color: AppTheme.primaryPink,
+                              ),
                             ),
-                            ResponsiveConfig.widthBox(8),
+                            ResponsiveConfig.widthBox(12),
                             Expanded(
                               child: Text(
-                                '${mood['emotion']} (${mood['frequency']}%)',
-                                style: ResponsiveConfig.textStyle(size: 14),
+                                mood['emotion'],
+                                style: ResponsiveConfig.textStyle(
+                                  size: 15,
+                                  weight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                            Text(
+                              '${mood['frequency']}%',
+                              style: ResponsiveConfig.textStyle(
+                                size: 14,
+                                color: AppTheme.mediumGray,
+                                weight: FontWeight.w600,
                               ),
                             ),
                           ],
                         ),
                       ))
-                  .toList(),
+                  ,
             ],
           ],
         ),
@@ -450,86 +479,67 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
     Map<String, dynamic> fertilityData,
   ) {
     return Card(
-      shadowColor: Colors.black.withValues(alpha: 0.08),
-      margin: const EdgeInsets.only(bottom: 0),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: ResponsiveConfig.borderRadius(16),
+        side: BorderSide(color: AppTheme.mediumGray.withValues(alpha: 0.08)),
+      ),
       child: Padding(
         padding: ResponsiveConfig.padding(all: 20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Icon(
-                  Icons.egg,
-                  color: AppTheme.primaryPink,
-                  size: ResponsiveConfig.iconSize(24),
-                ),
-                ResponsiveConfig.widthBox(8),
-                Text(
-                  'Fertility Insights',
-                  style: ResponsiveConfig.textStyle(
-                    size: 18,
-                    weight: FontWeight.w600,
-                  ),
-                ),
-              ],
+            _buildCardHeader(
+              context,
+              title: 'Fertility Insights',
+              icon: Icons.egg,
+              color: AppTheme.primaryPink,
             ),
-            ResponsiveConfig.heightBox(16),
             if (fertilityData['averageBBT'] != null &&
                 fertilityData['averageBBT'] > 0)
-              _buildStatItem(
+              _buildStatTile(
                 context,
-                'Avg BBT',
-                '${fertilityData['averageBBT']?.toStringAsFixed(1) ?? '0'}°C',
-                Icons.thermostat,
+                label: 'Avg BBT',
+                value:
+                    '${fertilityData['averageBBT']?.toStringAsFixed(1) ?? '0'}°C',
+                subtitle: 'MORNING BASELINE',
+                icon: Icons.thermostat,
+                color: AppTheme.warningOrange,
               ),
             if (fertilityData['ovulationPrediction'] != null) ...[
-              ResponsiveConfig.heightBox(16),
-              Text(
-                'Predicted Ovulation',
-                style: ResponsiveConfig.textStyle(
-                  size: 14,
-                  weight: FontWeight.w600,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              ResponsiveConfig.heightBox(4),
-              Text(
-                _formatDate(fertilityData['ovulationPrediction'] as DateTime),
-                style: ResponsiveConfig.textStyle(
-                  size: 16,
-                  weight: FontWeight.bold,
-                  color: AppTheme.primaryPink,
-                ),
-                textAlign: TextAlign.center,
+              if (fertilityData['averageBBT'] != null)
+                ResponsiveConfig.heightBox(16),
+              _buildStatTile(
+                context,
+                label: 'Predicted Ovulation',
+                value: _formatDate(
+                    fertilityData['ovulationPrediction'] as DateTime),
+                subtitle: 'NEXT EXPECTED',
+                icon: Icons.event,
               ),
             ],
             if (fertilityData['fertileWindow'] != null) ...[
-              ResponsiveConfig.heightBox(8),
-              Text(
-                'Fertile Window',
-                style: ResponsiveConfig.textStyle(
-                  size: 14,
-                  weight: FontWeight.w600,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              ResponsiveConfig.heightBox(4),
-              Text(
-                '${_formatDate((fertilityData['fertileWindow'] as Map)['start'] as DateTime)} - ${_formatDate((fertilityData['fertileWindow'] as Map)['end'] as DateTime)}',
-                style: ResponsiveConfig.textStyle(size: 14),
-                textAlign: TextAlign.center,
+              ResponsiveConfig.heightBox(12),
+              _buildStatTile(
+                context,
+                label: 'Fertile Window',
+                value:
+                    '${_formatDate((fertilityData['fertileWindow'] as Map)['start'] as DateTime)} - ${_formatDate((fertilityData['fertileWindow'] as Map)['end'] as DateTime)}',
+                subtitle: 'PEAK CHANCE',
+                icon: Icons.wb_sunny_outlined,
+                color: AppTheme.successGreen,
               ),
             ],
             if (fertilityData['confidence'] != null) ...[
-              ResponsiveConfig.heightBox(8),
+              ResponsiveConfig.heightBox(12),
               Text(
-                'Confidence: ${(fertilityData['confidence'] as double).toStringAsFixed(0)}%',
+                'PREDICTION CONFIDENCE: ${(fertilityData['confidence'] as double).toStringAsFixed(0)}%',
                 style: ResponsiveConfig.textStyle(
-                  size: 12,
-                  color: AppTheme.mediumGray,
+                  size: 10,
+                  weight: FontWeight.w700,
+                  color: AppTheme.mediumGray.withValues(alpha: 0.6),
+                  letterSpacing: 1.0,
                 ),
-                textAlign: TextAlign.center,
               ),
             ],
           ],
@@ -543,55 +553,54 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
     Map<String, dynamic> skincareData,
   ) {
     return Card(
-      shadowColor: Colors.black.withValues(alpha: 0.08),
-      margin: const EdgeInsets.only(bottom: 0),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: ResponsiveConfig.borderRadius(16),
+        side: BorderSide(color: AppTheme.mediumGray.withValues(alpha: 0.08)),
+      ),
       child: Padding(
         padding: ResponsiveConfig.padding(all: 20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Icon(
-                  Icons.face,
-                  color: AppTheme.primaryPink,
-                  size: ResponsiveConfig.iconSize(24),
-                ),
-                ResponsiveConfig.widthBox(8),
-                Text(
-                  'Skincare Insights',
-                  style: ResponsiveConfig.textStyle(
-                    size: 18,
-                    weight: FontWeight.w600,
-                  ),
-                ),
-              ],
+            _buildCardHeader(
+              context,
+              title: 'Skincare Insights',
+              icon: Icons.face,
+              color: AppTheme.lavender,
             ),
-            ResponsiveConfig.heightBox(16),
             Row(
               children: [
                 Expanded(
-                  child: _buildStatItem(
+                  child: _buildStatTile(
                     context,
-                    'Routines',
-                    '${skincareData['totalRoutines'] ?? 0}',
-                    Icons.spa,
+                    label: 'Routines',
+                    value: '${skincareData['totalRoutines'] ?? 0}',
+                    subtitle: 'COMPLETED',
+                    icon: Icons.spa,
+                    color: AppTheme.lavender,
                   ),
                 ),
+                ResponsiveConfig.widthBox(12),
                 Expanded(
-                  child: _buildStatItem(
+                  child: _buildStatTile(
                     context,
-                    'Products',
-                    '${skincareData['totalProducts'] ?? 0}',
-                    Icons.inventory_2,
+                    label: 'Products',
+                    value: '${skincareData['totalProducts'] ?? 0}',
+                    subtitle: 'IN INVENTORY',
+                    icon: Icons.inventory_2,
                   ),
                 ),
+                ResponsiveConfig.widthBox(12),
                 Expanded(
-                  child: _buildStatItem(
+                  child: _buildStatTile(
                     context,
-                    'Per Week',
-                    '${skincareData['averageRoutinesPerWeek']?.toStringAsFixed(1) ?? '0'}',
-                    Icons.calendar_view_week,
+                    label: 'Per Week',
+                    value:
+                        '${skincareData['averageRoutinesPerWeek']?.toStringAsFixed(1) ?? '0'}',
+                    subtitle: 'FREQUENCY',
+                    icon: Icons.calendar_view_week,
+                    color: AppTheme.infoBlue,
                   ),
                 ),
               ],
@@ -602,24 +611,38 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
               Container(
                 padding: ResponsiveConfig.padding(all: 12),
                 decoration: BoxDecoration(
-                  color: AppTheme.warningOrange.withOpacity(0.1),
-                  borderRadius: ResponsiveConfig.borderRadius(8),
+                  color: AppTheme.warningOrange.withValues(alpha: 0.08),
+                  borderRadius: ResponsiveConfig.borderRadius(12),
                 ),
                 child: Row(
                   children: [
                     Icon(
-                      Icons.warning,
+                      Icons.warning_amber_rounded,
                       color: AppTheme.warningOrange,
                       size: ResponsiveConfig.iconSize(20),
                     ),
                     ResponsiveConfig.widthBox(12),
                     Expanded(
-                      child: Text(
-                        '${skincareData['expiringProducts']} products expiring soon',
-                        style: ResponsiveConfig.textStyle(
-                          size: 14,
-                          color: AppTheme.warningOrange,
-                        ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Expiring Products',
+                            style: ResponsiveConfig.textStyle(
+                              size: 14,
+                              weight: FontWeight.bold,
+                              color: AppTheme.warningOrange,
+                            ),
+                          ),
+                          Text(
+                            '${skincareData['expiringProducts']} items need your attention',
+                            style: ResponsiveConfig.textStyle(
+                              size: 12,
+                              color:
+                                  AppTheme.warningOrange.withValues(alpha: 0.8),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
@@ -637,58 +660,58 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
     Map<String, dynamic> padData,
   ) {
     return Card(
-      shadowColor: Colors.black.withValues(alpha: 0.08),
-      margin: const EdgeInsets.only(bottom: 0),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: ResponsiveConfig.borderRadius(16),
+        side: BorderSide(color: AppTheme.mediumGray.withValues(alpha: 0.08)),
+      ),
       child: Padding(
         padding: ResponsiveConfig.padding(all: 20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Icon(
-                  Icons.medical_services,
-                  color: AppTheme.primaryPink,
-                  size: ResponsiveConfig.iconSize(24),
-                ),
-                ResponsiveConfig.widthBox(8),
-                Text(
-                  'Pad Usage Insights',
-                  style: ResponsiveConfig.textStyle(
-                    size: 18,
-                    weight: FontWeight.w600,
-                  ),
-                ),
-              ],
+            _buildCardHeader(
+              context,
+              title: 'Pad Usage Insights',
+              icon: Icons.medical_services,
+              color: AppTheme.primaryPink,
             ),
-            ResponsiveConfig.heightBox(16),
             Row(
               children: [
                 Expanded(
-                  child: _buildStatItem(
+                  child: _buildStatTile(
                     context,
-                    'Total Changes',
-                    '${padData['totalChanges'] ?? 0}',
-                    Icons.swap_horiz,
+                    label: 'Total Changes',
+                    value: '${padData['totalChanges'] ?? 0}',
+                    subtitle: 'LOGGED',
+                    icon: Icons.swap_horiz,
                   ),
                 ),
+                ResponsiveConfig.widthBox(12),
                 Expanded(
-                  child: _buildStatItem(
+                  child: _buildStatTile(
                     context,
-                    'Per Day',
-                    '${padData['averageChangesPerDay']?.toStringAsFixed(1) ?? '0'}',
-                    Icons.today,
+                    label: 'Per Day',
+                    value:
+                        '${padData['averageChangesPerDay']?.toStringAsFixed(1) ?? '0'}',
+                    subtitle: 'DAILY AVG',
+                    icon: Icons.today,
+                    color: AppTheme.infoBlue,
                   ),
                 ),
-                if (padData['mostUsedType'] != null)
+                if (padData['mostUsedType'] != null) ...[
+                  ResponsiveConfig.widthBox(12),
                   Expanded(
-                    child: _buildStatItem(
+                    child: _buildStatTile(
                       context,
-                      'Most Used',
-                      padData['mostUsedType'] as String,
-                      Icons.star,
+                      label: 'Most Used',
+                      value: padData['mostUsedType'] as String,
+                      subtitle: 'PREFERENCE',
+                      icon: Icons.star,
+                      color: AppTheme.successGreen,
                     ),
                   ),
+                ],
               ],
             ),
           ],
@@ -697,36 +720,114 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
     );
   }
 
-  Widget _buildStatItem(
-    BuildContext context,
-    String label,
-    String value,
-    IconData icon,
-  ) {
-    return Column(
-      children: [
-        Icon(
-          icon,
-          color: AppTheme.primaryPink,
-          size: ResponsiveConfig.iconSize(24),
-        ),
-        ResponsiveConfig.heightBox(8),
-        Text(
-          value,
-          style: ResponsiveConfig.textStyle(
-            size: 16,
-            weight: FontWeight.bold,
+  Widget _buildCardHeader(
+    BuildContext context, {
+    required String title,
+    required IconData icon,
+    required Color color,
+  }) {
+    return Padding(
+      padding: ResponsiveConfig.padding(bottom: 20),
+      child: Row(
+        children: [
+          Container(
+            padding: ResponsiveConfig.padding(all: 8),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              borderRadius: ResponsiveConfig.borderRadius(8),
+            ),
+            child: Icon(
+              icon,
+              color: color,
+              size: ResponsiveConfig.iconSize(20),
+            ),
           ),
-        ),
-        ResponsiveConfig.heightBox(4),
-        Text(
-          label,
-          style: ResponsiveConfig.textStyle(
-            size: 12,
-            color: AppTheme.mediumGray,
+          ResponsiveConfig.widthBox(12),
+          Text(
+            title,
+            style: ResponsiveConfig.textStyle(
+              size: 18,
+              weight: FontWeight.bold,
+              letterSpacing: -0.5,
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDivider() {
+    return Padding(
+      padding: ResponsiveConfig.padding(vertical: 20),
+      child: Divider(
+        height: 1,
+        thickness: 1,
+        color: AppTheme.mediumGray.withValues(alpha: 0.1),
+      ),
+    );
+  }
+
+  Widget _buildStatTile(
+    BuildContext context, {
+    required String label,
+    required String value,
+    required IconData icon,
+    Color? color,
+    String? subtitle,
+  }) {
+    final themeColor = color ?? AppTheme.primaryPink;
+    return Container(
+      padding: ResponsiveConfig.padding(all: 12),
+      decoration: BoxDecoration(
+        color: themeColor.withValues(alpha: 0.04),
+        borderRadius: ResponsiveConfig.borderRadius(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                icon,
+                color: themeColor,
+                size: ResponsiveConfig.iconSize(14),
+              ),
+              ResponsiveConfig.widthBox(6),
+              Expanded(
+                child: Text(
+                  label.toUpperCase(),
+                  style: ResponsiveConfig.textStyle(
+                    size: 11,
+                    weight: FontWeight.w700,
+                    color: AppTheme.mediumGray,
+                    letterSpacing: 0.5,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          ResponsiveConfig.heightBox(12),
+          Text(
+            value,
+            style: ResponsiveConfig.textStyle(
+              size: 18,
+              weight: FontWeight.w800,
+            ),
+          ),
+          if (subtitle != null) ...[
+            ResponsiveConfig.heightBox(2),
+            Text(
+              subtitle,
+              style: ResponsiveConfig.textStyle(
+                size: 12,
+                color: AppTheme.mediumGray,
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 
@@ -806,8 +907,8 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
           height: 150,
           child: LineChart(
             LineChartData(
-              gridData: FlGridData(show: false),
-              titlesData: FlTitlesData(show: false),
+              gridData: const FlGridData(show: false),
+              titlesData: const FlTitlesData(show: false),
               borderData: FlBorderData(show: false),
               lineBarsData: [
                 LineChartBarData(
@@ -815,7 +916,7 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
                   isCurved: true,
                   color: AppTheme.primaryPink,
                   barWidth: 3,
-                  dotData: FlDotData(show: true),
+                  dotData: const FlDotData(show: true),
                   belowBarData: BarAreaData(
                     show: true,
                     color: AppTheme.primaryPink.withOpacity(0.1),

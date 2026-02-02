@@ -56,7 +56,7 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content:
-                Text('AI Assistant is not configured. Please contact support.'),
+                Text('FemCare+ Assistant is not configured. Please contact support.'),
             backgroundColor: Colors.orange,
           ),
         );
@@ -208,7 +208,7 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(
+                          const Icon(
                             Icons.chat_bubble_outline,
                             size: 64,
                             color: AppTheme.mediumGray,
@@ -259,7 +259,7 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
                     ResponsiveConfig.widthBox(8),
                     Expanded(
                       child: Text(
-                        'AI Assistant is not configured. Please contact support.',
+                        'FemCare+ Assistant is not configured. Please contact support.',
                         style: ResponsiveConfig.textStyle(size: 12),
                       ),
                     ),
@@ -339,7 +339,7 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
             CircleAvatar(
               radius: 16,
               backgroundColor: AppTheme.primaryPink.withOpacity(0.1),
-              child: Icon(
+              child: const Icon(
                 Icons.smart_toy,
                 size: 18,
                 color: AppTheme.primaryPink,
@@ -368,7 +368,7 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
             CircleAvatar(
               radius: 16,
               backgroundColor: AppTheme.primaryPink.withOpacity(0.1),
-              child: Icon(
+              child: const Icon(
                 Icons.person,
                 size: 18,
                 color: AppTheme.primaryPink,
@@ -389,7 +389,7 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
           CircleAvatar(
             radius: 16,
             backgroundColor: AppTheme.primaryPink.withOpacity(0.1),
-            child: Icon(
+            child: const Icon(
               Icons.smart_toy,
               size: 18,
               color: AppTheme.primaryPink,

@@ -197,7 +197,7 @@ class _RedFlagAlertsScreenState extends ConsumerState<RedFlagAlertsScreen> {
                     padding: ResponsiveConfig.padding(bottom: 4),
                     child: Row(
                       children: [
-                        Icon(
+                        const Icon(
                           Icons.circle,
                           size: 6,
                           color: AppTheme.primaryPink,
@@ -212,7 +212,7 @@ class _RedFlagAlertsScreenState extends ConsumerState<RedFlagAlertsScreen> {
                       ],
                     ),
                   );
-                }).toList(),
+                }),
                 ResponsiveConfig.heightBox(16),
                 if (!alert.acknowledged)
                   ElevatedButton.icon(

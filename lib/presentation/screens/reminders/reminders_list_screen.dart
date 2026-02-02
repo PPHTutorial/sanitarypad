@@ -91,7 +91,7 @@ class RemindersListScreen extends ConsumerWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(
+                    const Icon(
                       Icons.notifications_off_outlined,
                       size: 64,
                       color: AppTheme.mediumGray,

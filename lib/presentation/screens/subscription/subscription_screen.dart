@@ -171,7 +171,7 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
                     isSelected: false,
                   ),
                 );
-              }).toList(),
+              }),
 
               ResponsiveConfig.heightBox(24),
 
@@ -185,7 +185,7 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
                       children: [
                         Row(
                           children: [
-                            Icon(
+                            const Icon(
                               Icons.check_circle,
                               color: AppTheme.successGreen,
                             ),
@@ -234,7 +234,7 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
     return Container(
       padding: ResponsiveConfig.padding(all: 24),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
+        gradient: const LinearGradient(
           colors: [AppTheme.primaryPink, AppTheme.deepPink],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -308,7 +308,7 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
                   ],
                 ),
               );
-            }).toList(),
+            }),
           ],
         ),
       ),

@@ -20,7 +20,7 @@ class AdBannerWidget extends ConsumerStatefulWidget {
 
 class _AdBannerWidgetState extends ConsumerState<AdBannerWidget> {
 //BannerAd? _bannerAd;
-    bool _isAdLoaded = false;
+    final bool _isAdLoaded = false;
 
   @override
   void initState() {

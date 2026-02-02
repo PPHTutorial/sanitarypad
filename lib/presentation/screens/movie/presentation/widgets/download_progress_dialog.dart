@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import '../../app/themes/app_colors.dart';
 import '../../app/themes/app_text_styles.dart';
 import '../../app/themes/app_dimensions.dart';
 
@@ -63,7 +62,7 @@ class _DownloadProgressDialogState extends State<DownloadProgressDialog> {
     return WillPopScope(
       onWillPop: () async => false, // Prevent dismissing during download
       child: Dialog(
-        backgroundColor: AppColors.darkCard,
+        backgroundColor: Theme.of(context).colorScheme.primary,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
         ),
@@ -79,32 +78,33 @@ class _DownloadProgressDialogState extends State<DownloadProgressDialog> {
                 textAlign: TextAlign.center,
               ),
               SizedBox(height: AppDimensions.space8),
-              
+
               // Subtitle
               if (widget.subtitle != null) ...[
                 Text(
                   widget.subtitle!,
                   style: AppTextStyles.bodyMedium.copyWith(
-                    color: AppColors.textSecondary,
+                    color: Theme.of(context).colorScheme.surface,
                   ),
                   textAlign: TextAlign.center,
                 ),
                 SizedBox(height: AppDimensions.space16),
               ],
-              
+
               // Progress indicator
               if (widget.isIndeterminate)
                 const CircularProgressIndicator()
               else ...[
                 LinearProgressIndicator(
                   value: widget.progress,
-                  backgroundColor: AppColors.darkSurface,
-                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.accentColor),
+                  backgroundColor: Theme.of(context).colorScheme.surface,
+                  valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.primary),
                   minHeight: 8.h,
-                  borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
+                  borderRadius:
+                      BorderRadius.circular(AppDimensions.radiusSmall),
                 ),
                 SizedBox(height: AppDimensions.space12),
-                
+
                 // Progress text
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -113,35 +113,36 @@ class _DownloadProgressDialogState extends State<DownloadProgressDialog> {
                       Text(
                         '${widget.completedItems}/${widget.totalItems}',
                         style: AppTextStyles.bodySmall.copyWith(
-                          color: AppColors.textSecondary,
+                          color: Theme.of(context).colorScheme.surface,
                         ),
                       ),
                     Text(
                       '${(widget.progress * 100).toInt()}%',
                       style: AppTextStyles.bodySmall.copyWith(
-                        color: AppColors.accentColor,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                   ],
                 ),
               ],
-              
+
               // Current item
-              if (widget.currentItem != null && widget.currentItem!.isNotEmpty) ...[
+              if (widget.currentItem != null &&
+                  widget.currentItem!.isNotEmpty) ...[
                 SizedBox(height: AppDimensions.space16),
                 Container(
                   padding: EdgeInsets.all(AppDimensions.space12),
                   decoration: BoxDecoration(
-                    color: AppColors.darkSurface,
-                    borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+                    color: Theme.of(context).colorScheme.surface,
+                    borderRadius:
+                        BorderRadius.circular(AppDimensions.radiusMedium),
                   ),
                   child: Row(
                     children: [
                       Icon(
                         Icons.image_outlined,
                         size: 16.w,
-                        color: AppColors.textSecondary,
+                        color: Theme.of(context).colorScheme.surface,
                       ),
                       SizedBox(width: AppDimensions.space8),
                       Expanded(
@@ -156,9 +157,9 @@ class _DownloadProgressDialogState extends State<DownloadProgressDialog> {
                   ),
                 ),
               ],
-              
+
               SizedBox(height: AppDimensions.space16),
-              
+
               // Cancel button (if allowed)
               if (widget.onCancel != null)
                 TextButton(
@@ -166,7 +167,7 @@ class _DownloadProgressDialogState extends State<DownloadProgressDialog> {
                   child: Text(
                     'Cancel',
                     style: AppTextStyles.bodyMedium.copyWith(
-                      color: AppColors.error,
+                      color: Theme.of(context).colorScheme.error,
                     ),
                   ),
                 ),
@@ -212,11 +213,11 @@ class _ProgressDialogBuilderState extends State<_ProgressDialogBuilder> {
     widget.progressStream.listen((progress) {
       if (mounted) setState(() => _progress = progress.clamp(0.0, 1.0));
     });
-    
+
     widget.currentItemStream?.listen((item) {
       if (mounted) setState(() => _currentItem = item);
     });
-    
+
     widget.completedItemsStream?.listen((completed) {
       if (mounted) setState(() => _completedItems = completed);
     });
@@ -240,4 +241,3 @@ class _ProgressDialogBuilderState extends State<_ProgressDialogBuilder> {
     );
   }
 }
-

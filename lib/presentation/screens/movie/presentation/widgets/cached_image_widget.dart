@@ -1,6 +1,5 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import '../../app/themes/app_colors.dart';
 import 'loading_indicator.dart';
 
 /// Cached image widget with consistent loading and error states
@@ -12,7 +11,7 @@ class CachedImageWidget extends StatelessWidget {
   final BorderRadius? borderRadius;
   final Widget? placeholder;
   final Widget? errorWidget;
-  
+
   const CachedImageWidget({
     super.key,
     required this.imageUrl,
@@ -33,16 +32,15 @@ class CachedImageWidget extends StatelessWidget {
         width: width,
         height: height,
         fit: fit,
-        placeholder: (context, url) =>
-            placeholder ?? const LoadingShimmer(),
+        placeholder: (context, url) => placeholder ?? const LoadingShimmer(),
         errorWidget: (context, url, error) =>
             errorWidget ??
             Container(
-              color: AppColors.darkCard,
-              child: const Center(
+              color: Theme.of(context).colorScheme.primary,
+              child:  Center(
                 child: Icon(
                   Icons.broken_image_outlined,
-                  color: AppColors.textDisabled,
+                  color: Theme.of(context).colorScheme.onPrimary,
                   size: 40,
                 ),
               ),
@@ -51,4 +49,3 @@ class CachedImageWidget extends StatelessWidget {
     );
   }
 }
-

@@ -397,7 +397,7 @@ class _SkincareProductFormScreenState
                       : Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(
+                            const Icon(
                               Icons.add_photo_alternate,
                               size: 48,
                               color: AppTheme.mediumGray,

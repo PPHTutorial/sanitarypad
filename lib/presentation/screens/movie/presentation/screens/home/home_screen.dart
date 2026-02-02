@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../app/themes/app_colors.dart';
+import 'package:go_router/go_router.dart';
 import '../../../app/themes/app_text_styles.dart';
 import '../../../app/themes/app_dimensions.dart';
 import '../../../services/permissions/permission_service.dart';
@@ -9,9 +9,7 @@ import '../../widgets/loading_indicator.dart';
 import '../../widgets/error_widget.dart';
 import 'widgets/trending_carousel.dart';
 import 'widgets/horizontal_movie_card.dart';
-import '../detail/movie_detail_screen.dart';
 import '../search/search_screen.dart';
-import '../favorites/favorites_screen.dart';
 import '../../widgets/app_logo.dart';
 
 /// Home screen with real data - Complete implementation
@@ -19,7 +17,8 @@ class MovieMovieHomeScreen extends ConsumerStatefulWidget {
   const MovieMovieHomeScreen({super.key});
 
   @override
-  ConsumerState<MovieMovieHomeScreen> createState() => _MovieMovieHomeScreenState();
+  ConsumerState<MovieMovieHomeScreen> createState() =>
+      _MovieMovieHomeScreenState();
 }
 
 class _MovieMovieHomeScreenState extends ConsumerState<MovieMovieHomeScreen> {
@@ -35,7 +34,7 @@ class _MovieMovieHomeScreenState extends ConsumerState<MovieMovieHomeScreen> {
   Future<void> _checkPermissionsOnLaunch() async {
     // Check storage permission on app launch
     final hasStorage = await PermissionService.instance.hasStoragePermission();
-    
+
     if (!hasStorage && mounted) {
       // Request permission with dialog
       await PermissionService.instance.requestAllPermissions(context: context);
@@ -74,33 +73,23 @@ class _MovieMovieHomeScreenState extends ConsumerState<MovieMovieHomeScreen> {
     final upcomingState = ref.watch(upcomingProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.darkBackground,
+      //
       appBar: AppBar(
         title: const AppLogo(height: 32),
-              actions: [
-                IconButton(
-                  icon: const Icon(Icons.search),
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const SearchScreen(),
-                      ),
-                    );
-                  },
-                ),
-                IconButton(
-                  icon: const Icon(Icons.favorite_border),
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const FavoritesScreen(),
-                      ),
-                    );
-                  },
-                ),
-              ],
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.search),
+            onPressed: () {
+              context.push('/movies/search');
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.favorite_border),
+            onPressed: () {
+              context.push('/movies/favorites');
+            },
+          ),
+        ],
       ),
       body: RefreshIndicator(
         onRefresh: () async {
@@ -153,18 +142,13 @@ class _MovieMovieHomeScreenState extends ConsumerState<MovieMovieHomeScreen> {
                       ? 20
                       : trendingAgg.items.length,
                   onMovieTap: (movie) {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => MovieDetailScreen(movie: movie),
-                      ),
-                    );
+                    context.push('/movies/detail', extra: movie);
                   },
                 ),
               ),
 
             SliverToBoxAdapter(child: SizedBox(height: AppDimensions.space24)),
-            
+
             SliverToBoxAdapter(child: SizedBox(height: AppDimensions.space16)),
 
             // Popular Section Header
@@ -183,11 +167,7 @@ class _MovieMovieHomeScreenState extends ConsumerState<MovieMovieHomeScreen> {
                         ref.read(searchQueryProvider.notifier).state = '';
                         ref.read(sortByProvider.notifier).state =
                             'popularity.desc';
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => const SearchScreen()),
-                        );
+                        context.push('/movies/search');
                       },
                       child: const Text('See more'),
                     ),
@@ -228,13 +208,7 @@ class _MovieMovieHomeScreenState extends ConsumerState<MovieMovieHomeScreen> {
                         movie: movie,
                         typeBadge: 'Popular',
                         onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  MovieDetailScreen(movie: movie),
-                            ),
-                          );
+                          context.push('/movies/detail', extra: movie);
                         },
                       );
                     },
@@ -260,11 +234,7 @@ class _MovieMovieHomeScreenState extends ConsumerState<MovieMovieHomeScreen> {
                         ref.read(searchQueryProvider.notifier).state = '';
                         ref.read(sortByProvider.notifier).state =
                             'vote_average.desc';
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => const SearchScreen()),
-                        );
+                        context.push('/movies/search');
                       },
                       child: const Text('See more'),
                     ),
@@ -277,7 +247,7 @@ class _MovieMovieHomeScreenState extends ConsumerState<MovieMovieHomeScreen> {
 
             // Top Rated Horizontal List
             if (topRatedState.items.isEmpty && topRatedState.isLoading)
-              SliverToBoxAdapter(
+              const SliverToBoxAdapter(
                 child: SizedBox(
                   height: 220,
                   child: Center(child: LoadingIndicator()),
@@ -308,13 +278,7 @@ class _MovieMovieHomeScreenState extends ConsumerState<MovieMovieHomeScreen> {
                         movie: movie,
                         typeBadge: 'Top Rated',
                         onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  MovieDetailScreen(movie: movie),
-                            ),
-                          );
+                          context.push('/movies/detail', extra: movie);
                         },
                       );
                     },
@@ -339,11 +303,7 @@ class _MovieMovieHomeScreenState extends ConsumerState<MovieMovieHomeScreen> {
                         // Use popularity for trailers discover as proxy
                         ref.read(sortByProvider.notifier).state =
                             'popularity.desc';
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => const SearchScreen()),
-                        );
+                        context.push('/movies/search');
                       },
                       child: const Text('See more'),
                     ),
@@ -388,13 +348,7 @@ class _MovieMovieHomeScreenState extends ConsumerState<MovieMovieHomeScreen> {
                         movie: movie,
                         typeBadge: 'Trailer',
                         onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  MovieDetailScreen(movie: movie),
-                            ),
-                          );
+                          context.push('/movies/detail', extra: movie);
                         },
                       );
                     },
@@ -405,8 +359,8 @@ class _MovieMovieHomeScreenState extends ConsumerState<MovieMovieHomeScreen> {
             SliverToBoxAdapter(child: SizedBox(height: AppDimensions.space24)),
 
             // Free To Watch Section Header
-              SliverToBoxAdapter(
-                child: Padding(
+            SliverToBoxAdapter(
+              child: Padding(
                 padding:
                     EdgeInsets.symmetric(horizontal: AppDimensions.space16),
                 child: Row(
@@ -418,11 +372,7 @@ class _MovieMovieHomeScreenState extends ConsumerState<MovieMovieHomeScreen> {
                         ref.read(searchQueryProvider.notifier).state =
                             'release_date.desc';
                         // Default discover without region/date filters
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => const SearchScreen()),
-                        );
+                        context.push('/movies/search');
                       },
                       child: const Text('See more'),
                     ),
@@ -466,13 +416,7 @@ class _MovieMovieHomeScreenState extends ConsumerState<MovieMovieHomeScreen> {
                         movie: movie,
                         typeBadge: 'Free',
                         onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  MovieDetailScreen(movie: movie),
-                            ),
-                          );
+                          context.push('/movies/detail', extra: movie);
                         },
                       );
                     },
@@ -497,11 +441,7 @@ class _MovieMovieHomeScreenState extends ConsumerState<MovieMovieHomeScreen> {
                       onPressed: () {
                         ref.read(searchQueryProvider.notifier).state = '';
                         // Default discover without region/date filters
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => const SearchScreen()),
-                        );
+                        context.push('/movies/search');
                       },
                       child: const Text('See more'),
                     ),
@@ -546,13 +486,7 @@ class _MovieMovieHomeScreenState extends ConsumerState<MovieMovieHomeScreen> {
                         movie: movie,
                         typeBadge: 'Upcoming',
                         onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  MovieDetailScreen(movie: movie),
-                            ),
-                          );
+                          context.push('/movies/detail', extra: movie);
                         },
                       );
                     },

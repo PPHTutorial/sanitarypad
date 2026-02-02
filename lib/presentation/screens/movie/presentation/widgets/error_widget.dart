@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import '../../app/themes/app_colors.dart';
 import '../../app/themes/app_text_styles.dart';
 import '../../app/themes/app_dimensions.dart';
 
@@ -9,7 +8,7 @@ class AppErrorWidget extends StatelessWidget {
   final String message;
   final VoidCallback? onRetry;
   final IconData icon;
-  
+
   const AppErrorWidget({
     super.key,
     required this.message,
@@ -28,7 +27,7 @@ class AppErrorWidget extends StatelessWidget {
             Icon(
               icon,
               size: 64.w,
-              color: AppColors.error,
+              color: Theme.of(context).colorScheme.error,
             ),
             SizedBox(height: AppDimensions.space16),
             Text(
@@ -54,7 +53,7 @@ class AppErrorWidget extends StatelessWidget {
 /// No internet widget
 class NoInternetWidget extends StatelessWidget {
   final VoidCallback? onRetry;
-  
+
   const NoInternetWidget({
     super.key,
     this.onRetry,
@@ -63,7 +62,8 @@ class NoInternetWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AppErrorWidget(
-      message: 'No internet connection.\nPlease check your network and try again.',
+      message:
+          'No internet connection.\nPlease check your network and try again.',
       onRetry: onRetry,
       icon: Icons.wifi_off,
     );
@@ -75,7 +75,7 @@ class EmptyStateWidget extends StatelessWidget {
   final String message;
   final IconData icon;
   final Widget? action;
-  
+
   const EmptyStateWidget({
     super.key,
     required this.message,
@@ -94,7 +94,7 @@ class EmptyStateWidget extends StatelessWidget {
             Icon(
               icon,
               size: 80.w,
-              color: AppColors.textSecondary,
+              color: Theme.of(context).colorScheme.surface,
             ),
             SizedBox(height: AppDimensions.space16),
             Text(
@@ -112,4 +112,3 @@ class EmptyStateWidget extends StatelessWidget {
     );
   }
 }
-

@@ -716,7 +716,7 @@ class _WellnessJournalScreenState extends ConsumerState<WellnessJournalScreen> {
                       ),
                     ],
                   );
-                }).toList(),
+                }),
                 GestureDetector(
                   onTap: _pickImage,
                   child: Container(

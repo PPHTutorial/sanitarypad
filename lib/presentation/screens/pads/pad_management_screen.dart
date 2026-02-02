@@ -244,7 +244,7 @@ class _PadManagementScreenState extends ConsumerState<PadManagementScreen> {
                     ],
                   ),
                 );
-              }).toList(),
+              }),
           ],
         ),
       ),
@@ -517,7 +517,7 @@ class _PadManagementScreenState extends ConsumerState<PadManagementScreen> {
                     ],
                   ),
                 );
-              }).toList(),
+              }),
           ],
         ),
       ),

@@ -6,7 +6,7 @@ import '../../app/themes/app_colors.dart';
 class LoadingIndicator extends StatelessWidget {
   final double size;
   final Color? color;
-  
+
   const LoadingIndicator({
     super.key,
     this.size = 40,
@@ -19,11 +19,8 @@ class LoadingIndicator extends StatelessWidget {
       child: SizedBox(
         width: size,
         height: size,
-        child: CircularProgressIndicator(
+        child: const CircularProgressIndicator(
           strokeWidth: 3,
-          valueColor: AlwaysStoppedAnimation<Color>(
-            color ?? AppColors.accentColor,
-          ),
         ),
       ),
     );
@@ -35,7 +32,7 @@ class LoadingShimmer extends StatelessWidget {
   final double? width;
   final double? height;
   final BorderRadius? borderRadius;
-  
+
   const LoadingShimmer({
     super.key,
     this.width,
@@ -46,13 +43,13 @@ class LoadingShimmer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Shimmer.fromColors(
-      baseColor: AppColors.shimmerBase,
-      highlightColor: AppColors.shimmerHighlight,
+      baseColor: Theme.of(context).colorScheme.onPrimary,
+      highlightColor: Theme.of(context).colorScheme.surface,
       child: Container(
         width: width,
         height: height,
         decoration: BoxDecoration(
-          color: AppColors.shimmerBase,
+          color: Theme.of(context).colorScheme.onPrimary,
           borderRadius: borderRadius ?? BorderRadius.zero,
         ),
       ),
@@ -64,7 +61,7 @@ class LoadingShimmer extends StatelessWidget {
 class GridShimmerLoading extends StatelessWidget {
   final int itemCount;
   final double aspectRatio;
-  
+
   const GridShimmerLoading({
     super.key,
     this.itemCount = 6,
@@ -96,7 +93,7 @@ class GridShimmerLoading extends StatelessWidget {
 class ListShimmerLoading extends StatelessWidget {
   final int itemCount;
   final double itemHeight;
-  
+
   const ListShimmerLoading({
     super.key,
     this.itemCount = 5,
@@ -119,4 +116,3 @@ class ListShimmerLoading extends StatelessWidget {
     );
   }
 }
-

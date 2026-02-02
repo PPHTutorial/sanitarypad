@@ -68,12 +68,18 @@ class _FertilityTrackingScreenState
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Fertility Tracking'),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.add_circle_outline),
+              tooltip: 'Quick Actions',
+              onPressed: () => _showQuickActionsMenu(context, user.userId),
+            ),
+          ],
           bottom: PreferredSize(
             preferredSize: const Size.fromHeight(72),
             child: _buildModernTabSwitcher(context),
           ),
         ),
-        floatingActionButton: _buildFloatingActionButton(user.userId),
         body: StreamBuilder<List<FertilityEntry>>(
           stream: _fertilityService.getFertilityEntries(
             user.userId,
@@ -146,14 +152,6 @@ class _FertilityTrackingScreenState
         Tab(icon: Icon(Icons.list_alt_outlined), text: 'Logs'),
         Tab(icon: Icon(Icons.insights_outlined), text: 'Insights'),
       ],
-    );
-  }
-
-  FloatingActionButton? _buildFloatingActionButton(String userId) {
-    return FloatingActionButton.extended(
-      onPressed: () => _showQuickActionsMenu(context, userId),
-      icon: const Icon(Icons.add_circle_outline),
-      label: const Text('Quick Actions'),
     );
   }
 
@@ -360,11 +358,11 @@ class _FertilityTrackingScreenState
                             color: AppTheme.primaryPink.withOpacity(0.6),
                             shape: BoxShape.circle,
                           ),
-                          selectedDecoration: BoxDecoration(
+                          selectedDecoration: const BoxDecoration(
                             color: AppTheme.primaryPink,
                             shape: BoxShape.circle,
                           ),
-                          markerDecoration: BoxDecoration(
+                          markerDecoration: const BoxDecoration(
                             color: AppTheme.accentCoral,
                             shape: BoxShape.circle,
                           ),
@@ -631,7 +629,7 @@ class _FertilityTrackingScreenState
                   minHeight: 10,
                   backgroundColor: AppTheme.palePink,
                   valueColor:
-                      AlwaysStoppedAnimation<Color>(AppTheme.primaryPink),
+                      const AlwaysStoppedAnimation<Color>(AppTheme.primaryPink),
                 ),
                 ResponsiveConfig.heightBox(12),
                 Text(
@@ -728,7 +726,7 @@ class _FertilityTrackingScreenState
                   ],
                 ),
               ),
-              Icon(Icons.chevron_right, color: AppTheme.mediumGray),
+              const Icon(Icons.chevron_right, color: AppTheme.mediumGray),
             ],
           ),
         ),
@@ -1099,7 +1097,7 @@ class _FertilityTrackingScreenState
                       tooltipRoundedRadius: 8,
                     ),
                   ),
-                  gridData: FlGridData(show: true, drawVerticalLine: false),
+                  gridData: const FlGridData(show: true, drawVerticalLine: false),
                   titlesData: FlTitlesData(
                     leftTitles: AxisTitles(
                       sideTitles: SideTitles(
@@ -1135,7 +1133,7 @@ class _FertilityTrackingScreenState
                     LineChartBarData(
                       spots: spots,
                       isCurved: true,
-                      dotData: FlDotData(show: true),
+                      dotData: const FlDotData(show: true),
                       color: AppTheme.primaryPink,
                       belowBarData: BarAreaData(
                         show: true,
@@ -1693,9 +1691,13 @@ class _FertilityTrackingScreenState
               ),
             ),
             ResponsiveConfig.heightBox(12),
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
+            GridView.count(
+              crossAxisCount: 2,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              childAspectRatio: 1.4,
               children: [
                 _buildStatCard(
                   title: 'Intercourse (30d)',
@@ -1756,15 +1758,10 @@ class _FertilityTrackingScreenState
             ResponsiveConfig.heightBox(12),
             OutlinedButton.icon(
               onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text(
-                        'AI assistant will be available in a future update.'),
-                  ),
-                );
+                context.push("/ai-chat/fertility");
               },
               icon: const Icon(Icons.smart_toy_outlined),
-              label: const Text('Preview Assistant'),
+              label: const Text('Get Preview Assistant'),
             ),
           ],
         ),
@@ -1819,6 +1816,7 @@ class _FertilityTrackingScreenState
 
   Widget _buildStatChip(String label, String value, IconData icon) {
     return Chip(
+      side: const BorderSide(color: AppTheme.primaryPink),
       avatar: Icon(icon, size: 16, color: AppTheme.primaryPink),
       label: Text('$label: $value'),
       backgroundColor: AppTheme.primaryPink.withOpacity(0.1),
@@ -1832,7 +1830,6 @@ class _FertilityTrackingScreenState
     required Color color,
   }) {
     return Container(
-      width: 150,
       padding: ResponsiveConfig.padding(all: 12),
       decoration: BoxDecoration(
         color: color.withOpacity(0.08),

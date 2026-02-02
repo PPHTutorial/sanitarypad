@@ -102,13 +102,13 @@ class ScrapingService {
     if (post) {
       response = await _client.post<String>(
         url,
-        data: body != null ? body.replaceFirst('page=1', 'page=$page') : null,
+        data: body?.replaceFirst('page=1', 'page=$page'),
         options: Options(headers: allHeaders),
       );
     } else {
       var trueUrl = url;
       if (!url.contains('page=') && page > 1) {
-        trueUrl += (url.contains('?') ? '&' : '?') + 'page=$page';
+        trueUrl += '${url.contains('?') ? '&' : '?'}page=$page';
       } else {
         trueUrl = url.replaceFirst(RegExp(r'page=[^&]*'), 'page=$page');
       }

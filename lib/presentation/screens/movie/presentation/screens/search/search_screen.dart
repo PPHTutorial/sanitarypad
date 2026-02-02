@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:dio/dio.dart';
 import '../../../app/themes/app_colors.dart';
@@ -13,7 +14,6 @@ import '../../widgets/loading_indicator.dart';
 import '../../widgets/error_widget.dart';
 import '../../widgets/ad_banner_widget.dart';
 import '../home/widgets/wallpaper_grid_item.dart';
-import '../detail/movie_detail_screen.dart';
 
 /// Search screen provider
 final searchQueryProvider = StateProvider<String>((ref) => '');
@@ -31,9 +31,7 @@ final searchResultsProvider = FutureProvider.family<List<Movie>, String>((
 ) async {
   if (query.trim().isEmpty) return [];
   try {
-    final searchUrl =
-        'https://www.themoviedb.org/search/movie?query=' +
-        Uri.encodeComponent(query);
+    final searchUrl = 'https://www.themoviedb.org/search/movie?query=${Uri.encodeComponent(query)}';
     final scraper = ScrapingService.instance;
     final response = await Dio().get<String>(
       searchUrl,
@@ -195,9 +193,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         : null;
 
     return Scaffold(
-      backgroundColor: AppColors.darkBackground,
       appBar: AppBar(
-        backgroundColor: AppColors.darkBackground,
         elevation: 0,
         toolbarHeight: 75,
         titleSpacing: 0,
@@ -240,32 +236,35 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       height: 45.h,
       padding: EdgeInsets.symmetric(horizontal: 4.w),
       decoration: BoxDecoration(
-        color: AppColors.darkSurface,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
         border: Border.all(
-          color: AppColors.textSecondary.withOpacity(0.2),
+          color: Theme.of(context).colorScheme.surface,
           width: 1,
         ),
       ),
       child: TextField(
         controller: _searchController,
         autofocus: false,
-        style: AppTextStyles.bodyLarge.copyWith(color: AppColors.textPrimary),
+        style: AppTextStyles.bodyLarge
+            .copyWith(color: Theme.of(context).colorScheme.primary),
         decoration: InputDecoration(
           hintText: 'Search movies...',
           hintStyle: AppTextStyles.bodyMedium.copyWith(
-            color: AppColors.textSecondary,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
           border: InputBorder.none,
           enabledBorder: InputBorder.none,
           focusedBorder: InputBorder.none,
-          prefixIcon: Icon(Icons.search, color: AppColors.textSecondary),
+          prefixIcon:
+              Icon(Icons.search, color: Theme.of(context).colorScheme.primary),
           suffixIcon: ValueListenableBuilder<TextEditingValue>(
             valueListenable: _searchController,
             builder: (context, value, child) {
               return value.text.isNotEmpty
                   ? IconButton(
-                      icon: Icon(Icons.clear, color: AppColors.textSecondary),
+                      icon: Icon(Icons.clear,
+                          color: Theme.of(context).colorScheme.onSurface),
                       onPressed: () {
                         _searchController.clear();
                         ref.read(searchQueryProvider.notifier).state = '';
@@ -360,12 +359,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         return WallpaperGridItem(
           movie: movie,
           onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => MovieDetailScreen(movie: movie),
-              ),
-            );
+            context.push('/movies/detail', extra: movie);
           },
         );
       },
@@ -380,7 +374,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     final to = ref.read(toDateProvider);
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.darkSurface,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       isScrollControlled: true,
       builder: (context) {
         String localSort = sortBy;
@@ -405,7 +399,10 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                           width: 40,
                           height: 4,
                           decoration: BoxDecoration(
-                            color: AppColors.textSecondary.withOpacity(0.5),
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withOpacity(0.5),
                             borderRadius: BorderRadius.circular(2),
                           ),
                         ),
@@ -437,11 +434,12 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                           onChanged: (v) =>
                               setModal(() => localSort = v ?? localSort),
                           isExpanded: true,
-                          style: AppTextStyles.bodyMedium,
-                          dropdownColor: AppColors.darkSurface,
+                          style: AppTextStyles.bodyMedium.copyWith(
+                              color: Theme.of(context).colorScheme.onSurface),
+                          dropdownColor: Theme.of(context).colorScheme.surface,
                           icon: Icon(
                             Icons.arrow_drop_down,
-                            color: AppColors.textSecondary,
+                            color: Theme.of(context).colorScheme.onSurface,
                           ),
                           iconSize: 24,
                           underline: Container(),
@@ -508,11 +506,12 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                           onChanged: (v) =>
                               setModal(() => localRegion = v ?? localRegion),
                           isExpanded: true,
-                          style: AppTextStyles.bodyMedium,
-                          dropdownColor: AppColors.darkSurface,
+                          style: AppTextStyles.bodyMedium.copyWith(
+                              color: Theme.of(context).colorScheme.onSurface),
+                          dropdownColor: Theme.of(context).colorScheme.surface,
                           icon: Icon(
                             Icons.arrow_drop_down,
-                            color: AppColors.textSecondary,
+                            color: Theme.of(context).colorScheme.onSurface,
                           ),
                           iconSize: 24,
                           underline: Container(),
@@ -526,11 +525,14 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                           decoration: InputDecoration(
                             hintText: 'Genres (comma-separated IDs)',
                             filled: true,
-                            fillColor: AppColors.darkBackground,
+                            fillColor: Theme.of(context).colorScheme.surface,
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(8),
                               borderSide: BorderSide(
-                                color: AppColors.textSecondary.withOpacity(0.2),
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurface
+                                    .withOpacity(0.07),
                               ),
                             ),
                           ),
@@ -555,17 +557,17 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                                 );
                                 if (picked != null) {
                                   final y = picked.year.toString().padLeft(
-                                    4,
-                                    '0',
-                                  );
+                                        4,
+                                        '0',
+                                      );
                                   final m = picked.month.toString().padLeft(
-                                    2,
-                                    '0',
-                                  );
+                                        2,
+                                        '0',
+                                      );
                                   final d = picked.day.toString().padLeft(
-                                    2,
-                                    '0',
-                                  );
+                                        2,
+                                        '0',
+                                      );
                                   setModal(() => localFrom = '$y-$m-$d');
                                 }
                               },
@@ -585,17 +587,17 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                                 );
                                 if (picked != null) {
                                   final y = picked.year.toString().padLeft(
-                                    4,
-                                    '0',
-                                  );
+                                        4,
+                                        '0',
+                                      );
                                   final m = picked.month.toString().padLeft(
-                                    2,
-                                    '0',
-                                  );
+                                        2,
+                                        '0',
+                                      );
                                   final d = picked.day.toString().padLeft(
-                                    2,
-                                    '0',
-                                  );
+                                        2,
+                                        '0',
+                                      );
                                   setModal(() => localTo = '$y-$m-$d');
                                 }
                               },
@@ -648,11 +650,12 @@ class _FilterCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: AppColors.darkBackground,
+        color: Theme.of(context).colorScheme.onPrimary,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.textSecondary.withOpacity(0.15)),
+        border: Border.all(
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.07)),
       ),
       child: child,
     );

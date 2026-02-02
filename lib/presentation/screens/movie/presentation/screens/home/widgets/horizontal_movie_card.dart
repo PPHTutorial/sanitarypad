@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import '../../../../app/themes/app_colors.dart';
 import '../../../../app/themes/app_dimensions.dart';
 import '../../../../app/themes/app_text_styles.dart';
 import '../../../../core/constants/tmdb_endpoints.dart';
@@ -52,11 +51,11 @@ class HorizontalMovieCard extends StatelessWidget {
                 )
               else
                 Container(
-                  color: AppColors.darkCard,
-                  child: const Center(
+                  color: Theme.of(context).colorScheme.primary,
+                  child:  Center(
                     child: Icon(
                       Icons.movie_outlined,
-                      color: AppColors.textDisabled,
+                      color: Theme.of(context).colorScheme.onPrimary,
                       size: 40,
                     ),
                   ),
@@ -92,8 +91,8 @@ class HorizontalMovieCard extends StatelessWidget {
                     vertical: 4.h,
                   ),
                   decoration: BoxDecoration(
-                    color: AppColors.accentColor,
-                    borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
+                    borderRadius:
+                        BorderRadius.circular(AppDimensions.radiusSmall),
                   ),
                   child: Text(
                     typeBadge,
@@ -134,7 +133,7 @@ class HorizontalMovieCard extends StatelessWidget {
                           Icon(
                             Icons.star,
                             size: 14.w,
-                            color: AppColors.ratingGold,
+                            color: Theme.of(context).colorScheme.primary,
                           ),
                           SizedBox(width: 4.w),
                           Text(
@@ -156,4 +155,3 @@ class HorizontalMovieCard extends StatelessWidget {
     );
   }
 }
-

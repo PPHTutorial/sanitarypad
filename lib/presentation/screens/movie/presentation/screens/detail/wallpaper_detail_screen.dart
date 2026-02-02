@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:photo_view/photo_view.dart';
-import '../../../app/themes/app_colors.dart';
 import '../../../app/themes/app_text_styles.dart';
 import '../../../app/themes/app_dimensions.dart';
 import '../../../core/constants/tmdb_endpoints.dart';
@@ -10,7 +9,7 @@ import '../../../domain/entities/movie.dart';
 /// Wallpaper detail screen with full preview
 class WallpaperDetailScreen extends StatefulWidget {
   final Movie movie;
-  
+
   const WallpaperDetailScreen({
     super.key,
     required this.movie,
@@ -23,7 +22,7 @@ class WallpaperDetailScreen extends StatefulWidget {
 class _WallpaperDetailScreenState extends State<WallpaperDetailScreen> {
   bool _showUI = true;
   String _selectedQuality = 'HD';
-  
+
   final List<String> _qualities = ['HD', 'Full HD', '4K', 'Original'];
 
   @override
@@ -58,7 +57,7 @@ class _WallpaperDetailScreenState extends State<WallpaperDetailScreen> {
               ),
             ),
           ),
-          
+
           // Top bar
           if (_showUI)
             Positioned(
@@ -67,7 +66,7 @@ class _WallpaperDetailScreenState extends State<WallpaperDetailScreen> {
               right: 0,
               child: _buildTopBar(),
             ),
-          
+
           // Bottom sheet
           if (_showUI)
             Positioned(
@@ -80,7 +79,7 @@ class _WallpaperDetailScreenState extends State<WallpaperDetailScreen> {
       ),
     );
   }
-  
+
   Widget _buildTopBar() {
     return Container(
       padding: EdgeInsets.only(
@@ -122,7 +121,7 @@ class _WallpaperDetailScreenState extends State<WallpaperDetailScreen> {
       ),
     );
   }
-  
+
   Widget _buildBottomSheet() {
     return Container(
       padding: EdgeInsets.all(AppDimensions.space16),
@@ -148,14 +147,14 @@ class _WallpaperDetailScreenState extends State<WallpaperDetailScreen> {
             overflow: TextOverflow.ellipsis,
           ),
           SizedBox(height: AppDimensions.space8),
-          
+
           // Rating and year
           Row(
             children: [
               Icon(
                 Icons.star,
                 size: 20.w,
-                color: AppColors.ratingGold,
+                color: Theme.of(context).colorScheme.primary,
               ),
               SizedBox(width: 4.w),
               Text(
@@ -173,9 +172,9 @@ class _WallpaperDetailScreenState extends State<WallpaperDetailScreen> {
               ],
             ],
           ),
-          
+
           SizedBox(height: AppDimensions.space16),
-          
+
           // Quality selector
           Text(
             'Select Quality',
@@ -188,7 +187,7 @@ class _WallpaperDetailScreenState extends State<WallpaperDetailScreen> {
               children: _qualities.map((quality) {
                 final isSelected = _selectedQuality == quality;
                 final isPro = quality == '4K' || quality == 'Original';
-                
+
                 return Padding(
                   padding: EdgeInsets.only(right: AppDimensions.space8),
                   child: ChoiceChip(
@@ -201,7 +200,7 @@ class _WallpaperDetailScreenState extends State<WallpaperDetailScreen> {
                           Icon(
                             Icons.star,
                             size: 14.w,
-                            color: AppColors.goldColor,
+                            color: Theme.of(context).colorScheme.primary,
                           ),
                         ],
                       ],
@@ -219,9 +218,9 @@ class _WallpaperDetailScreenState extends State<WallpaperDetailScreen> {
               }).toList(),
             ),
           ),
-          
+
           SizedBox(height: AppDimensions.space16),
-          
+
           // Action buttons
           Row(
             children: [
@@ -236,7 +235,8 @@ class _WallpaperDetailScreenState extends State<WallpaperDetailScreen> {
                   icon: const Icon(Icons.download),
                   label: const Text('Download'),
                   style: ElevatedButton.styleFrom(
-                    padding: EdgeInsets.symmetric(vertical: AppDimensions.space12),
+                    padding:
+                        EdgeInsets.symmetric(vertical: AppDimensions.space12),
                   ),
                 ),
               ),
@@ -252,13 +252,14 @@ class _WallpaperDetailScreenState extends State<WallpaperDetailScreen> {
                   icon: const Icon(Icons.wallpaper),
                   label: const Text('Set Wallpaper'),
                   style: OutlinedButton.styleFrom(
-                    padding: EdgeInsets.symmetric(vertical: AppDimensions.space12),
+                    padding:
+                        EdgeInsets.symmetric(vertical: AppDimensions.space12),
                   ),
                 ),
               ),
             ],
           ),
-          
+
           // Watermark indicator for free users
           if (_selectedQuality != 'Original')
             Padding(
@@ -269,7 +270,7 @@ class _WallpaperDetailScreenState extends State<WallpaperDetailScreen> {
                   Icon(
                     Icons.info_outline,
                     size: 14.w,
-                    color: AppColors.textSecondary,
+                    color: Theme.of(context).colorScheme.surface,
                   ),
                   SizedBox(width: 4.w),
                   Text(
@@ -284,4 +285,3 @@ class _WallpaperDetailScreenState extends State<WallpaperDetailScreen> {
     );
   }
 }
-

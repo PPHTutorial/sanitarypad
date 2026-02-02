@@ -1,4 +1,8 @@
+
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:logger/logger.dart';
+import 'package:sanitarypad/core/providers/auth_provider.dart';
+import 'package:sanitarypad/services/ai_service.dart';
 import '../core/constants/app_constants.dart';
 import '../data/models/skincare_model.dart';
 
@@ -382,6 +386,24 @@ class SkincareEnhancedService {
               .map((doc) => Ingredient.fromFirestore(doc))
               .toList(),
         );
+  }
+
+  Future<String> getAIIngredients(dynamic ref, String ing) async {
+    final user = ref.read(currentUserStreamProvider).value;
+    final aiService = AIService();
+    final response = ing.isEmpty
+        ? "**Enter an ingredient name to see details.**"
+        : await aiService.sendMessage(
+            userId: user.userId,
+            category: "ingredient",
+            message: 'Look up for this ingredient $ing',
+            conversationHistory: [],
+            context: {"ingridient": ing},
+          );
+
+    Logger().e(response);
+
+    return response;
   }
 
   // Acne tracker

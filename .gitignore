@@ -48,3 +48,11 @@ app.*.map.json
 .env
 .env.local
 .env.*.local
+
+lib/firebase_options.dart
+firebase.json
+
+# Firebase Functions
+functions/node_modules
+functions/.env
+functions/.env.local

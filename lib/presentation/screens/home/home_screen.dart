@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:sanitarypad/presentation/screens/movie/movies.dart';
-import 'package:sanitarypad/presentation/screens/movie/presentation/screens/home/home_screen.dart';
 import '../../../core/config/responsive_config.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/providers/cycle_provider.dart';
 import '../../../core/widgets/femcare_bottom_nav.dart';
+import '../../../services/ads_service.dart';
 
 /// Home screen - Blank dashboard for users to add their data
 class HomeScreen extends ConsumerWidget {
@@ -189,7 +188,10 @@ class HomeScreen extends ConsumerWidget {
                 context,
                 icon: Icons.child_care,
                 label: 'Pregnancy',
-                onTap: () => context.go('/pregnancy-tracking'),
+                onTap: () {
+                  AdsService().showInterstitialAd();
+                  context.go('/pregnancy-tracking');
+                },
               ),
             ),
             ResponsiveConfig.widthBox(12),
@@ -258,16 +260,15 @@ class HomeScreen extends ConsumerWidget {
                 context,
                 icon: Icons.movie,
                 label: 'Movies',
-                onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (context) => MovieMovieHomeScreen())),
+                onTap: () => context.push('/movies'),
               ),
             ),
           ],
         ),
         ResponsiveConfig.heightBox(12),
-        const _CommunityCard()
+        const _CommunityCard(),
+        ResponsiveConfig.heightBox(16),
+        const Center(child: BannerAdWidget()),
       ],
     );
   }

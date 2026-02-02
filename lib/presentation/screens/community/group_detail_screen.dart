@@ -137,19 +137,21 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen>
                     ],
                   ),
                   actions: [
+                    if (isMember)
+                      IconButton(
+                        icon: const Icon(Icons.bolt_outlined),
+                        tooltip: 'Quick actions',
+                        onPressed: () =>
+                            _showQuickActions(context, group, isOwner),
+                      ),
                     if (isOwner)
                       IconButton(
                         icon: const Icon(Icons.edit_note_outlined),
-                        tooltip: 'Edit group (coming soon)',
-                        onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                'Group editing is coming soon. Hang tight!',
-                              ),
-                            ),
-                          );
-                        },
+                        tooltip: 'Edit group',
+                        onPressed: () => context.push(
+                          '/groups/edit',
+                          extra: group,
+                        ),
                       ),
                     IconButton(
                       icon: const Icon(Icons.info_outline),
@@ -172,14 +174,6 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen>
                     ],
                   ),
                 ),
-                floatingActionButton: isMember
-                    ? FloatingActionButton.extended(
-                        onPressed: () =>
-                            _showQuickActions(context, group, isOwner),
-                        icon: const Icon(Icons.bolt),
-                        label: const Text('Quick actions'),
-                      )
-                    : null,
                 body: TabBarView(
                   controller: _tabController,
                   children: [
@@ -381,7 +375,7 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen>
                 ResponsiveConfig.heightBox(12),
                 Row(
                   children: [
-                    Icon(
+                    const Icon(
                       Icons.person_outline,
                       size: 18,
                       color: AppTheme.mediumGray,
@@ -399,7 +393,7 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen>
                 ResponsiveConfig.heightBox(8),
                 Row(
                   children: [
-                    Icon(
+                    const Icon(
                       Icons.calendar_month_outlined,
                       size: 18,
                       color: AppTheme.mediumGray,
@@ -425,10 +419,12 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen>
                   runSpacing: 8,
                   children: [
                     Chip(
+                      side: const BorderSide(color: AppTheme.mediumGray),
                       avatar: const Icon(Icons.category_outlined, size: 16),
                       label: Text(group.category.toUpperCase()),
                     ),
                     Chip(
+                      side: const BorderSide(color: AppTheme.mediumGray),
                       avatar: Icon(
                         group.isPublic
                             ? Icons.lock_open_outlined
@@ -514,7 +510,7 @@ class _OverviewTab extends StatelessWidget {
                       CircleAvatar(
                         radius: 36,
                         backgroundColor: AppTheme.primaryPink.withOpacity(0.12),
-                        child: Icon(
+                        child: const Icon(
                           Icons.groups,
                           size: 32,
                           color: AppTheme.primaryPink,
@@ -1066,7 +1062,7 @@ class _MessagePreviewTile extends StatelessWidget {
             ResponsiveConfig.heightBox(6),
             Row(
               children: [
-                Icon(Icons.access_time, size: 14, color: AppTheme.mediumGray),
+                const Icon(Icons.access_time, size: 14, color: AppTheme.mediumGray),
                 ResponsiveConfig.widthBox(4),
                 Text(
                   DateFormat('MMM d • h:mm a').format(message.sentAt),
@@ -1077,7 +1073,7 @@ class _MessagePreviewTile extends StatelessWidget {
                 ),
                 if (message.reactions.isNotEmpty) ...[
                   ResponsiveConfig.widthBox(12),
-                  Icon(Icons.favorite, size: 14, color: AppTheme.primaryPink),
+                  const Icon(Icons.favorite, size: 14, color: AppTheme.primaryPink),
                   ResponsiveConfig.widthBox(4),
                   Text(
                     message.reactions.values
@@ -1136,7 +1132,7 @@ class _EventTile extends StatelessWidget {
             ResponsiveConfig.heightBox(6),
             Row(
               children: [
-                Icon(Icons.calendar_month,
+                const Icon(Icons.calendar_month,
                     size: 14, color: AppTheme.mediumGray),
                 ResponsiveConfig.widthBox(4),
                 Text(
@@ -1153,7 +1149,7 @@ class _EventTile extends StatelessWidget {
                 padding: const EdgeInsets.only(top: 4),
                 child: Row(
                   children: [
-                    Icon(Icons.location_on_outlined,
+                    const Icon(Icons.location_on_outlined,
                         size: 14, color: AppTheme.mediumGray),
                     ResponsiveConfig.widthBox(4),
                     Flexible(

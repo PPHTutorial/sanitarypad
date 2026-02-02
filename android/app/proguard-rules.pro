@@ -117,3 +117,18 @@
     native <methods>;
 }
 
+# Keep Flutter Local Notifications plugin classes
+-keep class com.dexterous.flutterlocalnotifications.** { *; }
+-keep class com.dexterous.flutterlocalnotifications.models.** { *; }
+
+# Keep Gson reflection classes (required for TypeToken)
+-keep class com.google.gson.** { *; }
+-keep class com.google.gson.reflect.TypeToken { *; }
+
+# Keep attributes needed for generic signatures
+-keepattributes Signature
+-keepattributes *Annotation*
+
+# Prevent warnings
+-dontwarn com.dexterous.flutterlocalnotifications.**
+-dontwarn com.google.gson.**

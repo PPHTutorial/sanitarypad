@@ -206,7 +206,7 @@ class _WellnessJournalListScreenState
                 ResponsiveConfig.heightBox(8),
                 Row(
                   children: [
-                    Icon(
+                    const Icon(
                       Icons.photo_library,
                       size: 16,
                       color: AppTheme.mediumGray,

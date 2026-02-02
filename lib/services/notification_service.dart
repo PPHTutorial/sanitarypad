@@ -472,7 +472,7 @@ class NotificationService {
           matchDateTimeComponents: _getDateTimeComponents(repeatInterval),
         );
         print(
-            '✅ Repeating notification scheduled: $title (${repeatInterval}) at $scheduledTZ (ID: $id)');
+            '✅ Repeating notification scheduled: $title ($repeatInterval) at $scheduledTZ (ID: $id)');
       } else {
         // One-time notification
         await _localNotifications.zonedSchedule(
