@@ -16,7 +16,7 @@ publish_to: "none" # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.0.0+1
+version: 26.08.49+1
 
 environment:
   sdk: ">=3.0.0 <4.0.0"
@@ -88,6 +88,10 @@ dependencies:
   # HTTP & Networking
   dio: ^5.4.0
 
+  # Image Processing
+  image: ^4.2.0
+  path: ^1.9.0
+
 
   # Utilities
   equatable: ^2.0.5
@@ -132,6 +136,14 @@ dependencies:
   google_sign_in: ^6.2.1
   sign_in_with_apple: ^6.1.1
   font_awesome_flutter: ^10.7.0
+  html: ^0.15.4
+
+  # App Rating
+  in_app_review: ^2.0.9
+  flutter_secure_storage: ^10.0.0
+  google_maps_flutter: ^2.10.0
+  location: ^7.0.1
+  flutter_native_splash: ^2.4.0
 
 dev_dependencies:
   flutter_test:
@@ -152,7 +164,6 @@ dev_dependencies:
 
   # App Icons & Splash Screen
   flutter_launcher_icons: ^0.13.1
-  flutter_native_splash: ^2.3.10
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -167,5 +178,11 @@ flutter:
   # Assets configuration
   assets:
     - assets/images/
-    - assets/icons/
-    - assets/images/logo.png
+
+flutter_native_splash:
+  color: "#1A1A1A"
+  image: assets/images/logo.png
+  android_12:
+    image: assets/images/logo.png
+    color: "#1A1A1A"
+  fullscreen: true

@@ -350,7 +350,25 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     setState(() => _isLoading = true);
     try {
       await signInMethod();
-      if (mounted) context.go('/home');
+
+      // Wait for auth state to propagate
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      // Force provider refresh to update auth state
+      ref.invalidate(currentUserStreamProvider);
+
+      // Initialize notification scheduler
+      try {
+        final scheduler = NotificationSchedulerService();
+        await scheduler.initialize();
+      } catch (e) {
+        print('Error initializing notifications: $e');
+      }
+
+      // Navigate to home
+      if (mounted) {
+        context.go('/home');
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

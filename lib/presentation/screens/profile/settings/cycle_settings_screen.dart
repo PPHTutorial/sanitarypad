@@ -5,7 +5,8 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/config/responsive_config.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/providers/auth_provider.dart';
-import '../../../../services/auth_service.dart';
+import '../../../../services/notification_scheduler_service.dart';
+import '../../../../services/credit_manager.dart';
 
 class CycleSettingsScreen extends ConsumerStatefulWidget {
   const CycleSettingsScreen({super.key});
@@ -18,6 +19,9 @@ class CycleSettingsScreen extends ConsumerStatefulWidget {
 class _CycleSettingsScreenState extends ConsumerState<CycleSettingsScreen> {
   int _cycleLength = 28;
   int _periodLength = 5;
+  bool _predictPeriod = true;
+  bool _predictOvulation = true;
+  bool _dailyLogPrompt = false;
   bool _isLoading = false;
 
   @override
@@ -27,6 +31,9 @@ class _CycleSettingsScreenState extends ConsumerState<CycleSettingsScreen> {
     if (user != null) {
       _cycleLength = user.settings.cycleLength;
       _periodLength = user.settings.periodLength;
+      _predictPeriod = user.settings.predictPeriod;
+      _predictOvulation = user.settings.predictOvulation;
+      _dailyLogPrompt = user.settings.dailyLogPrompt;
     }
   }
 
@@ -36,15 +43,36 @@ class _CycleSettingsScreenState extends ConsumerState<CycleSettingsScreen> {
       final user = ref.read(currentUserStreamProvider).value;
       if (user == null) return;
 
+      // Credit Check
+      final hasCredit = await ref
+          .read(creditManagerProvider)
+          .requestCredit(context, ActionType.cycleSettings);
+      if (!hasCredit) {
+        if (mounted) setState(() => _isLoading = false);
+        return;
+      }
+
       final updatedSettings = user.settings.copyWith(
         cycleLength: _cycleLength,
         periodLength: _periodLength,
+        predictPeriod: _predictPeriod,
+        predictOvulation: _predictOvulation,
+        dailyLogPrompt: _dailyLogPrompt,
       );
 
       final updatedUser = user.copyWith(settings: updatedSettings);
 
       final authService = ref.read(authServiceProvider);
       await authService.updateUserData(updatedUser);
+
+      // Reschedule notifications
+      final notificationScheduler = NotificationSchedulerService();
+      await notificationScheduler.scheduleAllNotifications(user.userId);
+
+      // Consume credits
+      await ref
+          .read(creditManagerProvider)
+          .consumeCredits(ActionType.cycleSettings);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -121,22 +149,22 @@ class _CycleSettingsScreenState extends ConsumerState<CycleSettingsScreen> {
               title: 'Period Prediction',
               subtitle: 'Get notified 2 days before your period starts',
               icon: FontAwesomeIcons.bell,
-              value: true, // TODO: Link to settings
-              onChanged: (val) {},
+              value: _predictPeriod,
+              onChanged: (val) => setState(() => _predictPeriod = val),
             ),
             _buildToggleTile(
               title: 'Ovulation Prediction',
               subtitle: 'Get notified during your fertile window',
               icon: FontAwesomeIcons.heartPulse,
-              value: true,
-              onChanged: (val) {},
+              value: _predictOvulation,
+              onChanged: (val) => setState(() => _predictOvulation = val),
             ),
             _buildToggleTile(
               title: 'Daily Log Prompt',
               subtitle: 'Gentle reminder to log your symptoms',
               icon: FontAwesomeIcons.penToSquare,
-              value: false,
-              onChanged: (val) {},
+              value: _dailyLogPrompt,
+              onChanged: (val) => setState(() => _dailyLogPrompt = val),
             ),
           ],
         ),
@@ -202,7 +230,7 @@ class _CycleSettingsScreenState extends ConsumerState<CycleSettingsScreen> {
                         style: const TextStyle(
                             fontWeight: FontWeight.bold, fontSize: 16)),
                     Text(subtitle,
-                        style: TextStyle(
+                        style: const TextStyle(
                             color: AppTheme.mediumGray, fontSize: 12)),
                   ],
                 ),

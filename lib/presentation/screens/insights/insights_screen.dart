@@ -1,14 +1,16 @@
-import 'dart:math' as math;
+﻿import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:go_router/go_router.dart';
 import '../../../core/config/responsive_config.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/providers/cycle_provider.dart';
 import '../../../core/widgets/femcare_bottom_nav.dart';
 import '../../../core/widgets/back_button_handler.dart';
 import '../../../services/insights_service.dart';
-import '../../../services/ads_service.dart';
+import 'package:sanitarypad/presentation/widgets/ads/eco_ad_wrapper.dart';
 
 /// Comprehensive insights and analytics screen
 class InsightsScreen extends ConsumerStatefulWidget {
@@ -84,6 +86,8 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  const EcoAdWrapper(adType: AdType.banner),
+                  ResponsiveConfig.heightBox(16),
                   // Overall Health Score
                   if (insights['overallHealth'] != null)
                     _buildOverallHealthScoreCard(
@@ -91,7 +95,7 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
                       insights['overallHealth'] as double,
                     ),
                   ResponsiveConfig.heightBox(16),
-                  const NativeAdWidget(),
+                  const EcoAdWrapper(adType: AdType.native),
                   if (insights['overallHealth'] != null)
                     ResponsiveConfig.heightBox(16),
 
@@ -218,7 +222,7 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
             _buildCardHeader(
               context,
               title: 'Overall Health Score',
-              icon: Icons.health_and_safety,
+              icon: FontAwesomeIcons.heartPulse,
               color: _getScoreColor(score),
             ),
             ResponsiveConfig.heightBox(4),
@@ -276,8 +280,9 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
             _buildCardHeader(
               context,
               title: 'Cycle Statistics',
-              icon: Icons.calendar_today,
+              icon: FontAwesomeIcons.calendarDays,
               color: AppTheme.primaryPink,
+              route: '/cycles-list',
             ),
             Row(
               children: [
@@ -345,8 +350,9 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
             _buildCardHeader(
               context,
               title: 'Wellness Insights',
-              icon: Icons.auto_awesome,
-              color: AppTheme.infoBlue,
+              icon: FontAwesomeIcons.spa,
+              color: AppTheme.accentCoral,
+              route: '/wellness-journal',
             ),
             Row(
               children: [
@@ -357,8 +363,8 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
                     value:
                         '${wellnessData['averageHydration']?.toStringAsFixed(1) ?? '0'}',
                     subtitle: 'GLASSES',
-                    icon: Icons.water_drop,
-                    color: AppTheme.infoBlue,
+                    icon: FontAwesomeIcons.glassWater,
+                    color: AppTheme.accentCoral,
                   ),
                 ),
                 ResponsiveConfig.widthBox(12),
@@ -369,7 +375,7 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
                     value:
                         '${wellnessData['averageSleep']?.toStringAsFixed(1) ?? '0'}',
                     subtitle: 'HOURS',
-                    icon: Icons.bedtime,
+                    icon: FontAwesomeIcons.moon,
                     color: AppTheme.lavender,
                   ),
                 ),
@@ -381,8 +387,8 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
                     value:
                         '${wellnessData['averageEnergy']?.toStringAsFixed(1) ?? '0'}',
                     subtitle: '/ 5',
-                    icon: Icons.bolt,
-                    color: AppTheme.warningOrange,
+                    icon: FontAwesomeIcons.bolt,
+                    color: AppTheme.accentRose,
                   ),
                 ),
               ],
@@ -396,7 +402,7 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
                     label: 'Wellness Score',
                     value: '${wellnessData['wellnessScore']?.round() ?? 0}',
                     subtitle: '/ 100',
-                    icon: Icons.star,
+                    icon: FontAwesomeIcons.star,
                   ),
                 ),
                 ResponsiveConfig.widthBox(12),
@@ -407,8 +413,8 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
                     value:
                         '${wellnessData['exerciseFrequency']?.toStringAsFixed(0) ?? '0'}%',
                     subtitle: 'CONSISTENCY',
-                    icon: Icons.fitness_center,
-                    color: AppTheme.successGreen,
+                    icon: FontAwesomeIcons.dumbbell,
+                    color: AppTheme.deepPink,
                   ),
                 ),
               ],
@@ -491,8 +497,9 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
             _buildCardHeader(
               context,
               title: 'Fertility Insights',
-              icon: Icons.egg,
-              color: AppTheme.primaryPink,
+              icon: FontAwesomeIcons.seedling,
+              color: AppTheme.deepPink,
+              route: '/fertility-tracking',
             ),
             if (fertilityData['averageBBT'] != null &&
                 fertilityData['averageBBT'] > 0)
@@ -500,7 +507,7 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
                 context,
                 label: 'Avg BBT',
                 value:
-                    '${fertilityData['averageBBT']?.toStringAsFixed(1) ?? '0'}°C',
+                    '${fertilityData['averageBBT']?.toStringAsFixed(1) ?? '0'}┬░C',
                 subtitle: 'MORNING BASELINE',
                 icon: Icons.thermostat,
                 color: AppTheme.warningOrange,
@@ -565,8 +572,9 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
             _buildCardHeader(
               context,
               title: 'Skincare Insights',
-              icon: Icons.face,
+              icon: FontAwesomeIcons.faceSmileBeam,
               color: AppTheme.lavender,
+              route: '/skincare-tracking',
             ),
             Column(
               children: [
@@ -666,8 +674,9 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
             _buildCardHeader(
               context,
               title: 'Pad Usage Insights',
-              icon: Icons.medical_services,
-              color: AppTheme.primaryPink,
+              icon: FontAwesomeIcons.droplet,
+              color: AppTheme.accentRose,
+              route: '/pad-management',
             ),
             Row(
               children: [
@@ -718,6 +727,7 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
     required String title,
     required IconData icon,
     required Color color,
+    String? route,
   }) {
     return Padding(
       padding: ResponsiveConfig.padding(bottom: 20),
@@ -729,21 +739,46 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
               color: color.withValues(alpha: 0.1),
               borderRadius: ResponsiveConfig.borderRadius(8),
             ),
-            child: Icon(
+            child: FaIcon(
               icon,
               color: color,
-              size: ResponsiveConfig.iconSize(20),
+              size: ResponsiveConfig.iconSize(18),
             ),
           ),
           ResponsiveConfig.widthBox(12),
-          Text(
-            title,
-            style: ResponsiveConfig.textStyle(
-              size: 18,
-              weight: FontWeight.bold,
-              letterSpacing: -0.5,
+          Expanded(
+            child: Text(
+              title,
+              style: ResponsiveConfig.textStyle(
+                size: 18,
+                weight: FontWeight.bold,
+                letterSpacing: -0.5,
+              ),
             ),
           ),
+          if (route != null)
+            GestureDetector(
+              onTap: () => context.push(route),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'View All',
+                    style: ResponsiveConfig.textStyle(
+                      size: 12,
+                      weight: FontWeight.w600,
+                      color: color,
+                    ),
+                  ),
+                  ResponsiveConfig.widthBox(4),
+                  FaIcon(
+                    FontAwesomeIcons.arrowRight,
+                    size: 12,
+                    color: color,
+                  ),
+                ],
+              ),
+            ),
         ],
       ),
     );
@@ -780,10 +815,10 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
         children: [
           Row(
             children: [
-              Icon(
+              FaIcon(
                 icon,
                 color: themeColor,
-                size: ResponsiveConfig.iconSize(14),
+                size: ResponsiveConfig.iconSize(13),
               ),
               ResponsiveConfig.widthBox(6),
               Expanded(

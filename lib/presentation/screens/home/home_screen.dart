@@ -7,13 +7,32 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/providers/cycle_provider.dart';
 import '../../../core/widgets/femcare_bottom_nav.dart';
 import '../../../services/ads_service.dart';
+import '../../../core/providers/auth_provider.dart';
+import '../../../core/providers/subscription_provider.dart';
 
 /// Home screen - Blank dashboard for users to add their data
-class HomeScreen extends ConsumerWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends ConsumerState<HomeScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Proactive check for daily credits reset
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final user = ref.read(currentUserProvider);
+      if (user != null) {
+        ref.read(subscriptionServiceProvider).checkDailyReset(user.userId);
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final activeCycle = ref.watch(activeCycleProvider);
 
     return Scaffold(
@@ -52,7 +71,7 @@ class HomeScreen extends ConsumerWidget {
             ],
 
             // Quick Actions
-            _buildQuickActions(context),
+            _buildQuickActions(context, ref),
             ResponsiveConfig.heightBox(16),
 
             // Get Started Section (if no data)
@@ -161,6 +180,40 @@ class HomeScreen extends ConsumerWidget {
                     ],
                   ),
                 ),
+                Consumer(
+                  builder: (context, ref, child) {
+                    final cyclesAsync = ref.watch(cyclesStreamProvider);
+                    final cycles = cyclesAsync.value ?? [];
+                    if (cycles.length > 1) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: InkWell(
+                          onTap: () => context.push('/cycles-list'),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'View All',
+                                style: ResponsiveConfig.textStyle(
+                                  size: 14,
+                                  color: AppTheme.primaryPink,
+                                  weight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              const Icon(
+                                Icons.arrow_forward_ios,
+                                size: 12,
+                                color: AppTheme.primaryPink,
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }
+                    return const SizedBox.shrink();
+                  },
+                ),
               ],
             ),
           ],
@@ -169,7 +222,7 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildQuickActions(BuildContext context) {
+  Widget _buildQuickActions(BuildContext context, WidgetRef ref) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -187,7 +240,7 @@ class HomeScreen extends ConsumerWidget {
             Expanded(
               child: _buildActionButton(
                 context,
-                icon: FontAwesomeIcons.baby,
+                icon: FontAwesomeIcons.personPregnant,
                 label: 'Pregnancy',
                 onTap: () {
                   AdsService().showInterstitialAd();
@@ -214,7 +267,7 @@ class HomeScreen extends ConsumerWidget {
             Expanded(
               child: _buildActionButton(
                 context,
-                icon: FontAwesomeIcons.faceSmile,
+                icon: FontAwesomeIcons.faceGrinBeamSweat,
                 label: 'Skincare',
                 onTap: () => context.go('/skincare-tracking'),
               ),
@@ -223,7 +276,7 @@ class HomeScreen extends ConsumerWidget {
             Expanded(
               child: _buildActionButton(
                 context,
-                icon: FontAwesomeIcons.heartPulse,
+                icon: FontAwesomeIcons.heartCirclePlus,
                 label: 'Wellness',
                 onTap: () => context.go('/wellness-journal-list'),
               ),

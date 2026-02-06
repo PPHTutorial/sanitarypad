@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/config/responsive_config.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../../core/constants/app_constants.dart';
 import '../../../services/wellness_content_service.dart';
 import '../../../core/widgets/back_button_handler.dart';
 import '../../../core/widgets/empty_state.dart';

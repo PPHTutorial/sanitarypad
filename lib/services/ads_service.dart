@@ -12,6 +12,11 @@ class AdsService {
   Future<void> initialize() async {
     if (_isInitialized) return;
     try {
+      // Configure test device ID provided by user
+      const testDeviceIds = ['FDB6404EE2DF76ABCA39527BDAFAB242'];
+      final configuration = RequestConfiguration(testDeviceIds: testDeviceIds);
+      await MobileAds.instance.updateRequestConfiguration(configuration);
+
       await MobileAds.instance.initialize();
       _isInitialized = true;
       debugPrint('AdsService initialized');
@@ -108,20 +113,90 @@ class AdsService {
     );
   }
 
-  Future<void> showRewardedAd(
-      {required Function(RewardItem) onUserEarnedReward}) async {
+  // --- Ad Pre-loading ---
+  RewardedAd? _rewardedAd;
+  bool _isRewardedAdLoading = false;
+  DateTime? _rewardedAdLoadTime;
+
+  bool get isRewardedAdAvailable {
+    return _rewardedAd != null &&
+        _rewardedAdLoadTime != null &&
+        DateTime.now().difference(_rewardedAdLoadTime!) <
+            const Duration(hours: 4);
+  }
+
+  Future<void> loadRewardedAd() async {
+    if (_isRewardedAdLoading || isRewardedAdAvailable) return;
     if (!_isInitialized) await initialize();
+
+    _isRewardedAdLoading = true;
+    debugPrint('Loading RewardedAd...');
+
     RewardedAd.load(
       adUnitId: rewardedAdUnitId,
       request: const AdRequest(),
       rewardedAdLoadCallback: RewardedAdLoadCallback(
         onAdLoaded: (RewardedAd ad) {
+          _rewardedAd = ad;
+          _isRewardedAdLoading = false;
+          _rewardedAdLoadTime = DateTime.now();
+          debugPrint('RewardedAd loaded and ready.');
+        },
+        onAdFailedToLoad: (LoadAdError error) {
+          _isRewardedAdLoading = false;
+          debugPrint('RewardedAd failed to load: $error');
+        },
+      ),
+    );
+  }
+
+  Future<void> showRewardedAd({
+    required Function(RewardItem) onUserEarnedReward,
+    VoidCallback? onAdDismissed,
+    Function(LoadAdError)? onAdFailedToLoad,
+  }) async {
+    if (!_isInitialized) await initialize();
+
+    // If ad is available, show it
+    if (isRewardedAdAvailable) {
+      _rewardedAd!.fullScreenContentCallback = FullScreenContentCallback(
+        onAdDismissedFullScreenContent: (RewardedAd ad) {
+          ad.dispose();
+          _rewardedAd = null;
+          if (onAdDismissed != null) onAdDismissed();
+          loadRewardedAd(); // Pre-load next one
+        },
+        onAdFailedToShowFullScreenContent: (RewardedAd ad, AdError error) {
+          ad.dispose();
+          _rewardedAd = null;
+          loadRewardedAd();
+        },
+      );
+
+      _rewardedAd!.show(
+          onUserEarnedReward: (AdWithoutView ad, RewardItem reward) {
+        onUserEarnedReward(reward);
+      });
+      return;
+    }
+
+    // If no ad pre-loaded, try loading one immediately (user might have to wait)
+    _isRewardedAdLoading = true;
+    RewardedAd.load(
+      adUnitId: rewardedAdUnitId,
+      request: const AdRequest(),
+      rewardedAdLoadCallback: RewardedAdLoadCallback(
+        onAdLoaded: (RewardedAd ad) {
+          _isRewardedAdLoading = false;
           ad.fullScreenContentCallback = FullScreenContentCallback(
             onAdDismissedFullScreenContent: (RewardedAd ad) {
               ad.dispose();
+              if (onAdDismissed != null) onAdDismissed();
+              loadRewardedAd();
             },
             onAdFailedToShowFullScreenContent: (RewardedAd ad, AdError error) {
               ad.dispose();
+              loadRewardedAd();
             },
           );
           ad.show(onUserEarnedReward: (AdWithoutView ad, RewardItem reward) {
@@ -129,7 +204,10 @@ class AdsService {
           });
         },
         onAdFailedToLoad: (LoadAdError error) {
+          _isRewardedAdLoading = false;
           debugPrint('RewardedAd failed to load: $error');
+          if (onAdFailedToLoad != null) onAdFailedToLoad(error);
+          loadRewardedAd(); // Try again for background
         },
       ),
     );

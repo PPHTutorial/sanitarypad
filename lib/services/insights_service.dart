@@ -9,6 +9,7 @@ import 'fertility_service.dart';
 import 'skincare_service.dart';
 import 'pad_service.dart';
 import 'auth_service.dart';
+import 'pregnancy_service.dart';
 
 final insightsServiceProvider = Provider<InsightsService>((ref) {
   return InsightsService();
@@ -22,6 +23,7 @@ class InsightsService {
   final SkincareService _skincareService = SkincareService();
   final PadService _padService = PadService();
   final AuthService _authService = AuthService();
+  final PregnancyService _pregnancyService = PregnancyService();
 
   /// Get comprehensive insights
   Future<Map<String, dynamic>> getComprehensiveInsights() async {
@@ -58,6 +60,7 @@ class InsightsService {
       'fertility': await _calculateFertilityInsights(cycles, last90Days),
       'skincare': _calculateSkincareInsights(skincareEntries, skincareProducts),
       'pads': _calculatePadInsights(pads),
+      'pregnancy': await _calculatePregnancyInsights(userId),
       'overallHealth': await _calculateOverallHealthScore(
         cycles,
         wellnessEntries,
@@ -436,5 +439,49 @@ class InsightsService {
     if (factors == 0) return 0.0;
 
     return (totalScore / factors * 4).clamp(0, 100); // Scale to 0-100
+  }
+
+  /// Calculate pregnancy insights
+  Future<Map<String, dynamic>> _calculatePregnancyInsights(
+      String userId) async {
+    final pregnancy = await _pregnancyService.getActivePregnancy(userId);
+    if (pregnancy == null) {
+      return {'hasData': false};
+    }
+
+    final pregnancyId = pregnancy.id!;
+
+    // Get kicks data
+    final kicksStream = _pregnancyService.getKickEntries(userId, pregnancyId);
+    final kicks = await kicksStream.first;
+
+    // Get weight data
+    final weightsStream =
+        _pregnancyService.getWeightEntries(userId, pregnancyId);
+    final weights = await weightsStream.first;
+
+    // Calculate avg kicks per session
+    double avgKicks = 0;
+    if (kicks.isNotEmpty) {
+      avgKicks =
+          kicks.map((k) => k.kickCount).reduce((a, b) => a + b) / kicks.length;
+    }
+
+    // Weight gain
+    double weightGain = 0;
+    if (weights.length >= 2) {
+      weightGain = weights.first.weight - weights.last.weight;
+    }
+
+    return {
+      'hasData': true,
+      'currentWeek': pregnancy.currentWeek,
+      'dueDate': pregnancy.dueDate,
+      'averageKicks': avgKicks,
+      'totalWeightGain': weightGain,
+      'totalKicksLogged': kicks.length,
+      'totalWeightsLogged': weights.length,
+      'lastWeight': weights.isNotEmpty ? weights.first.weight : null,
+    };
   }
 }

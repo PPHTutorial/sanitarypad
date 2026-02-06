@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:math';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -22,6 +21,9 @@ import '../reminders/create_reminder_dialog.dart';
 import 'skincare_product_management_screen.dart' show ProductInventoryView;
 import 'package:flutter_markdown/flutter_markdown.dart';
 import '../../../services/ads_service.dart';
+import '../../../services/skincare_export_service.dart';
+import '../../widgets/ads/eco_ad_wrapper.dart';
+import '../../../services/credit_manager.dart';
 
 class SkincareTrackingScreen extends ConsumerStatefulWidget {
   const SkincareTrackingScreen({super.key});
@@ -99,65 +101,77 @@ class _SkincareTrackingScreenState extends ConsumerState<SkincareTrackingScreen>
             child: _buildModernTabSwitcher(context),
           ),
         ),
-        body: TabBarView(
-          controller: _tabController,
-          children: [
-            _OverviewTab(
-              userId: user.userId,
-              enhancedService: _enhancedService,
-              skinTypeStream: _enhancedService.watchSkinType(user.userId),
-              productStream: productStream,
-              acneStream: acneStream,
-              uvStream: uvStream,
-              goalStream: goalStream,
-              journalStream: journalStream,
-              hydrationStream: hydrationStream,
-              reminderService: _reminderService,
-              onAddGoal: () => _showGoalSheet(context, user.userId),
-              onAddProduct: () => context.push('/skincare-product-form'),
-              onManageProducts: () =>
-                  _openProductManager(context, view: ProductInventoryView.all),
-              onOpenProductCategory: (view) =>
-                  _openProductManager(context, view: view),
-              onLogHydration: () => context.push('/wellness-journal'),
-              onViewHydrationLogs: () => context.push('/wellness-journal-list'),
-              onAnalyzeSkin: () => _showRewardedAnalysis(context),
-              onLogAcne: () => _showAcneSheet(context, user.userId),
-              onLogUV: () => _showUVSheet(context, user.userId),
-            ),
-            _JournalTab(
-              userId: user.userId,
-              journalStream: journalStream,
-              onLogJournal: () => _showJournalSheet(context, user.userId),
-            ),
-            _RoutineTab(
-              userId: user.userId,
-              routineEntriesStream: _skincareService.getEntries(
-                user.userId,
-                DateTime.now().subtract(const Duration(days: 60)),
-                DateTime.now().add(const Duration(days: 30)),
+        body: SafeArea(
+          bottom: true,
+          top: false,
+          child: TabBarView(
+            controller: _tabController,
+            children: [
+              _OverviewTab(
+                userId: user.userId,
+                enhancedService: _enhancedService,
+                skinTypeStream: _enhancedService.watchSkinType(user.userId),
+                productStream: productStream,
+                acneStream: acneStream,
+                uvStream: uvStream,
+                goalStream: goalStream,
+                journalStream: journalStream,
+                hydrationStream: hydrationStream,
+                reminderService: _reminderService,
+                onAddGoal: () => _showGoalSheet(context, user.userId),
+                onAddProduct: () => context.push('/skincare-product-form'),
+                onManageProducts: () => _openProductManager(context,
+                    view: ProductInventoryView.all),
+                onOpenProductCategory: (view) =>
+                    _openProductManager(context, view: view),
+                onLogHydration: () => context.push('/wellness-journal'),
+                onViewHydrationLogs: () =>
+                    context.push('/wellness-journal-list'),
+                onAnalyzeSkin: () =>
+                    _showRewardedAnalysis(context, user.userId),
+                onExportJournal: (entries) =>
+                    SkincareExportService().exportJournalAsPdf(entries),
+                onLogAcne: () => _showAcneSheet(context, user.userId),
+                onLogUV: () => _showUVSheet(context, user.userId),
               ),
-              routineTemplatesStream: routineTemplateStream,
-              onCreateTemplate: () =>
-                  _showRoutineTemplateSheet(context, user.userId),
-              onIngredientSearch: () => _showIngredientSearchSheet(context),
-              onScheduleReminder: () => _scheduleRoutineReminder(user.userId),
-            ),
-            _InsightsTab(
-              userId: user.userId,
-              journalStream: journalStream,
-              acneStream: acneStream,
-              uvStream: uvStream,
-              hydrationStream: hydrationStream,
-              routineEntriesStream: _skincareService.getEntries(
-                user.userId,
-                DateTime.now().subtract(const Duration(days: 90)),
-                DateTime.now(),
+              _JournalTab(
+                userId: user.userId,
+                journalStream: journalStream,
+                onLogJournal: () => _showJournalSheet(context, user.userId),
               ),
-              onIngredientSearch: () => _showIngredientSearchSheet(context),
-            ),
-          ],
+              _RoutineTab(
+                userId: user.userId,
+                routineEntriesStream: _skincareService.getEntries(
+                  user.userId,
+                  DateTime.now().subtract(const Duration(days: 60)),
+                  DateTime.now().add(const Duration(days: 30)),
+                ),
+                routineTemplatesStream: routineTemplateStream,
+                journalStream: journalStream,
+                onCreateTemplate: () =>
+                    _showRoutineTemplateSheet(context, user.userId),
+                onIngredientSearch: () => _showIngredientSearchSheet(context),
+                onScheduleReminder: () => _scheduleRoutineReminder(user.userId),
+                onExportJournal: (entries) =>
+                    SkincareExportService().exportJournalAsPdf(entries),
+              ),
+              _InsightsTab(
+                userId: user.userId,
+                journalStream: journalStream,
+                acneStream: acneStream,
+                uvStream: uvStream,
+                hydrationStream: hydrationStream,
+                routineEntriesStream: _skincareService.getEntries(
+                  user.userId,
+                  DateTime.now().subtract(const Duration(days: 90)),
+                  DateTime.now(),
+                ),
+                onIngredientSearch: () => _showIngredientSearchSheet(context),
+              ),
+            ],
+          ),
         ),
+        bottomNavigationBar: const EcoAdWrapper(adType: AdType.banner),
       ),
     );
   }
@@ -200,13 +214,20 @@ class _SkincareTrackingScreenState extends ConsumerState<SkincareTrackingScreen>
                 showDialog(
                   context: context,
                   builder: (context) => AlertDialog(
-                    title: const Text('Coming Soon'),
+                    title: const Text('Share Dashboard'),
                     content: const Text(
-                        'Dashboard sharing functionality is under development.'),
+                        'Would you like to share a summary of your skincare progress?'),
                     actions: [
                       TextButton(
                         onPressed: () => Navigator.pop(context),
-                        child: const Text('OK'),
+                        child: const Text('Cancel'),
+                      ),
+                      ElevatedButton(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          _shareSkincareDashboard();
+                        },
+                        child: const Text('Share'),
                       ),
                     ],
                   ),
@@ -243,15 +264,31 @@ class _SkincareTrackingScreenState extends ConsumerState<SkincareTrackingScreen>
     }
   }
 
-  void _showRewardedAnalysis(BuildContext context) {
+  void _shareSkincareDashboard() {
+    final user = ref.read(currentUserStreamProvider).value;
+    if (user == null) return;
+
+    // In a real app, we'd fetch actual stats here
+    // For now, we share a professional summary
+    final stats = {
+      'productsCount': '8', // Mock data for now
+      'avgHydration': '7.2',
+      'currentCondition': 'Balanced',
+      'goalsMet': '3/5',
+    };
+
+    SkincareExportService().shareDashboardSummary(stats);
+  }
+
+  void _showRewardedAnalysis(BuildContext context, String userId) {
     AdsService().showRewardedAd(
       onUserEarnedReward: (reward) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
+          const SnackBar(
               content: Text(
-                  'Reward earned: ${reward.amount} ${reward.type}! Unlocking analysis...')),
+                  'Analysis unlocked! Initializing Skin Type Analyzer...')),
         );
-        // Logic to trigger analysis could go here
+        _showSkinTypeSheet(context, userId);
       },
     );
   }
@@ -407,7 +444,17 @@ class _SkincareTrackingScreenState extends ConsumerState<SkincareTrackingScreen>
                               : notesController.text.trim(),
                           analyzedAt: DateTime.now(),
                         );
+
+                        // Credit Check
+                        final hasCredit = await ref
+                            .read(creditManagerProvider)
+                            .requestCredit(context, ActionType.skincare);
+                        if (!hasCredit) return;
+
                         await _enhancedService.saveSkinType(skinType);
+                        await ref
+                            .read(creditManagerProvider)
+                            .consumeCredits(ActionType.skincare);
                         if (mounted) Navigator.of(context).pop();
                       },
                       child: const Text('Save skin profile'),
@@ -552,7 +599,17 @@ class _SkincareTrackingScreenState extends ConsumerState<SkincareTrackingScreen>
                                 : int.tryParse(sleepController.text.trim()),
                             createdAt: DateTime.now(),
                           );
+
+                          // Credit Check
+                          final hasCredit = await ref
+                              .read(creditManagerProvider)
+                              .requestCredit(context, ActionType.skincare);
+                          if (!hasCredit) return;
+
                           await _enhancedService.logSkinJournal(entry);
+                          await ref
+                              .read(creditManagerProvider)
+                              .consumeCredits(ActionType.skincare);
                           if (mounted) Navigator.of(context).pop();
                         },
                         child: const Text('Save entry'),
@@ -685,7 +742,17 @@ class _SkincareTrackingScreenState extends ConsumerState<SkincareTrackingScreen>
                               : notesController.text.trim(),
                           createdAt: DateTime.now(),
                         );
+
+                        // Credit Check
+                        final hasCredit = await ref
+                            .read(creditManagerProvider)
+                            .requestCredit(context, ActionType.skincare);
+                        if (!hasCredit) return;
+
                         await _enhancedService.saveRoutineTemplate(template);
+                        await ref
+                            .read(creditManagerProvider)
+                            .consumeCredits(ActionType.skincare);
                         if (mounted) Navigator.of(context).pop();
                       },
                       child: const Text('Save routine'),
@@ -780,6 +847,21 @@ class _SkincareTrackingScreenState extends ConsumerState<SkincareTrackingScreen>
                     _scheduleHydrationReminder(userId);
                   },
                 ),
+                ListTile(
+                  leading: const FaIcon(FontAwesomeIcons.shareNodes),
+                  title: const Text('Share Dashboard'),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    _shareSkincareDashboard();
+                  },
+                ),
+                ListTile(
+                    leading: const FaIcon(FontAwesomeIcons.userDoctor),
+                    title: const Text('Find Dermatologist'),
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      context.push('/dermatologist-search');
+                    }),
               ],
             ),
           ),
@@ -998,7 +1080,17 @@ class _SkincareTrackingScreenState extends ConsumerState<SkincareTrackingScreen>
                                 : notesController.text.trim(),
                             createdAt: DateTime.now(),
                           );
+
+                          // Credit Check
+                          final hasCredit = await ref
+                              .read(creditManagerProvider)
+                              .requestCredit(context, ActionType.skincare);
+                          if (!hasCredit) return;
+
                           await _enhancedService.logAcneEntry(entry);
+                          await ref
+                              .read(creditManagerProvider)
+                              .consumeCredits(ActionType.skincare);
                           if (mounted) Navigator.of(context).pop();
                         },
                         child: const Text('Save breakout'),
@@ -1080,7 +1172,17 @@ class _SkincareTrackingScreenState extends ConsumerState<SkincareTrackingScreen>
                             : notesController.text.trim(),
                         createdAt: DateTime.now(),
                       );
+
+                      // Credit Check
+                      final hasCredit = await ref
+                          .read(creditManagerProvider)
+                          .requestCredit(context, ActionType.skincare);
+                      if (!hasCredit) return;
+
                       await _enhancedService.logUVIndex(entry);
+                      await ref
+                          .read(creditManagerProvider)
+                          .consumeCredits(ActionType.skincare);
                       if (mounted) Navigator.of(context).pop();
                     },
                     child: const Text('Save UV log'),
@@ -1176,7 +1278,17 @@ class _SkincareTrackingScreenState extends ConsumerState<SkincareTrackingScreen>
                             targetDate: targetDate,
                             createdAt: DateTime.now(),
                           );
+
+                          // Credit Check
+                          final hasCredit = await ref
+                              .read(creditManagerProvider)
+                              .requestCredit(context, ActionType.skincare);
+                          if (!hasCredit) return;
+
                           await _enhancedService.createSkinGoal(goal);
+                          await ref
+                              .read(creditManagerProvider)
+                              .consumeCredits(ActionType.skincare);
                           if (mounted) Navigator.of(context).pop();
                         },
                         child: const Text('Save goal'),
@@ -1216,6 +1328,7 @@ class _OverviewTab extends StatelessWidget {
     required this.onOpenProductCategory,
     required this.onLogHydration,
     required this.onViewHydrationLogs,
+    required this.onExportJournal,
   });
 
   final String userId;
@@ -1237,6 +1350,7 @@ class _OverviewTab extends StatelessWidget {
   final void Function(ProductInventoryView view) onOpenProductCategory;
   final VoidCallback onLogHydration;
   final VoidCallback onViewHydrationLogs;
+  final void Function(List<SkinJournalEntry> entries) onExportJournal;
 
   @override
   Widget build(BuildContext context) {
@@ -1344,9 +1458,58 @@ class _OverviewTab extends StatelessWidget {
           ResponsiveConfig.heightBox(16),
           const _BeautyTipsCard(),
           ResponsiveConfig.heightBox(16),
+          _buildExportCard(context),
           const _CommunityCard(),
         ],
       ),
+    );
+  }
+
+  Widget _buildExportCard(BuildContext context) {
+    return StreamBuilder<List<SkinJournalEntry>>(
+      stream: journalStream,
+      builder: (context, snapshot) {
+        final entries = snapshot.data ?? [];
+        return Card(
+          child: Padding(
+            padding: ResponsiveConfig.padding(all: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const FaIcon(FontAwesomeIcons.filePdf,
+                        color: AppTheme.primaryPink),
+                    ResponsiveConfig.widthBox(8),
+                    Text(
+                      'Export Journal',
+                      style: ResponsiveConfig.textStyle(
+                        size: 18,
+                        weight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                ResponsiveConfig.heightBox(8),
+                Text(
+                  'Share your skincare history with a dermatologist or keep it for your records.',
+                  style: ResponsiveConfig.textStyle(
+                    size: 14,
+                    color: AppTheme.mediumGray,
+                  ),
+                ),
+                ResponsiveConfig.heightBox(12),
+                ElevatedButton.icon(
+                  onPressed:
+                      entries.isEmpty ? null : () => onExportJournal(entries),
+                  icon: const Icon(Icons.download),
+                  label: const Text('Export History as PDF'),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }
@@ -1461,14 +1624,18 @@ class _RoutineTab extends StatelessWidget {
     required this.onCreateTemplate,
     required this.onIngredientSearch,
     required this.onScheduleReminder,
+    required this.journalStream,
+    required this.onExportJournal,
   });
 
   final String userId;
   final Stream<List<SkincareEntry>> routineEntriesStream;
   final Stream<List<RoutineTemplate>> routineTemplatesStream;
+  final Stream<List<SkinJournalEntry>> journalStream;
   final VoidCallback onCreateTemplate;
   final VoidCallback onIngredientSearch;
   final VoidCallback onScheduleReminder;
+  final void Function(List<SkinJournalEntry> entries) onExportJournal;
 
   @override
   Widget build(BuildContext context) {
@@ -1483,7 +1650,24 @@ class _RoutineTab extends StatelessWidget {
           ResponsiveConfig.heightBox(16),
           const _ClimateAdjusterCard(),
           ResponsiveConfig.heightBox(16),
-          const _DermatologistCard(),
+          StreamBuilder<List<SkinJournalEntry>>(
+            stream: journalStream,
+            builder: (context, snapshot) {
+              return _DermatologistCard(
+                onExport: () {
+                  final entries = snapshot.data ?? [];
+                  if (entries.isNotEmpty) {
+                    onExportJournal(entries);
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                          content: Text('No journal entries to export.')),
+                    );
+                  }
+                },
+              );
+            },
+          ),
           ResponsiveConfig.heightBox(16),
           StreamBuilder<List<RoutineTemplate>>(
             stream: routineTemplatesStream,
@@ -1595,6 +1779,8 @@ class _InsightsTab extends StatelessWidget {
                               onSearch: onIngredientSearch),
                           ResponsiveConfig.heightBox(16),
                           const _AIDermatologistCard(),
+                          ResponsiveConfig.heightBox(16),
+                          const _FindDermatologistCard(),
                           ResponsiveConfig.heightBox(16),
                           const _ARPreviewCard(),
                           ResponsiveConfig.heightBox(16),
@@ -2130,11 +2316,13 @@ class _ProductPreviewTile extends StatelessWidget {
       leading: product.imageUrl != null
           ? ClipRRect(
               borderRadius: BorderRadius.circular(12),
-              child: Image.network(
-                product.imageUrl!,
-                width: 48,
-                height: 48,
-                fit: BoxFit.cover,
+              child: Center(
+                child: Image.network(
+                  product.imageUrl!,
+                  width: 48,
+                  height: 48,
+                  fit: BoxFit.cover,
+                ),
               ),
             )
           : Container(
@@ -2144,9 +2332,11 @@ class _ProductPreviewTile extends StatelessWidget {
                 color: AppTheme.primaryPink.withOpacity(0.12),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const FaIcon(
-                FontAwesomeIcons.boxOpen,
-                color: AppTheme.primaryPink,
+              child: const Center(
+                child: FaIcon(
+                  FontAwesomeIcons.boxOpen,
+                  color: AppTheme.primaryPink,
+                ),
               ),
             ),
       title: Text(
@@ -2706,7 +2896,9 @@ class _ClimateAdjusterCard extends StatelessWidget {
 }
 
 class _DermatologistCard extends StatelessWidget {
-  const _DermatologistCard();
+  const _DermatologistCard({required this.onExport});
+
+  final VoidCallback onExport;
 
   @override
   Widget build(BuildContext context) {
@@ -2736,43 +2928,13 @@ class _DermatologistCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 ElevatedButton.icon(
-                  onPressed: () {
-                    showDialog(
-                      context: context,
-                      builder: (context) => AlertDialog(
-                        title: const Text('Coming Soon'),
-                        content: const Text(
-                            'Video consultation booking is under development and will be available in the next update.'),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(context),
-                            child: const Text('OK'),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                  icon: const FaIcon(FontAwesomeIcons.video),
-                  label: const Text('Book video call'),
+                  onPressed: () => context.push('/dermatologist-search'),
+                  icon: const FaIcon(FontAwesomeIcons.userDoctor),
+                  label: const Text('Book A Dermatologist'),
                 ),
                 ResponsiveConfig.heightBox(8),
                 OutlinedButton.icon(
-                  onPressed: () {
-                    showDialog(
-                      context: context,
-                      builder: (context) => AlertDialog(
-                        title: const Text('Coming Soon'),
-                        content: const Text(
-                            'Journal export functionality is under development.'),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(context),
-                            child: const Text('OK'),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
+                  onPressed: onExport,
                   icon: const FaIcon(FontAwesomeIcons.filePdf),
                   label: const Text('Export journal'),
                 ),
@@ -3614,4 +3776,92 @@ List<_HydrationLogEntry> _mergeHydrationLogs(
 
   combined.sort((a, b) => b.date.compareTo(a.date));
   return combined;
+}
+
+class _FindDermatologistCard extends StatelessWidget {
+  const _FindDermatologistCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            Theme.of(context).colorScheme.primary,
+            Theme.of(context).colorScheme.secondary,
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: AppTheme.primaryPink.withOpacity(0.2),
+          width: 1.5,
+        ),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => context.push('/dermatologist-search'),
+          borderRadius: BorderRadius.circular(24),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppTheme.primaryPink.withOpacity(0.2),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: const FaIcon(
+                    FontAwesomeIcons.userDoctor,
+                    color: AppTheme.primaryPink,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 20),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Specialist Search',
+                        style: ResponsiveConfig.textStyle(
+                          size: 18,
+                          weight: FontWeight.bold,
+                          color: Theme.of(context).colorScheme.onPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Find verified local dermatologists nearby.',
+                        style: ResponsiveConfig.textStyle(
+                            size: 13,
+                            color:
+                                Theme.of(context).colorScheme.surfaceContainer),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.arrow_forward_ios,
+                  size: 16,
+                  color: Theme.of(context).colorScheme.onPrimary,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }

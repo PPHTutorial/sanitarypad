@@ -1,47 +1,64 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // Helper function to check if user owns the document
+
+  // Helper function to check if user owns the document
     function isOwner(userId) {
       return request.auth != null && request.auth.uid == userId;
     }
-    
-    // Helper function to check if user owns the resource
+
+  // Helper function to check if user owns the resource
     function isResourceOwner() {
       return request.auth != null && resource.data.userId == request.auth.uid;
     }
-    
-    // Helper function to check if user owns the new resource
+
+  // Helper function to check if user owns the new resource
     function isNewResourceOwner() {
       return request.auth != null && request.resource.data.userId == request.auth.uid;
+    }
+
+    // Check if user has specific subscription tier
+    function hasTier(tiers) {
+      return request.auth != null && 
+      get(/databases/$(database)/documents/users/$(request.auth.uid)).data.subscription.tier in tiers;
     }
 
     // Helper to check group membership using deterministic member document IDs
     function isGroupMember(groupId) {
       return request.auth != null && (
-        exists(/databases/$(database)/documents/groupMembers/$(groupId + '_' + request.auth.uid)) ||
-        (exists(/databases/$(database)/documents/groups/$(groupId)) &&
-         get(/databases/$(database)/documents/groups/$(groupId)).data.adminId == request.auth.uid)
+      exists(/databases/$(database)/documents/groupMembers/$(groupId + '_' + request.auth.uid)) ||
+      (exists(/databases/$(database)/documents/groups/$(groupId)) &&
+      get(/databases/$(database)/documents/groups/$(groupId)).data.adminId == request.auth.uid)
       );
     }
 
     function isGroupAdmin(groupId) {
       return request.auth != null &&
-        exists(/databases/$(database)/documents/groups/$(groupId)) &&
-        get(/databases/$(database)/documents/groups/$(groupId)).data.adminId == request.auth.uid;
+      exists(/databases/$(database)/documents/groups/$(groupId)) &&
+      get(/databases/$(database)/documents/groups/$(groupId)).data.adminId == request.auth.uid;
     }
-    
+
+    // Helper to check if user is an admin
+    function isAdmin() {
+      return request.auth != null && 
+      get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
     // ============================================
     // USERS COLLECTION
     // ============================================
     match /users/{userId} {
-      allow read: if isOwner(userId);
+      allow read: if request.auth != null && (
+      isOwner(userId) || 
+      isAdmin() ||
+      resource.data.privacy.profileVisibility == 'public' ||
+      (resource.data.privacy.profileVisibility == 'protected' && request.auth != null)
+      );
       allow create: if isOwner(userId);
-      allow update: if isOwner(userId);
+      allow update: if isOwner(userId) || isAdmin();
       allow delete: if isOwner(userId);
     }
-    
+
     // ============================================
     // CYCLES COLLECTION
     // ============================================
@@ -52,7 +69,7 @@ service cloud.firestore {
       allow update: if isResourceOwner();
       allow delete: if isResourceOwner();
     }
-    
+
     // ============================================
     // CYCLE PREDICTIONS COLLECTION
     // ============================================
@@ -62,7 +79,7 @@ service cloud.firestore {
       allow update: if isResourceOwner();
       allow delete: if isResourceOwner();
     }
-    
+
     // ============================================
     // SYMPTOMS COLLECTION
     // ============================================
@@ -72,7 +89,7 @@ service cloud.firestore {
       allow update: if isResourceOwner();
       allow delete: if isResourceOwner();
     }
-    
+
     // ============================================
     // WELLNESS ENTRIES COLLECTION
     // ============================================
@@ -83,7 +100,7 @@ service cloud.firestore {
       allow update: if isResourceOwner();
       allow delete: if isResourceOwner();
     }
-    
+
     // ============================================
     // PADS COLLECTION
     // ============================================
@@ -94,7 +111,7 @@ service cloud.firestore {
       allow update: if isResourceOwner();
       allow delete: if isResourceOwner();
     }
-    
+
     // ============================================
     // PAD INVENTORY COLLECTION
     // ============================================
@@ -105,7 +122,7 @@ service cloud.firestore {
       allow update: if isResourceOwner();
       allow delete: if isResourceOwner();
     }
-    
+
     // ============================================
     // REMINDERS COLLECTION
     // ============================================
@@ -116,7 +133,7 @@ service cloud.firestore {
       allow update: if isResourceOwner();
       allow delete: if isResourceOwner();
     }
-    
+
     // ============================================
     // WELLNESS CONTENT COLLECTION (Public Read, Authenticated Write)
     // ============================================
@@ -127,7 +144,7 @@ service cloud.firestore {
       allow update: if request.auth != null;
       allow delete: if request.auth != null;
     }
-    
+
     // ============================================
     // ANALYTICS COLLECTION
     // ============================================
@@ -137,17 +154,17 @@ service cloud.firestore {
       allow update: if isResourceOwner();
       allow delete: if isResourceOwner();
     }
-    
+
     // ============================================
     // SUBSCRIPTIONS COLLECTION
     // ============================================
     match /subscriptions/{userId} {
-      allow read: if isOwner(userId);
+      allow read: if isOwner(userId) || isAdmin();
       allow create: if isOwner(userId);
-      allow update: if isOwner(userId);
+      allow update: if isOwner(userId) || isAdmin();
       allow delete: if false; // Keep audit trail
     }
-    
+
     // ============================================
     // SUPPORT CONTACTS COLLECTION
     // ============================================
@@ -158,7 +175,7 @@ service cloud.firestore {
       allow update: if isResourceOwner();
       allow delete: if isResourceOwner();
     }
-    
+
     // ============================================
     // RED FLAG ALERTS COLLECTION
     // ============================================
@@ -168,7 +185,7 @@ service cloud.firestore {
       allow update: if isResourceOwner();
       allow delete: if false; // Keep records
     }
-    
+
     // ============================================
     // PREGNANCIES COLLECTION
     // ============================================
@@ -179,7 +196,7 @@ service cloud.firestore {
       allow update: if isResourceOwner();
       allow delete: if isResourceOwner();
     }
-    
+
     // ============================================
     // PREGNANCY ENHANCED COLLECTIONS
     // ============================================
@@ -190,7 +207,7 @@ service cloud.firestore {
       allow update: if isResourceOwner();
       allow delete: if isResourceOwner();
     }
-    
+
     match /contractionEntries/{entryId} {
       allow list: if request.auth != null;
       allow read: if isResourceOwner();
@@ -198,7 +215,7 @@ service cloud.firestore {
       allow update: if isResourceOwner();
       allow delete: if isResourceOwner();
     }
-    
+
     match /pregnancyAppointments/{appointmentId} {
       allow list: if request.auth != null;
       allow read: if isResourceOwner();
@@ -206,7 +223,7 @@ service cloud.firestore {
       allow update: if isResourceOwner();
       allow delete: if isResourceOwner();
     }
-    
+
     match /pregnancyMedications/{medicationId} {
       allow list: if request.auth != null;
       allow read: if isResourceOwner();
@@ -214,7 +231,7 @@ service cloud.firestore {
       allow update: if isResourceOwner();
       allow delete: if isResourceOwner();
     }
-    
+
     match /pregnancyJournalEntries/{entryId} {
       allow list: if request.auth != null;
       allow read: if isResourceOwner();
@@ -222,7 +239,7 @@ service cloud.firestore {
       allow update: if isResourceOwner();
       allow delete: if isResourceOwner();
     }
-    
+
     match /pregnancyWeightEntries/{entryId} {
       allow list: if request.auth != null;
       allow read: if isResourceOwner();
@@ -230,7 +247,7 @@ service cloud.firestore {
       allow update: if isResourceOwner();
       allow delete: if isResourceOwner();
     }
-    
+
     match /hospitalChecklistItems/{itemId} {
       allow list: if request.auth != null;
       allow read: if isResourceOwner();
@@ -238,7 +255,7 @@ service cloud.firestore {
       allow update: if isResourceOwner();
       allow delete: if isResourceOwner();
     }
-    
+
     // ============================================
     // FERTILITY ENTRIES COLLECTION
     // ============================================
@@ -249,7 +266,7 @@ service cloud.firestore {
       allow update: if isResourceOwner();
       allow delete: if isResourceOwner();
     }
-    
+
     // ============================================
     // FERTILITY ENHANCED COLLECTIONS
     // ============================================
@@ -260,7 +277,7 @@ service cloud.firestore {
       allow update: if isResourceOwner();
       allow delete: if isResourceOwner();
     }
-    
+
     match /fertilitySymptoms/{symptomId} {
       allow list: if request.auth != null;
       allow read: if isResourceOwner();
@@ -268,7 +285,7 @@ service cloud.firestore {
       allow update: if isResourceOwner();
       allow delete: if isResourceOwner();
     }
-    
+
     match /moodEnergyEntries/{entryId} {
       allow list: if request.auth != null;
       allow read: if isResourceOwner();
@@ -276,7 +293,7 @@ service cloud.firestore {
       allow update: if isResourceOwner();
       allow delete: if isResourceOwner();
     }
-    
+
     match /fertilityMedications/{medicationId} {
       allow list: if request.auth != null;
       allow read: if isResourceOwner();
@@ -284,7 +301,7 @@ service cloud.firestore {
       allow update: if isResourceOwner();
       allow delete: if isResourceOwner();
     }
-    
+
     match /intercourseEntries/{entryId} {
       allow list: if request.auth != null;
       allow read: if isResourceOwner();
@@ -292,7 +309,7 @@ service cloud.firestore {
       allow update: if isResourceOwner();
       allow delete: if isResourceOwner();
     }
-    
+
     match /pregnancyTestEntries/{entryId} {
       allow list: if request.auth != null;
       allow read: if isResourceOwner();
@@ -300,7 +317,7 @@ service cloud.firestore {
       allow update: if isResourceOwner();
       allow delete: if isResourceOwner();
     }
-    
+
     match /healthRecommendations/{recommendationId} {
       allow list: if request.auth != null;
       allow read: if isResourceOwner();
@@ -308,7 +325,7 @@ service cloud.firestore {
       allow update: if isResourceOwner();
       allow delete: if isResourceOwner();
     }
-    
+
     match /ovulationTestReminders/{reminderId} {
       allow list: if request.auth != null;
       allow read: if isResourceOwner();
@@ -316,7 +333,7 @@ service cloud.firestore {
       allow update: if isResourceOwner();
       allow delete: if isResourceOwner();
     }
-    
+
     // ============================================
     // SKINCARE ENTRIES COLLECTION
     // ============================================
@@ -327,7 +344,7 @@ service cloud.firestore {
       allow update: if isResourceOwner();
       allow delete: if isResourceOwner();
     }
-    
+
     // ============================================
     // SKINCARE PRODUCTS COLLECTION
     // ============================================
@@ -338,7 +355,7 @@ service cloud.firestore {
       allow update: if isResourceOwner();
       allow delete: if isResourceOwner();
     }
-    
+
     // ============================================
     // SKINCARE ENHANCED COLLECTIONS
     // ============================================
@@ -349,7 +366,7 @@ service cloud.firestore {
       allow update: if isResourceOwner();
       allow delete: if isResourceOwner();
     }
-    
+
     match /skinJournalEntries/{entryId} {
       allow list: if request.auth != null;
       allow read: if isResourceOwner();
@@ -357,7 +374,7 @@ service cloud.firestore {
       allow update: if isResourceOwner();
       allow delete: if isResourceOwner();
     }
-    
+
     match /routineTemplates/{templateId} {
       allow list: if request.auth != null;
       allow read: if isResourceOwner();
@@ -365,7 +382,7 @@ service cloud.firestore {
       allow update: if isResourceOwner();
       allow delete: if isResourceOwner();
     }
-    
+
     match /ingredients/{ingredientId} {
       allow list: if request.auth != null;
       allow read: if request.auth != null;
@@ -375,7 +392,7 @@ service cloud.firestore {
       allow update: if request.auth != null;
       allow delete: if false; 
     }
-    
+
     match /acneEntries/{entryId} {
       allow list: if request.auth != null;
       allow read: if isResourceOwner();
@@ -383,7 +400,7 @@ service cloud.firestore {
       allow update: if isResourceOwner();
       allow delete: if isResourceOwner();
     }
-    
+
     match /uvIndexEntries/{entryId} {
       allow list: if request.auth != null;
       allow read: if isResourceOwner();
@@ -391,7 +408,7 @@ service cloud.firestore {
       allow update: if isResourceOwner();
       allow delete: if isResourceOwner();
     }
-    
+
     match /skinGoals/{goalId} {
       allow list: if request.auth != null;
       allow read: if isResourceOwner();
@@ -399,7 +416,7 @@ service cloud.firestore {
       allow update: if isResourceOwner();
       allow delete: if isResourceOwner();
     }
-    
+
     // ============================================
     // COMMUNITY COLLECTIONS (GROUPS & EVENTS)
     // ============================================
@@ -408,13 +425,13 @@ service cloud.firestore {
       allow read: if request.auth != null; // All authenticated users can read groups
       allow create: if request.auth != null; // Any authenticated user can create groups
       allow update: if request.auth != null && 
-        (resource.data.adminId == request.auth.uid ||
-         resource.data.createdBy == request.auth.uid ||
-         request.resource.data.adminId == request.auth.uid);
+      (resource.data.adminId == request.auth.uid ||
+      resource.data.createdBy == request.auth.uid ||
+      request.resource.data.adminId == request.auth.uid);
       allow delete: if request.auth != null &&
-        (resource.data.adminId == request.auth.uid || resource.data.createdBy == request.auth.uid);
+      (resource.data.adminId == request.auth.uid || resource.data.createdBy == request.auth.uid);
     }
-    
+
     match /groupMembers/{memberId} {
       allow list: if request.auth != null;
       allow read: if request.auth != null;
@@ -428,24 +445,24 @@ service cloud.firestore {
       allow read: if request.auth != null && isGroupMember(resource.data.groupId);
       allow create: if request.auth != null && isGroupMember(request.resource.data.groupId);
       allow update: if request.auth != null && (
-        resource.data.senderId == request.auth.uid ||
-        isGroupAdmin(resource.data.groupId)
+      resource.data.senderId == request.auth.uid ||
+      isGroupAdmin(resource.data.groupId)
       );
       allow delete: if request.auth != null && (
-        resource.data.senderId == request.auth.uid ||
-        isGroupAdmin(resource.data.groupId)
+      resource.data.senderId == request.auth.uid ||
+      isGroupAdmin(resource.data.groupId)
       );
     }
-    
+
     match /events/{eventId} {
       allow list: if request.auth != null;
       allow read: if request.auth != null; // All authenticated users can read events
       allow create: if request.auth != null; // Any authenticated user can create events
       allow update: if request.auth != null && 
-        (resource.data.organizerId == request.auth.uid || request.resource.data.organizerId == request.auth.uid);
+      (resource.data.organizerId == request.auth.uid || request.resource.data.organizerId == request.auth.uid);
       allow delete: if request.auth != null && resource.data.organizerId == request.auth.uid;
     }
-    
+
     match /eventAttendees/{attendeeId} {
       allow list: if request.auth != null;
       allow read: if request.auth != null;
@@ -453,7 +470,7 @@ service cloud.firestore {
       allow update: if request.auth != null;
       allow delete: if request.auth != null;
     }
-    
+
     // ============================================
     // AI CHAT COLLECTIONS
     // ============================================
@@ -464,7 +481,7 @@ service cloud.firestore {
       allow update: if isResourceOwner();
       allow delete: if isResourceOwner();
     }
-    
+
     match /aiConversations/{conversationId} {
       allow list: if request.auth != null;
       allow read: if isResourceOwner();
@@ -472,7 +489,37 @@ service cloud.firestore {
       allow update: if isResourceOwner();
       allow delete: if isResourceOwner();
     }
-    
+
+    // ============================================
+    // TRANSACTIONS COLLECTION (Credit History)
+    // ============================================
+    match /transactions/{transactionId} {
+      allow list: if request.auth != null;
+      allow read: if isResourceOwner() || isAdmin(); 
+      allow create: if isNewResourceOwner();
+      allow update: if false; 
+      allow delete: if false;
+    }
+
+    // ============================================
+    // SUPPORT TICKETS COLLECTION
+    // ============================================
+    match /support_tickets/{ticketId} {
+      allow create: if request.auth != null;
+      allow read, update: if request.auth != null && (
+      isResourceOwner() || isAdmin() || (request.resource != null && request.resource.data.userId == request.auth.uid)
+      );
+      allow delete: if false; // Keep for audit
+    }
+
+    // ============================================
+    // APP CONFIG COLLECTION
+    // ============================================
+    match /app_config/{configId} {
+      allow read: if request.auth != null;
+      allow write: if false; // Only admins via console
+    }
+
     // ============================================
     // DEFAULT DENY RULE
     // ============================================

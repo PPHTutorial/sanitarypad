@@ -41,13 +41,21 @@
 			<string>UIInterfaceOrientationLandscapeLeft</string>
 			<string>UIInterfaceOrientationLandscapeRight</string>
 		</array>
+		<key>NSPhotoLibraryUsageDescription</key>
+		<string>FemCare+ needs access to your photo library to attach screenshots to support tickets.</string>
+		<key>NSCameraUsageDescription</key>
+		<string>FemCare+ needs access to your camera to take photos for support tickets.</string>
+		<key>NSMicrophoneUsageDescription</key>
+		<string>FemCare+ needs access to your microphone for video support tickets.</string>
 		<key>CADisableMinimumFrameDurationOnPhone</key>
 		<true/>
 		<key>UIApplicationSupportsIndirectInputEvents</key>
 		<true/>
 		<key>UIStatusBarHidden</key>
-		<false/>
+		<true/>
 		<key>GADApplicationIdentifier</key>
 		<string>ca-app-pub-9043208558525567~5026221961</string>
+		<key>UIViewControllerBasedStatusBarAppearance</key>
+		<false/>
 	</dict>
 </plist>

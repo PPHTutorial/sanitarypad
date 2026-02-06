@@ -1,23 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/config/responsive_config.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../services/security_service.dart';
+import '../../../../core/providers/auth_provider.dart';
 
 /// PIN setup screen
-class PinSetupScreen extends StatefulWidget {
+class PinSetupScreen extends ConsumerStatefulWidget {
   final bool isSetup; // true for setup, false for change
 
   const PinSetupScreen({super.key, this.isSetup = true});
 
   @override
-  State<PinSetupScreen> createState() => _PinSetupScreenState();
+  ConsumerState<PinSetupScreen> createState() => _PinSetupScreenState();
 }
 
-class _PinSetupScreenState extends State<PinSetupScreen> {
+class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
   final _pinController = TextEditingController();
   final _confirmPinController = TextEditingController();
-  final _securityService = SecurityService();
   String _currentStep = 'enter'; // 'enter', 'confirm'
 
   @override
@@ -49,14 +50,26 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
       }
 
       try {
-        final success = await _securityService.setPIN(_pinController.text);
-        if (success && mounted) {
+        final securityService = ref.read(securityServiceProvider);
+        final user = ref.read(currentUserStreamProvider).value;
+        if (user == null || !user.subscription.isActive) {
+          throw Exception('Premium required for PIN lock');
+        }
+
+        await securityService.setPin(_pinController.text);
+
+        // Update Firestore
+        final updatedUser = user.copyWith(
+          settings:
+              user.settings.copyWith(pinHash: 'SET'), // Indicate PIN is set
+        );
+        await ref.read(authServiceProvider).updateUserData(updatedUser);
+
+        if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('PIN set successfully')),
           );
           Navigator.of(context).pop();
-        } else {
-          throw Exception('Failed to set PIN');
         }
       } catch (e) {
         if (mounted) {

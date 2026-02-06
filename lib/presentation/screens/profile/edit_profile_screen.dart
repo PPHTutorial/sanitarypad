@@ -1,12 +1,14 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../../../core/config/responsive_config.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/providers/auth_provider.dart';
-import '../../../../services/auth_service.dart';
+import '../../../../core/providers/cycle_provider.dart';
 
 class EditProfileScreen extends ConsumerStatefulWidget {
   const EditProfileScreen({super.key});
@@ -24,6 +26,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   String? _gender;
   DateTime? _dob;
   bool _isLoading = false;
+  File? _imageFile;
+  final _picker = ImagePicker();
 
   @override
   void initState() {
@@ -55,7 +59,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       final user = ref.read(currentUserStreamProvider).value;
       if (user == null) return;
 
-      final updatedUser = user.copyWith(
+      var updatedUser = user.copyWith(
         fullName: _fullNameController.text.trim(),
         username: _usernameController.text.trim(),
         address: _addressController.text.trim(),
@@ -63,6 +67,16 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         gender: _gender,
         dateOfBirth: _dob,
       );
+
+      if (_imageFile != null) {
+        final storageService = ref.read(storageServiceProvider);
+        final fileName = 'profile_${DateTime.now().millisecondsSinceEpoch}.jpg';
+        final uploadResult = await storageService.uploadFile(
+          path: 'profile_pictures/${user.userId}/$fileName',
+          file: _imageFile!,
+        );
+        updatedUser = updatedUser.copyWith(photoUrl: uploadResult.downloadUrl);
+      }
 
       final authService = ref.read(authServiceProvider);
       await authService.updateUserData(updatedUser);
@@ -109,6 +123,20 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     }
   }
 
+  Future<void> _pickImage() async {
+    final XFile? image = await _picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 70,
+      maxWidth: 500,
+    );
+
+    if (image != null) {
+      setState(() {
+        _imageFile = File(image.path);
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -134,56 +162,113 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
             ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: ResponsiveConfig.padding(all: 20),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildSectionTitle('Personal Information'),
-              ResponsiveConfig.heightBox(16),
-              _buildTextField(
-                controller: _fullNameController,
-                label: 'Full Name',
-                icon: FontAwesomeIcons.user,
-                hint: 'Enter your full name',
-              ),
-              ResponsiveConfig.heightBox(16),
-              _buildTextField(
-                controller: _usernameController,
-                label: 'Username',
-                icon: FontAwesomeIcons.at,
-                hint: 'Choose a username',
-              ),
-              ResponsiveConfig.heightBox(16),
-              _buildGenderDropdown(),
-              ResponsiveConfig.heightBox(16),
-              _buildDobPicker(context),
-              ResponsiveConfig.heightBox(32),
-              _buildSectionTitle('Contact Details'),
-              ResponsiveConfig.heightBox(16),
-              _buildTextField(
-                controller: _phoneController,
-                label: 'Phone Number',
-                icon: FontAwesomeIcons.phone,
-                hint: 'Enter your phone number',
-                keyboardType: TextInputType.phone,
-              ),
-              ResponsiveConfig.heightBox(16),
-              _buildTextField(
-                controller: _addressController,
-                label: 'Address',
-                icon: FontAwesomeIcons.locationDot,
-                hint: 'Enter your address',
-                maxLines: 2,
-              ),
-              ResponsiveConfig.heightBox(32),
-              _buildSecuritySection(),
-              ResponsiveConfig.heightBox(40),
-            ],
+      body: SafeArea(
+        bottom: true,
+        top: false,
+        child: SingleChildScrollView(
+          padding: ResponsiveConfig.padding(all: 20),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildProfileHeader(),
+                ResponsiveConfig.heightBox(24),
+                _buildSectionTitle('Personal Information'),
+                ResponsiveConfig.heightBox(16),
+                _buildTextField(
+                  controller: _fullNameController,
+                  label: 'Full Name',
+                  icon: FontAwesomeIcons.user,
+                  hint: 'Enter your full name',
+                ),
+                ResponsiveConfig.heightBox(16),
+                _buildTextField(
+                  controller: _usernameController,
+                  label: 'Username',
+                  icon: FontAwesomeIcons.at,
+                  hint: 'Choose a username',
+                ),
+                ResponsiveConfig.heightBox(16),
+                _buildGenderDropdown(),
+                ResponsiveConfig.heightBox(16),
+                _buildDobPicker(context),
+                ResponsiveConfig.heightBox(32),
+                _buildSectionTitle('Contact Details'),
+                ResponsiveConfig.heightBox(16),
+                _buildTextField(
+                  controller: _phoneController,
+                  label: 'Phone Number',
+                  icon: FontAwesomeIcons.phone,
+                  hint: 'Enter your phone number',
+                  keyboardType: TextInputType.phone,
+                ),
+                ResponsiveConfig.heightBox(16),
+                _buildTextField(
+                  controller: _addressController,
+                  label: 'Address',
+                  icon: FontAwesomeIcons.locationDot,
+                  hint: 'Enter your address',
+                  maxLines: 2,
+                ),
+                ResponsiveConfig.heightBox(32),
+                _buildSecuritySection(),
+                ResponsiveConfig.heightBox(40),
+              ],
+            ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildProfileHeader() {
+    final user = ref.watch(currentUserStreamProvider).value;
+
+    return Center(
+      child: Stack(
+        children: [
+          Container(
+            width: 120,
+            height: 120,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: AppTheme.primaryPink, width: 2),
+              image: _imageFile != null
+                  ? DecorationImage(
+                      image: FileImage(_imageFile!),
+                      fit: BoxFit.cover,
+                    )
+                  : (user?.photoUrl != null
+                      ? DecorationImage(
+                          image: NetworkImage(user!.photoUrl!),
+                          fit: BoxFit.cover,
+                        )
+                      : null),
+              color: AppTheme.primaryPink.withOpacity(0.1),
+            ),
+            child: _imageFile == null && user?.photoUrl == null
+                ? const Icon(Icons.person,
+                    size: 60, color: AppTheme.primaryPink)
+                : null,
+          ),
+          Positioned(
+            bottom: 0,
+            right: 0,
+            child: GestureDetector(
+              onTap: _pickImage,
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: const BoxDecoration(
+                  color: AppTheme.primaryPink,
+                  shape: BoxShape.circle,
+                ),
+                child: const FaIcon(FontAwesomeIcons.camera,
+                    color: Colors.white, size: 16),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

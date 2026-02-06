@@ -8,6 +8,7 @@ import '../../../services/notification_service.dart';
 import '../../../services/notification_settings_service.dart';
 import '../../../core/widgets/back_button_handler.dart';
 import '../reminders/create_reminder_dialog.dart';
+import '../../../services/credit_manager.dart';
 
 /// Notification settings screen
 class NotificationSettingsScreen extends ConsumerStatefulWidget {
@@ -50,8 +51,17 @@ class _NotificationSettingsScreenState
   }
 
   Future<void> _saveCheckInterval(int minutes) async {
+    // Credit Check
+    final hasCredit = await ref
+        .read(creditManagerProvider)
+        .requestCredit(context, ActionType.notification);
+    if (!hasCredit) return;
+
     final success = await _settingsService.setCheckIntervalMinutes(minutes);
     if (success && mounted) {
+      await ref
+          .read(creditManagerProvider)
+          .consumeCredits(ActionType.notification);
       setState(() => _checkIntervalMinutes = minutes);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -254,7 +264,7 @@ class _NotificationSettingsScreenState
                           ],
                         ),
                         ResponsiveConfig.heightBox(8),
-                        Text(
+                        /* Text(
                           _checkIntervalMinutes <= 2
                               ? '⚡ Very responsive (uses more battery)'
                               : _checkIntervalMinutes <= 5
@@ -264,7 +274,7 @@ class _NotificationSettingsScreenState
                             size: 11,
                             color: Colors.grey[700],
                           ).copyWith(fontStyle: FontStyle.italic),
-                        ),
+                        ), */
                       ],
                     ),
                   ),
@@ -307,92 +317,6 @@ class _NotificationSettingsScreenState
                   label: const Text('Create Reminder'),
                 ),
                 ResponsiveConfig.heightBox(12),
-
-                // Test Notification Button
-                OutlinedButton.icon(
-                  onPressed: () async {
-                    try {
-                      await _notificationService.showImmediateNotification(
-                        title: 'Test Notification',
-                        body:
-                            'This is a test notification from FemCare+. If you see this, notifications are working! 🔔',
-                      );
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                                '✅ Test notification sent! Check your notification tray.'),
-                            duration: Duration(seconds: 3),
-                          ),
-                        );
-                      }
-                    } catch (e) {
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('❌ Error: ${e.toString()}')),
-                        );
-                      }
-                    }
-                  },
-                  icon: const Icon(Icons.notifications),
-                  label: const Text('Send Test Notification'),
-                ),
-                ResponsiveConfig.heightBox(12),
-
-                // View Pending Notifications (Debug)
-                OutlinedButton.icon(
-                  onPressed: () async {
-                    try {
-                      final pending =
-                          await _notificationService.getPendingNotifications();
-                      if (mounted) {
-                        showDialog(
-                          context: context,
-                          builder: (context) => AlertDialog(
-                            title: Text(
-                                'Pending Notifications (${pending.length})'),
-                            content: SizedBox(
-                              width: double.maxFinite,
-                              child: pending.isEmpty
-                                  ? const Text(
-                                      'No pending notifications scheduled.\n\nCreate a reminder to schedule one!')
-                                  : ListView.builder(
-                                      shrinkWrap: true,
-                                      itemCount: pending.length,
-                                      itemBuilder: (context, index) {
-                                        final notif = pending[index];
-                                        return ListTile(
-                                          title:
-                                              Text(notif.title ?? 'No title'),
-                                          subtitle: Text(
-                                            'ID: ${notif.id}\n'
-                                            'Body: ${notif.body ?? 'No body'}',
-                                          ),
-                                          dense: true,
-                                        );
-                                      },
-                                    ),
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.of(context).pop(),
-                                child: const Text('Close'),
-                              ),
-                            ],
-                          ),
-                        );
-                      }
-                    } catch (e) {
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Error: ${e.toString()}')),
-                        );
-                      }
-                    }
-                  },
-                  icon: const Icon(Icons.schedule),
-                  label: const Text('View Pending Notifications'),
-                ),
               ],
             ],
           ),

@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:image/image.dart' as img;
 import '../../core/constants/app_constants.dart';
 import '../../core/utils/logger.dart';
-import '../iap/subscription_manager.dart';
 
 /// Watermark service for adding watermarks to images
 class WatermarkService {

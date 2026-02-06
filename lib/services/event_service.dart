@@ -139,8 +139,15 @@ class EventService {
     });
   }
 
-  // Delete event
-  Future<void> deleteEvent(String eventId) async {
+  // Delete event (restricted to creator)
+  Future<void> deleteEvent(String eventId, String userId) async {
+    final event = await getEvent(eventId);
+    if (event == null) throw Exception('Event not found');
+
+    if (event.createdBy != userId) {
+      throw Exception('Only the creator can delete this event');
+    }
+
     // Delete all attendees
     final attendees = await _firestore
         .collection(AppConstants.collectionEventAttendees)

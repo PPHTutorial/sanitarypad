@@ -15,6 +15,7 @@ class UserModel extends Equatable {
   final String? phoneNumber;
   final DateTime createdAt;
   final DateTime? lastLoginAt;
+  final String role; // 'user', 'admin', 'moderator'
   final UserSettings settings;
   final UserSubscription subscription;
   final UserPrivacy privacy;
@@ -32,10 +33,14 @@ class UserModel extends Equatable {
     this.phoneNumber,
     required this.createdAt,
     this.lastLoginAt,
+    this.role = 'user',
     required this.settings,
     required this.subscription,
     required this.privacy,
   });
+
+  bool get isAdmin => role == 'admin';
+  bool get isModerator => role == 'moderator' || role == 'admin';
 
   /// Create from Firestore document
   factory UserModel.fromFirestore(DocumentSnapshot doc) {
@@ -59,11 +64,18 @@ class UserModel extends Equatable {
       lastLoginAt: data['lastLoginAt'] != null
           ? (data['lastLoginAt'] as Timestamp).toDate()
           : null,
-      settings: UserSettings.fromMap(data['settings'] as Map<String, dynamic>),
-      subscription: UserSubscription.fromMap(
-        data['subscription'] as Map<String, dynamic>,
-      ),
-      privacy: UserPrivacy.fromMap(data['privacy'] as Map<String, dynamic>),
+      role: data['role'] as String? ?? 'user',
+      settings: data['settings'] != null
+          ? UserSettings.fromMap(data['settings'] as Map<String, dynamic>)
+          : const UserSettings(units: UserUnits()),
+      subscription: data['subscription'] != null
+          ? UserSubscription.fromMap(
+              data['subscription'] as Map<String, dynamic>,
+            )
+          : const UserSubscription(),
+      privacy: data['privacy'] != null
+          ? UserPrivacy.fromMap(data['privacy'] as Map<String, dynamic>)
+          : const UserPrivacy(),
     );
   }
 
@@ -84,6 +96,7 @@ class UserModel extends Equatable {
       'createdAt': Timestamp.fromDate(createdAt),
       'lastLoginAt':
           lastLoginAt != null ? Timestamp.fromDate(lastLoginAt!) : null,
+      'role': role,
       'settings': settings.toMap(),
       'subscription': subscription.toMap(),
       'privacy': privacy.toMap(),
@@ -102,6 +115,7 @@ class UserModel extends Equatable {
     DateTime? dateOfBirth,
     String? phoneNumber,
     DateTime? lastLoginAt,
+    String? role,
     UserSettings? settings,
     UserSubscription? subscription,
     UserPrivacy? privacy,
@@ -119,6 +133,7 @@ class UserModel extends Equatable {
       phoneNumber: phoneNumber ?? this.phoneNumber,
       createdAt: createdAt,
       lastLoginAt: lastLoginAt ?? this.lastLoginAt,
+      role: role ?? this.role,
       settings: settings ?? this.settings,
       subscription: subscription ?? this.subscription,
       privacy: privacy ?? this.privacy,
@@ -139,6 +154,7 @@ class UserModel extends Equatable {
         phoneNumber,
         createdAt,
         lastLoginAt,
+        role,
         settings,
         subscription,
         privacy,
@@ -156,6 +172,9 @@ class UserSettings extends Equatable {
   final bool teenMode;
   final int cycleLength;
   final int periodLength;
+  final bool predictPeriod;
+  final bool predictOvulation;
+  final bool dailyLogPrompt;
   final UserUnits units;
 
   const UserSettings({
@@ -168,6 +187,9 @@ class UserSettings extends Equatable {
     this.teenMode = false,
     this.cycleLength = 28,
     this.periodLength = 5,
+    this.predictPeriod = true,
+    this.predictOvulation = true,
+    this.dailyLogPrompt = true,
     required this.units,
   });
 
@@ -181,6 +203,9 @@ class UserSettings extends Equatable {
     bool? teenMode,
     int? cycleLength,
     int? periodLength,
+    bool? predictPeriod,
+    bool? predictOvulation,
+    bool? dailyLogPrompt,
     UserUnits? units,
   }) {
     return UserSettings(
@@ -193,6 +218,9 @@ class UserSettings extends Equatable {
       teenMode: teenMode ?? this.teenMode,
       cycleLength: cycleLength ?? this.cycleLength,
       periodLength: periodLength ?? this.periodLength,
+      predictPeriod: predictPeriod ?? this.predictPeriod,
+      predictOvulation: predictOvulation ?? this.predictOvulation,
+      dailyLogPrompt: dailyLogPrompt ?? this.dailyLogPrompt,
       units: units ?? this.units,
     );
   }
@@ -208,6 +236,9 @@ class UserSettings extends Equatable {
       teenMode: map['teenMode'] as bool? ?? false,
       cycleLength: map['cycleLength'] as int? ?? 28,
       periodLength: map['periodLength'] as int? ?? 5,
+      predictPeriod: map['predictPeriod'] as bool? ?? true,
+      predictOvulation: map['predictOvulation'] as bool? ?? true,
+      dailyLogPrompt: map['dailyLogPrompt'] as bool? ?? true,
       units: UserUnits.fromMap(
         map['units'] as Map<String, dynamic>? ?? {},
       ),
@@ -225,6 +256,9 @@ class UserSettings extends Equatable {
       'teenMode': teenMode,
       'cycleLength': cycleLength,
       'periodLength': periodLength,
+      'predictPeriod': predictPeriod,
+      'predictOvulation': predictOvulation,
+      'dailyLogPrompt': dailyLogPrompt,
       'units': units.toMap(),
     };
   }
@@ -240,6 +274,9 @@ class UserSettings extends Equatable {
         teenMode,
         cycleLength,
         periodLength,
+        predictPeriod,
+        predictOvulation,
+        dailyLogPrompt,
         units,
       ];
 }
@@ -278,22 +315,66 @@ class UserSubscription extends Equatable {
   final String status;
   final DateTime? startDate;
   final DateTime? endDate;
+  final String? plan; // 'monthly', 'yearly', 'forever'
   final String? paymentMethod;
   final String? transactionId;
+  final double dailyCreditsRemaining;
+  final double adCreditsEarnedToday;
+  final int totalActionsToday;
+  final DateTime? lastResetDate;
 
   const UserSubscription({
-    this.tier = 'free',
+    this.tier = 'economy',
     this.status = 'expired',
+    this.plan,
     this.startDate,
     this.endDate,
     this.paymentMethod,
     this.transactionId,
+    this.dailyCreditsRemaining = 3.0,
+    this.adCreditsEarnedToday = 0.0,
+    this.totalActionsToday = 0,
+    this.lastResetDate,
   });
+
+  /// Getter to handle null lastResetDate (defaults to epoch)
+  DateTime get effectiveLastResetDate =>
+      lastResetDate ?? DateTime.fromMillisecondsSinceEpoch(0);
+
+  UserSubscription copyWith({
+    String? tier,
+    String? status,
+    String? plan,
+    DateTime? startDate,
+    DateTime? endDate,
+    String? paymentMethod,
+    String? transactionId,
+    double? dailyCreditsRemaining,
+    double? adCreditsEarnedToday,
+    int? totalActionsToday,
+    DateTime? lastResetDate,
+  }) {
+    return UserSubscription(
+      tier: tier ?? this.tier,
+      status: status ?? this.status,
+      plan: plan ?? this.plan,
+      startDate: startDate ?? this.startDate,
+      endDate: endDate ?? this.endDate,
+      paymentMethod: paymentMethod ?? this.paymentMethod,
+      transactionId: transactionId ?? this.transactionId,
+      dailyCreditsRemaining:
+          dailyCreditsRemaining ?? this.dailyCreditsRemaining,
+      adCreditsEarnedToday: adCreditsEarnedToday ?? this.adCreditsEarnedToday,
+      totalActionsToday: totalActionsToday ?? this.totalActionsToday,
+      lastResetDate: lastResetDate ?? this.lastResetDate,
+    );
+  }
 
   factory UserSubscription.fromMap(Map<String, dynamic> map) {
     return UserSubscription(
-      tier: map['tier'] as String? ?? 'free',
+      tier: map['tier'] as String? ?? 'economy',
       status: map['status'] as String? ?? 'expired',
+      plan: map['plan'] as String?,
       startDate: map['startDate'] != null
           ? (map['startDate'] as Timestamp).toDate()
           : null,
@@ -302,6 +383,14 @@ class UserSubscription extends Equatable {
           : null,
       paymentMethod: map['paymentMethod'] as String?,
       transactionId: map['transactionId'] as String?,
+      dailyCreditsRemaining:
+          (map['dailyCreditsRemaining'] as num? ?? 3).toDouble(),
+      adCreditsEarnedToday:
+          (map['adCreditsEarnedToday'] as num? ?? 0).toDouble(),
+      totalActionsToday: (map['totalActionsToday'] as num? ?? 0).toInt(),
+      lastResetDate: map['lastResetDate'] != null
+          ? (map['lastResetDate'] as Timestamp).toDate()
+          : null,
     );
   }
 
@@ -309,23 +398,54 @@ class UserSubscription extends Equatable {
     return {
       'tier': tier,
       'status': status,
+      'plan': plan,
       'startDate': startDate != null ? Timestamp.fromDate(startDate!) : null,
       'endDate': endDate != null ? Timestamp.fromDate(endDate!) : null,
       'paymentMethod': paymentMethod,
       'transactionId': transactionId,
+      'dailyCreditsRemaining': dailyCreditsRemaining,
+      'adCreditsEarnedToday': adCreditsEarnedToday,
+      'totalActionsToday': totalActionsToday,
+      'lastResetDate':
+          lastResetDate != null ? Timestamp.fromDate(lastResetDate!) : null,
     };
   }
 
   bool get isActive {
     if (status != 'active') return false;
+    if (tier == 'economy') return true; // Eco is forever
     if (endDate == null) return false;
     return endDate!.isAfter(DateTime.now());
+  }
+
+  /// Check if plan is yearly
+  bool get isYearly {
+    // Economy tier is basic/free and never qualifies for "Yearly Unlimited" credits
+    // regardless of duration or plan name.
+    if (tier == 'economy') return false;
+
+    if (plan != null && plan!.toLowerCase().contains('yearly')) return true;
+    if (startDate != null && endDate != null) {
+      // Logic: If duration is > 300 days (approx 10 months), treat as yearly
+      return endDate!.difference(startDate!).inDays > 300;
+    }
+    return false;
+  }
+
+  /// Check if credits should be reset (new day)
+  bool get shouldResetDaily {
+    final now = DateTime.now();
+    final resetDate = effectiveLastResetDate;
+    return now.year != resetDate.year ||
+        now.month != resetDate.month ||
+        now.day != resetDate.day;
   }
 
   @override
   List<Object?> get props => [
         tier,
         status,
+        plan,
         startDate,
         endDate,
         paymentMethod,
@@ -338,6 +458,7 @@ class UserPrivacy extends Equatable {
   final bool dataEncrypted;
   final DateTime? lastExportDate;
   final bool? deletionRequested;
+  final String profileVisibility; // 'public', 'private', 'protected'
 
   // Visibility Flags
   final bool showFullName;
@@ -352,6 +473,7 @@ class UserPrivacy extends Equatable {
     this.dataEncrypted = true,
     this.lastExportDate,
     this.deletionRequested = false,
+    this.profileVisibility = 'private',
     this.showFullName = false,
     this.showUsername = true,
     this.showPhoto = true,
@@ -361,6 +483,34 @@ class UserPrivacy extends Equatable {
     this.showHealthStats = false,
   });
 
+  UserPrivacy copyWith({
+    bool? dataEncrypted,
+    DateTime? lastExportDate,
+    bool? deletionRequested,
+    String? profileVisibility,
+    bool? showFullName,
+    bool? showUsername,
+    bool? showPhoto,
+    bool? showAddress,
+    bool? showGender,
+    bool? showAge,
+    bool? showHealthStats,
+  }) {
+    return UserPrivacy(
+      dataEncrypted: dataEncrypted ?? this.dataEncrypted,
+      lastExportDate: lastExportDate ?? this.lastExportDate,
+      deletionRequested: deletionRequested ?? this.deletionRequested,
+      profileVisibility: profileVisibility ?? this.profileVisibility,
+      showFullName: showFullName ?? this.showFullName,
+      showUsername: showUsername ?? this.showUsername,
+      showPhoto: showPhoto ?? this.showPhoto,
+      showAddress: showAddress ?? this.showAddress,
+      showGender: showGender ?? this.showGender,
+      showAge: showAge ?? this.showAge,
+      showHealthStats: showHealthStats ?? this.showHealthStats,
+    );
+  }
+
   factory UserPrivacy.fromMap(Map<String, dynamic> map) {
     return UserPrivacy(
       dataEncrypted: map['dataEncrypted'] as bool? ?? true,
@@ -368,6 +518,7 @@ class UserPrivacy extends Equatable {
           ? (map['lastExportDate'] as Timestamp).toDate()
           : null,
       deletionRequested: map['deletionRequested'] as bool? ?? false,
+      profileVisibility: map['profileVisibility'] as String? ?? 'private',
       showFullName: map['showFullName'] as bool? ?? false,
       showUsername: map['showUsername'] as bool? ?? true,
       showPhoto: map['showPhoto'] as bool? ?? true,
@@ -384,6 +535,7 @@ class UserPrivacy extends Equatable {
       'lastExportDate':
           lastExportDate != null ? Timestamp.fromDate(lastExportDate!) : null,
       'deletionRequested': deletionRequested ?? false,
+      'profileVisibility': profileVisibility,
       'showFullName': showFullName,
       'showUsername': showUsername,
       'showPhoto': showPhoto,
@@ -399,6 +551,7 @@ class UserPrivacy extends Equatable {
         dataEncrypted,
         lastExportDate,
         deletionRequested,
+        profileVisibility,
         showFullName,
         showUsername,
         showPhoto,

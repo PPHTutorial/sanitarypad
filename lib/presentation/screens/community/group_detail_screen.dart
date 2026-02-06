@@ -319,7 +319,7 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen>
                     _tabController.animateTo(2);
                   },
                 ),
-                if (isOwner)
+                if (isOwner) ...[
                   ListTile(
                     leading: const Icon(Icons.add_alert_outlined),
                     title: const Text('Create group event'),
@@ -332,12 +332,69 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen>
                       });
                     },
                   ),
+                  const Divider(),
+                  ListTile(
+                    leading:
+                        const Icon(Icons.delete_outline, color: Colors.red),
+                    title: const Text('Delete community',
+                        style: TextStyle(color: Colors.red)),
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      _showDeleteGroupConfirmation(context);
+                    },
+                  ),
+                ],
               ],
             ),
           ),
         );
       },
     );
+  }
+
+  void _showDeleteGroupConfirmation(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Community?'),
+        content: const Text(
+            'This action is permanent. All group content and members will be removed.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              _deleteGroup(context);
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _deleteGroup(BuildContext context) async {
+    try {
+      final user = ref.read(currentUserStreamProvider).value;
+      if (user == null) return;
+      await _groupService.deleteGroup(widget.groupId, user.userId);
+      if (mounted) {
+        context.pop(); // Go back to groups list
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Community deleted successfully.')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: ${e.toString()}')),
+        );
+      }
+    }
   }
 
   void _showGroupInfoSheet(BuildContext context, GroupModel group) {
@@ -1062,7 +1119,8 @@ class _MessagePreviewTile extends StatelessWidget {
             ResponsiveConfig.heightBox(6),
             Row(
               children: [
-                const Icon(Icons.access_time, size: 14, color: AppTheme.mediumGray),
+                const Icon(Icons.access_time,
+                    size: 14, color: AppTheme.mediumGray),
                 ResponsiveConfig.widthBox(4),
                 Text(
                   DateFormat('MMM d • h:mm a').format(message.sentAt),
@@ -1073,7 +1131,8 @@ class _MessagePreviewTile extends StatelessWidget {
                 ),
                 if (message.reactions.isNotEmpty) ...[
                   ResponsiveConfig.widthBox(12),
-                  const Icon(Icons.favorite, size: 14, color: AppTheme.primaryPink),
+                  const Icon(Icons.favorite,
+                      size: 14, color: AppTheme.primaryPink),
                   ResponsiveConfig.widthBox(4),
                   Text(
                     message.reactions.values

@@ -8,7 +8,6 @@
 /// add the content via Firebase Console using the data structure below.
 library;
 
-import 'package:cloud_firestore/cloud_firestore.dart';
 
 void main() async {
   // Initialize Firebase (you may need to adjust this based on your setup)

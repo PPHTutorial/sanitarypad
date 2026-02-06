@@ -4,9 +4,11 @@ import '../../../core/config/responsive_config.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/dialog_wrapper.dart';
 import '../../../services/reminder_service.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../services/credit_manager.dart';
 
 /// Dialog for creating/editing reminders with full customization
-class CreateReminderDialog extends StatefulWidget {
+class CreateReminderDialog extends ConsumerStatefulWidget {
   final Reminder? reminder;
   final String userId;
   final String? defaultType;
@@ -23,10 +25,11 @@ class CreateReminderDialog extends StatefulWidget {
   });
 
   @override
-  State<CreateReminderDialog> createState() => _CreateReminderDialogState();
+  ConsumerState<CreateReminderDialog> createState() =>
+      _CreateReminderDialogState();
 }
 
-class _CreateReminderDialogState extends State<CreateReminderDialog> {
+class _CreateReminderDialogState extends ConsumerState<CreateReminderDialog> {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
@@ -83,6 +86,12 @@ class _CreateReminderDialogState extends State<CreateReminderDialog> {
   Future<void> _saveReminder() async {
     if (!_formKey.currentState!.validate()) return;
 
+    // Credit Check
+    final hasCredit = await ref
+        .read(creditManagerProvider)
+        .requestCredit(context, ActionType.notification);
+    if (!hasCredit) return;
+
     final scheduledTime = _getScheduledDateTime();
 
     // Ensure scheduled time is in the future
@@ -122,6 +131,10 @@ class _CreateReminderDialogState extends State<CreateReminderDialog> {
       } else {
         await reminderService.createReminder(reminder);
       }
+
+      await ref
+          .read(creditManagerProvider)
+          .consumeCredits(ActionType.notification);
 
       if (!mounted) return;
       Navigator.of(context).pop(true);

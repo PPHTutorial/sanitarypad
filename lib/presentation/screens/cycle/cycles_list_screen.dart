@@ -80,136 +80,141 @@ class _CyclesListScreenState extends ConsumerState<CyclesListScreen> {
             ),
           ],
         ),
-        body: cycles.isEmpty
-            ? EmptyState(
-                title: 'No Cycles Yet',
-                icon: Icons.calendar_today_outlined,
-                message:
-                    'Start tracking your menstrual cycle to see your history here',
-                actionLabel: 'Log Period',
-                onAction: () {
-                  context.push('/log-period');
-                },
-              )
-            : ListView.builder(
-                padding: ResponsiveConfig.padding(all: 16),
-                itemCount: cycles.length,
-                itemBuilder: (context, index) {
-                  final cycle = cycles[index];
-                  return Card(
-                    shadowColor: Colors.black.withValues(alpha: 0.08),
-                    margin: ResponsiveConfig.margin(bottom: 12),
-                    child: InkWell(
-                      onTap: () {
-                        context.push('/log-period', extra: cycle);
-                      },
-                      child: Padding(
-                        padding: ResponsiveConfig.padding(all: 16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
+        body: SafeArea(
+          bottom: true,
+          top: false,
+          child: cycles.isEmpty
+              ? EmptyState(
+                  title: 'No Cycles Yet',
+                  icon: Icons.calendar_today_outlined,
+                  message:
+                      'Start tracking your menstrual cycle to see your history here',
+                  actionLabel: 'Log Period',
+                  onAction: () {
+                    context.push('/log-period');
+                  },
+                )
+              : ListView.builder(
+                  padding: ResponsiveConfig.padding(all: 16),
+                  itemCount: cycles.length,
+                  itemBuilder: (context, index) {
+                    final cycle = cycles[index];
+                    return Card(
+                      shadowColor: Colors.black.withValues(alpha: 0.08),
+                      margin: ResponsiveConfig.margin(bottom: 12),
+                      child: InkWell(
+                        onTap: () {
+                          context.push('/log-period', extra: cycle);
+                        },
+                        child: Padding(
+                          padding: ResponsiveConfig.padding(all: 16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Cycle ${cycles.length - index}',
+                                          style: ResponsiveConfig.textStyle(
+                                            size: 16,
+                                            weight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        ResponsiveConfig.heightBox(4),
+                                        Text(
+                                          DateFormat('MMM dd, yyyy')
+                                              .format(cycle.startDate),
+                                          style: ResponsiveConfig.textStyle(
+                                            size: 14,
+                                            color: AppTheme.mediumGray,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Row(
                                     children: [
-                                      Text(
-                                        'Cycle ${cycles.length - index}',
-                                        style: ResponsiveConfig.textStyle(
-                                          size: 16,
-                                          weight: FontWeight.bold,
-                                        ),
+                                      IconButton(
+                                        icon: const Icon(Icons.edit_outlined),
+                                        onPressed: () {
+                                          context.push('/log-period',
+                                              extra: cycle);
+                                        },
+                                        tooltip: 'Edit',
                                       ),
-                                      ResponsiveConfig.heightBox(4),
-                                      Text(
-                                        DateFormat('MMM dd, yyyy')
-                                            .format(cycle.startDate),
-                                        style: ResponsiveConfig.textStyle(
-                                          size: 14,
-                                          color: AppTheme.mediumGray,
-                                        ),
+                                      IconButton(
+                                        icon: const Icon(Icons.delete_outline),
+                                        color: AppTheme.errorRed,
+                                        onPressed: () =>
+                                            _deleteCycle(cycle.cycleId),
+                                        tooltip: 'Delete',
                                       ),
                                     ],
                                   ),
-                                ),
-                                Row(
-                                  children: [
-                                    IconButton(
-                                      icon: const Icon(Icons.edit_outlined),
-                                      onPressed: () {
-                                        context.push('/log-period',
-                                            extra: cycle);
-                                      },
-                                      tooltip: 'Edit',
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(Icons.delete_outline),
-                                      color: AppTheme.errorRed,
-                                      onPressed: () =>
-                                          _deleteCycle(cycle.cycleId),
-                                      tooltip: 'Delete',
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                            ResponsiveConfig.heightBox(12),
-                            Row(
-                              children: [
-                                _buildCycleInfo(
-                                  icon: Icons.calendar_today,
-                                  label: 'Cycle Length',
-                                  value: '${cycle.cycleLength} days',
-                                ),
-                                ResponsiveConfig.widthBox(22),
-                                _buildCycleInfo(
-                                  icon: Icons.water_drop,
-                                  label: 'Period Length',
-                                  value: '${cycle.periodLength} days',
-                                ),
-                              ],
-                            ),
-                            ResponsiveConfig.heightBox(16),
-                            Row(
-                              children: [
-                                _buildCycleInfo(
-                                  icon: Icons.speed,
-                                  label: 'Flow',
-                                  value: cycle.flowIntensity.toUpperCase(),
-                                ),
-                                if (cycle.symptoms.isNotEmpty) ...[
+                                ],
+                              ),
+                              ResponsiveConfig.heightBox(12),
+                              Row(
+                                children: [
+                                  _buildCycleInfo(
+                                    icon: Icons.calendar_today,
+                                    label: 'Cycle Length',
+                                    value: '${cycle.cycleLength} days',
+                                  ),
                                   ResponsiveConfig.widthBox(22),
                                   _buildCycleInfo(
-                                    icon: Icons.medical_services,
-                                    label: 'Symptoms',
-                                    value: '${cycle.symptoms.length}',
+                                    icon: Icons.water_drop,
+                                    label: 'Period Length',
+                                    value: '${cycle.periodLength} days',
                                   ),
                                 ],
-                              ],
-                            ),
-                            if (cycle.notes != null &&
-                                cycle.notes!.isNotEmpty) ...[
-                              ResponsiveConfig.heightBox(16),
-                              Text(
-                                cycle.notes!,
-                                style: ResponsiveConfig.textStyle(
-                                  size: 12,
-                                  color: AppTheme.mediumGray,
-                                ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
                               ),
+                              ResponsiveConfig.heightBox(16),
+                              Row(
+                                children: [
+                                  _buildCycleInfo(
+                                    icon: Icons.speed,
+                                    label: 'Flow',
+                                    value: cycle.flowIntensity.toUpperCase(),
+                                  ),
+                                  if (cycle.symptoms.isNotEmpty) ...[
+                                    ResponsiveConfig.widthBox(22),
+                                    _buildCycleInfo(
+                                      icon: Icons.medical_services,
+                                      label: 'Symptoms',
+                                      value: '${cycle.symptoms.length}',
+                                    ),
+                                  ],
+                                ],
+                              ),
+                              if (cycle.notes != null &&
+                                  cycle.notes!.isNotEmpty) ...[
+                                ResponsiveConfig.heightBox(16),
+                                Text(
+                                  cycle.notes!,
+                                  style: ResponsiveConfig.textStyle(
+                                    size: 12,
+                                    color: AppTheme.mediumGray,
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
                             ],
-                          ],
+                          ),
                         ),
                       ),
-                    ),
-                  );
-                },
-              ),
+                    );
+                  },
+                ),
+        ),
       ),
     );
   }

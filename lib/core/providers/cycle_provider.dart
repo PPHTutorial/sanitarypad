@@ -4,6 +4,7 @@ import '../../core/constants/app_constants.dart';
 import '../../services/storage_service.dart';
 import '../../services/cycle_service.dart';
 import 'auth_provider.dart';
+import 'firebase_provider.dart';
 
 /// Storage service provider
 final storageServiceProvider = Provider<StorageService>((ref) {
@@ -17,6 +18,13 @@ final cycleServiceProvider = Provider<CycleService>((ref) {
 
 /// Cycles stream provider for current user
 final cyclesStreamProvider = StreamProvider<List<CycleModel>>((ref) async* {
+  // Wait for Firebase to be ready
+  final isFirebaseReady = ref.watch(firebaseReadyProvider);
+  if (!isFirebaseReady) {
+    yield [];
+    return;
+  }
+
   final user = ref.watch(currentUserProvider);
   if (user == null) {
     yield [];
@@ -45,7 +53,7 @@ final cyclesStreamProvider = StreamProvider<List<CycleModel>>((ref) async* {
 /// Current active cycle provider
 final activeCycleProvider = Provider<CycleModel?>((ref) {
   final cyclesAsync = ref.watch(cyclesStreamProvider);
-  final cycles = cyclesAsync.value ?? [];
+  final cycles = cyclesAsync.valueOrNull ?? [];
 
   if (cycles.isEmpty) return null;
 

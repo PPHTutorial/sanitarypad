@@ -91,10 +91,13 @@ class AppConstants {
   static const String collectionAIConversations = 'aiConversations';
 
   // Subscription Tiers
-  static const String tierFree = 'free';
-  static const String tierPremium = 'premium';
+  static const String tierEconomy = 'economy';
+  static const String tierPremiumPro = 'premium_pro';
+  static const String tierPremiumAdvance = 'premium_advance';
+  static const String tierPremiumPlus = 'premium_plus';
 
   // Subscription Plans
+  static const String planForever = 'forever';
   static const String planMonthly = 'monthly';
   static const String planQuarterly = 'quarterly';
   static const String planSemiAnnual = 'semi_annual';
@@ -148,6 +151,40 @@ class AppConstants {
   // Privacy
   static const int pinLength = 4;
   static const int maxFailedPinAttempts = 5;
+
+  // Credit Costs (ActionType costs)
+  static const double costPregnancy = 2.0;
+  static const double costFertility = 2.0;
+  static const double costSkincare = 3.0;
+  static const double costWellness = 2.0;
+  static const double costLogPeriod = 2.0;
+  static const double costPadChange = 2.0;
+  static const double costNotification = 2.0;
+  static const double costAIChat = 5.0;
+  static const double costMovie = 2;
+  static const double costCreateGroup = 5.0;
+  static const double costCreateEvent = 5.0;
+  static const double costDermatologist = 5.0;
+  static const double costExport = 2.0;
+  static const double costEmergencyNumber = 1.0;
+
+  // Daily Credit Limits (per tier)
+  static const double creditsEco = 108.0;
+  static const double creditsPro = 360.0;
+  static const double creditsAdv = 720.0;
+  static const double creditsPlus = 1440.0;
+  static const double creditsYearly = 999990.0;
+  static const double creditsDefault = 108.0;
+
+  // Subscription Pricing (Monthly)
+  static const double priceEco = 0.0;
+  static const double pricePro = 19.99;
+  static const double priceAdv = 29.99;
+  static const double pricePlus = 59.99;
+
+  // Ad Rewards
+  static const int adsNeededForReward = 3;
+  static const double creditsPerAdReward = 2.0;
 
   // Download Links
   static const String playStoreUrl =

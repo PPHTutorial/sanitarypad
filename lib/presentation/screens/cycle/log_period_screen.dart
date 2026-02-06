@@ -8,6 +8,8 @@ import '../../../core/utils/date_utils.dart' as app_date_utils;
 import '../../../services/cycle_service.dart';
 import '../../../core/widgets/back_button_handler.dart';
 import '../../../data/models/cycle_model.dart';
+import 'package:sanitarypad/presentation/widgets/ads/eco_ad_wrapper.dart';
+import '../../../services/credit_manager.dart';
 
 /// Log period screen
 class LogPeriodScreen extends ConsumerStatefulWidget {
@@ -99,6 +101,12 @@ class _LogPeriodScreenState extends ConsumerState<LogPeriodScreen> {
       return;
     }
 
+    // Credit Check
+    final hasCredit = await ref
+        .read(creditManagerProvider)
+        .requestCredit(context, ActionType.logPeriod);
+    if (!hasCredit) return;
+
     setState(() => _isLoading = true);
 
     try {
@@ -125,6 +133,9 @@ class _LogPeriodScreenState extends ConsumerState<LogPeriodScreen> {
           updatedAt: DateTime.now(),
         );
         await cycleService.updateCycle(updatedCycle);
+        await ref
+            .read(creditManagerProvider)
+            .consumeCredits(ActionType.logPeriod);
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -143,6 +154,10 @@ class _LogPeriodScreenState extends ConsumerState<LogPeriodScreen> {
           mood: _mood,
           notes: _notesController.text.isEmpty ? null : _notesController.text,
         );
+
+        await ref
+            .read(creditManagerProvider)
+            .consumeCredits(ActionType.logPeriod);
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -170,13 +185,17 @@ class _LogPeriodScreenState extends ConsumerState<LogPeriodScreen> {
   @override
   Widget build(BuildContext context) {
     return BackButtonHandler(
-        fallbackRoute: '/home',
-        child: Scaffold(
-          backgroundColor: Colors.transparent,
-          appBar: AppBar(
-            title: Text(widget.cycle != null ? 'Edit Period' : 'Log Period'),
-          ),
-          body: SingleChildScrollView(
+      fallbackRoute: '/home',
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          title: Text(widget.cycle != null ? 'Edit Period' : 'Log Period'),
+        ),
+        bottomNavigationBar: const EcoAdWrapper(adType: AdType.banner),
+        body: SafeArea(
+          bottom: true,
+          top: false,
+          child: SingleChildScrollView(
             padding: ResponsiveConfig.padding(all: 16),
             child: Form(
               key: _formKey,
@@ -259,7 +278,9 @@ class _LogPeriodScreenState extends ConsumerState<LogPeriodScreen> {
               ),
             ),
           ),
-        ));
+        ),
+      ),
+    );
   }
 
   Widget _buildDateField({

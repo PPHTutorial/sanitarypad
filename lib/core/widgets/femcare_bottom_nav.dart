@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:sanitarypad/core/config/responsive_config.dart';
 import '../../core/theme/app_theme.dart';
+import 'package:sanitarypad/presentation/widgets/ads/eco_ad_wrapper.dart';
 
 /// FemCare+ Bottom Navigation Bar
 ///
@@ -20,8 +21,7 @@ class FemCareBottomNav extends StatelessWidget {
   static final List<NavItem> _navItems = [
     const NavItem(
       icon: FontAwesomeIcons.house,
-      activeIcon: FontAwesomeIcons
-          .house, // FA uses same name, we can toggle solid/regular if using different IconData
+      activeIcon: FontAwesomeIcons.house,
       label: 'Home',
       route: '/home',
     ),
@@ -56,37 +56,43 @@ class FemCareBottomNav extends StatelessWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: theme.scaffoldBackgroundColor,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: ResponsiveConfig.radius(12),
-            offset: const Offset(0, -4),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const EcoAdWrapper(adType: AdType.banner),
+        Container(
+          decoration: BoxDecoration(
+            color: theme.scaffoldBackgroundColor,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.08),
+                blurRadius: ResponsiveConfig.radius(12),
+                offset: const Offset(0, -4),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: SafeArea(
-        top: false,
-        child: Container(
-          height: ResponsiveConfig.height(90),
-          padding: ResponsiveConfig.padding(horizontal: 4, vertical: 8),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: _navItems.map((item) {
-              final isActive = currentRoute == item.route;
-              return _buildNavItem(
-                context,
-                item: item,
-                isActive: isActive,
-                isDark: isDark,
-              );
-            }).toList(),
+          child: SafeArea(
+            top: false,
+            child: Container(
+              height: ResponsiveConfig.height(90),
+              padding: ResponsiveConfig.padding(horizontal: 4, vertical: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: _navItems.map((item) {
+                  final isActive = currentRoute == item.route;
+                  return _buildNavItem(
+                    context,
+                    item: item,
+                    isActive: isActive,
+                    isDark: isDark,
+                  );
+                }).toList(),
+              ),
+            ),
           ),
         ),
-      ),
+      ],
     );
   }
 
@@ -112,11 +118,9 @@ class FemCareBottomNav extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Icon with animated background
                 Stack(
                   alignment: Alignment.center,
                   children: [
-                    // Animated background circle
                     AnimatedContainer(
                       duration: const Duration(milliseconds: 300),
                       curve: Curves.easeInOutCubic,
@@ -127,20 +131,16 @@ class FemCareBottomNav extends StatelessWidget {
                         shape: BoxShape.circle,
                       ),
                     ),
-                    // Icon
                     FaIcon(
                       isActive ? item.activeIcon : item.icon,
                       color: isActive
                           ? AppTheme.primaryPink
                           : (isDark ? Colors.grey[500] : Colors.grey[600]),
-                      size: isActive
-                          ? 22
-                          : 20, // FaIcons can be slightly larger visually
+                      size: isActive ? 22 : 20,
                     ),
                   ],
                 ),
                 const SizedBox(height: 4),
-                // Label with animation
                 AnimatedDefaultTextStyle(
                   duration: const Duration(milliseconds: 200),
                   curve: Curves.easeInOut,
@@ -169,7 +169,6 @@ class FemCareBottomNav extends StatelessWidget {
   }
 }
 
-/// Navigation item model
 class NavItem {
   final IconData icon;
   final IconData activeIcon;

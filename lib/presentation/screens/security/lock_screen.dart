@@ -1,20 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/config/responsive_config.dart';
-import '../../../core/theme/app_theme.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../services/security_service.dart';
 
 /// App lock screen (PIN/Biometric)
-class LockScreen extends StatefulWidget {
+class LockScreen extends ConsumerStatefulWidget {
   const LockScreen({super.key});
 
   @override
-  State<LockScreen> createState() => _LockScreenState();
+  ConsumerState<LockScreen> createState() => _LockScreenState();
 }
 
-class _LockScreenState extends State<LockScreen> {
+class _LockScreenState extends ConsumerState<LockScreen> {
   final _pinController = TextEditingController();
-  final _securityService = SecurityService();
   bool _isBiometricAvailable = false;
   bool _isBiometricEnabled = false;
   int _failedAttempts = 0;
@@ -23,8 +22,9 @@ class _LockScreenState extends State<LockScreen> {
   @override
   void initState() {
     super.initState();
-    _checkBiometricAvailability();
-    _tryBiometricAuth();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkBiometricAvailability();
+    });
   }
 
   @override
@@ -34,20 +34,25 @@ class _LockScreenState extends State<LockScreen> {
   }
 
   Future<void> _checkBiometricAvailability() async {
-    final isAvailable = await _securityService.isBiometricAvailable();
-    final isEnabled = await _securityService.isBiometricLockEnabled();
-    setState(() {
-      _isBiometricAvailable = isAvailable;
-      _isBiometricEnabled = isEnabled;
-    });
+    final securityService = ref.read(securityServiceProvider);
+    final isAvailable = await securityService.isBiometricAvailable();
+    final isEnabled = await securityService.isBiometricEnabled();
+    if (mounted) {
+      setState(() {
+        _isBiometricAvailable = isAvailable;
+        _isBiometricEnabled = isEnabled;
+      });
+      if (isAvailable && isEnabled) {
+        _tryBiometricAuth();
+      }
+    }
   }
 
   Future<void> _tryBiometricAuth() async {
-    if (_isBiometricEnabled && _isBiometricAvailable) {
-      final authenticated = await _securityService.authenticateWithBiometrics();
-      if (authenticated && mounted) {
-        Navigator.of(context).pop(true);
-      }
+    final securityService = ref.read(securityServiceProvider);
+    final authenticated = await securityService.authenticateBiometric();
+    if (authenticated && mounted) {
+      Navigator.of(context).pop(true);
     }
   }
 
@@ -57,7 +62,8 @@ class _LockScreenState extends State<LockScreen> {
       return;
     }
 
-    final isValid = await _securityService.verifyPIN(pin);
+    final securityService = ref.read(securityServiceProvider);
+    final isValid = await securityService.verifyPin(pin);
     if (isValid) {
       if (mounted) {
         Navigator.of(context).pop(true);
@@ -94,6 +100,9 @@ class _LockScreenState extends State<LockScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
     return Scaffold(
       body: SafeArea(
         child: Padding(
@@ -104,22 +113,21 @@ class _LockScreenState extends State<LockScreen> {
               Icon(
                 Icons.lock_outlined,
                 size: ResponsiveConfig.iconSize(80),
-                color: AppTheme.primaryPink,
+                color: colorScheme.primary,
               ),
               ResponsiveConfig.heightBox(32),
               Text(
                 'Unlock FemCare+',
-                style: ResponsiveConfig.textStyle(
-                  size: 24,
-                  weight: FontWeight.bold,
+                style: textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: colorScheme.onSurface,
                 ),
               ),
               ResponsiveConfig.heightBox(8),
               Text(
                 'Enter your PIN to continue',
-                style: ResponsiveConfig.textStyle(
-                  size: 16,
-                  color: AppTheme.mediumGray,
+                style: textTheme.bodyLarge?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
                 ),
               ),
               ResponsiveConfig.heightBox(32),
@@ -134,17 +142,21 @@ class _LockScreenState extends State<LockScreen> {
                   size: 24,
                   weight: FontWeight.bold,
                   letterSpacing: 8,
-                ),
+                ).copyWith(color: colorScheme.onSurface),
                 decoration: InputDecoration(
                   counterText: '',
+                  filled: true,
+                  fillColor: colorScheme.surfaceContainerHighest.withOpacity(0.3),
                   border: OutlineInputBorder(
                     borderRadius: ResponsiveConfig.borderRadius(12),
+                    borderSide: BorderSide.none,
                   ),
                   hintText: '••••',
                   hintStyle: ResponsiveConfig.textStyle(
                     size: 24,
                     letterSpacing: 8,
-                  ),
+                  ).copyWith(
+                      color: colorScheme.onSurfaceVariant.withOpacity(0.5)),
                 ),
                 onChanged: (value) {
                   if (value.length == AppConstants.pinLength) {
@@ -159,14 +171,16 @@ class _LockScreenState extends State<LockScreen> {
                   onPressed: _tryBiometricAuth,
                   icon: const Icon(Icons.fingerprint),
                   label: const Text('Use Biometric'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: colorScheme.primary,
+                  ),
                 ),
               ResponsiveConfig.heightBox(16),
               if (_failedAttempts > 0)
                 Text(
                   'Failed attempts: $_failedAttempts/$_maxAttempts',
-                  style: ResponsiveConfig.textStyle(
-                    size: 12,
-                    color: AppTheme.errorRed,
+                  style: textTheme.bodySmall?.copyWith(
+                    color: colorScheme.error,
                   ),
                 ),
             ],

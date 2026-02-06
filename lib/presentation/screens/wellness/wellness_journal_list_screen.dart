@@ -7,6 +7,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/providers/auth_provider.dart';
 import '../../../services/wellness_service.dart';
 import '../../../data/models/wellness_model.dart';
+import 'package:sanitarypad/presentation/widgets/ads/eco_ad_wrapper.dart';
 import '../../../core/widgets/back_button_handler.dart';
 import '../../../core/widgets/empty_state.dart';
 
@@ -97,9 +98,14 @@ class _WellnessJournalListScreenState
 
             return ListView.builder(
               padding: ResponsiveConfig.padding(all: 16),
-              itemCount: entries.length,
+              itemCount: entries.length + (entries.length > 2 ? 1 : 0),
               itemBuilder: (context, index) {
-                final entry = entries[index];
+                if (entries.length > 2 && index == 2) {
+                  return const EcoAdWrapper(adType: AdType.native);
+                }
+                final actualIndex =
+                    (entries.length > 2 && index > 2) ? index - 1 : index;
+                final entry = entries[actualIndex];
                 return _buildEntryCard(context, entry);
               },
             );

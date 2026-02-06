@@ -14,7 +14,10 @@ import '../../presentation/screens/insights/insights_screen.dart';
 import '../../presentation/screens/wellness/wellness_screen.dart';
 import '../../presentation/screens/profile/profile_screen.dart';
 import '../../presentation/screens/profile/edit_profile_screen.dart';
+import '../../presentation/screens/profile/full_profile_screen.dart';
+import '../../presentation/screens/profile/credit_history_screen.dart';
 import '../../presentation/screens/profile/settings/cycle_settings_screen.dart';
+import '../../presentation/screens/profile/settings/privacy_settings_screen.dart';
 import '../../presentation/screens/cycle/log_period_screen.dart';
 import '../../presentation/screens/cycle/cycles_list_screen.dart';
 import '../../presentation/screens/pads/pad_management_screen.dart';
@@ -23,6 +26,7 @@ import '../../presentation/screens/wellness/wellness_journal_list_screen.dart';
 import '../../data/models/wellness_model.dart';
 import '../../presentation/screens/profile/settings/pin_setup_screen.dart';
 import '../../presentation/screens/profile/settings/biometric_setup_screen.dart';
+import '../../presentation/screens/profile/settings/security_settings_screen.dart';
 import '../../presentation/screens/subscription/subscription_screen.dart';
 import '../../presentation/screens/wellness/wellness_content_detail_screen.dart';
 import '../../presentation/screens/wellness/wellness_content_management_screen.dart';
@@ -44,6 +48,7 @@ import '../../presentation/screens/skincare/skincare_tracking_screen.dart';
 import '../../presentation/screens/skincare/skincare_product_management_screen.dart';
 import '../../presentation/screens/skincare/skincare_product_form_screen.dart';
 import '../../presentation/screens/skincare/skincare_routine_form_screen.dart';
+import '../../presentation/screens/skincare/dermatologist_search_screen.dart';
 import '../../data/models/skincare_model.dart';
 import '../../presentation/screens/alerts/red_flag_alerts_screen.dart';
 import '../../presentation/screens/reports/health_report_screen.dart';
@@ -65,9 +70,15 @@ import '../../presentation/screens/movie/presentation/screens/favorites/favorite
 import '../../presentation/screens/movie/presentation/screens/detail/movie_detail_screen.dart'
     as movie_detail;
 import '../../presentation/screens/movie/movies.dart' as movie_player;
+import '../../presentation/screens/movie/customplayer.dart' as video_player;
+import '../../presentation/screens/profile/help_support_screen.dart';
+import '../../presentation/screens/profile/create_ticket_screen.dart';
 import 'package:sanitarypad/data/models/user_model.dart';
+import '../../presentation/screens/splash/custom_splash_screen.dart';
+import '../../presentation/screens/security/lock_screen.dart';
 import '../../core/providers/auth_provider.dart';
 import '../../core/providers/onboarding_provider.dart';
+import '../../core/providers/firebase_provider.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 
@@ -130,9 +141,13 @@ class AppRouter {
       ),
       redirect: (context, state) {
         final isOnboardingComplete = ref.read(onboardingCompleteProvider);
+        final isFirebaseReady = ref.read(firebaseReadyProvider);
+        final authState = ref.read(currentUserStreamProvider);
 
-        // Check Firebase Auth directly for immediate auth state (persisted)
-        final isAuthenticated = ref.read(isAuthenticatedProvider);
+        // If Firebase isn't ready or auth status is still loading, stay on splash
+        if (!isFirebaseReady || authState.isLoading) return null;
+
+        final isAuthenticated = authState.value != null;
 
         final currentLocation = state.matchedLocation;
 
@@ -180,7 +195,7 @@ class AppRouter {
         GoRoute(
           path: '/splash',
           name: 'splash',
-          builder: (context, state) => const SplashScreenPage(),
+          builder: (context, state) => const CustomSplashScreen(),
         ),
         GoRoute(
           path: '/onboarding',
@@ -198,6 +213,11 @@ class AppRouter {
           path: '/signup',
           name: 'signup',
           builder: (context, state) => const SignUpScreen(),
+        ),
+        GoRoute(
+          path: '/lock',
+          name: 'lock',
+          builder: (context, state) => const LockScreen(),
         ),
 
         // Main App (with bottom navigation) - Protected routes
@@ -235,6 +255,36 @@ class AppRouter {
           path: '/cycle-settings',
           name: 'cycle-settings',
           builder: (context, state) => const CycleSettingsScreen(),
+        ),
+        GoRoute(
+          path: '/privacy-settings',
+          name: 'privacy-settings',
+          builder: (context, state) => const PrivacySettingsScreen(),
+        ),
+        GoRoute(
+          path: '/profile-details',
+          name: 'profile-details',
+          builder: (context, state) => const FullProfileScreen(),
+        ),
+        GoRoute(
+          path: '/security-settings',
+          name: 'security-settings',
+          builder: (context, state) => const SecuritySettingsScreen(),
+        ),
+        GoRoute(
+          path: '/credit-history',
+          name: 'credit-history',
+          builder: (context, state) => const CreditHistoryScreen(),
+        ),
+        GoRoute(
+          path: '/help-support',
+          name: 'help-support',
+          builder: (context, state) => const HelpSupportScreen(),
+        ),
+        GoRoute(
+          path: '/create-ticket',
+          name: 'create-ticket',
+          builder: (context, state) => const CreateTicketScreen(),
         ),
 
         // Feature Screens - Protected routes
@@ -422,6 +472,11 @@ class AppRouter {
             return SkincareRoutineFormScreen(entry: entry);
           },
         ),
+        GoRoute(
+          path: '/dermatologist-search',
+          name: 'dermatologist-search',
+          builder: (context, state) => const DermatologistSearchScreen(),
+        ),
 
         // Community - Groups - Protected routes
         GoRoute(
@@ -511,6 +566,25 @@ class AppRouter {
               );
             }
             return movie_player.MovieScreen(movie: movie);
+          },
+        ),
+        GoRoute(
+          path: '/movies/player',
+          name: 'movie-player',
+          builder: (context, state) {
+            final extra = state.extra as Map<String, dynamic>?;
+            final url = extra?['url'] as String?;
+            final movieId = extra?['movieId'] as String?;
+
+            if (url == null || movieId == null) {
+              return const Scaffold(
+                body: Center(child: Text('Playback error: Missing data')),
+              );
+            }
+            return video_player.CustomVideoPlayer(
+              url: url,
+              movieId: movieId,
+            );
           },
         ),
         GoRoute(
@@ -622,24 +696,21 @@ class RouterRefreshNotifier extends ChangeNotifier {
         }
       },
     );
+
+    // Firebase ready listener
+    _ref.listen<bool>(
+      firebaseReadyProvider,
+      (previous, next) {
+        if (previous != next) {
+          notifyListeners();
+        }
+      },
+    );
   }
 
   @override
   void dispose() {
     _subscription?.cancel();
     super.dispose();
-  }
-}
-
-class SplashScreenPage extends StatelessWidget {
-  const SplashScreenPage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(
-        child: CircularProgressIndicator(),
-      ),
-    );
   }
 }

@@ -1,6 +1,7 @@
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 const OpenAI = require("openai");
+const axios = require("axios");
 
 admin.initializeApp();
 
@@ -44,7 +45,8 @@ const buildSystemPrompt = (category, context) => {
       return `${basePrompt} Focus on dermatologist-level skincare routines, ingredient analysis, skin health evaluation, and personalized recommendations. Provide clear, evidence-based explanations of skincare ingredients, their functions, benefits, safety profiles, and potential interactions. Always consider dermatological conditions such as acne, hyperpigmentation, eczema, rosacea, sensitivity, and barrier impairment. Account for topical and oral medications (e.g., retinoids, benzoyl peroxide, antibiotics, azelaic acid, hormonal treatments)and provide safe compatibility guidance without giving medical prescriptions. Highlight contraindications, ingredient conflicts, over-exfoliation risks, and pregnancy/breastfeeding considerations. Prioritize user safety, patch testing, gentle options, barrier support, and conservative recommendations. Do not diagnose but offer supportive dermatologist-informed insights based on provided information.`;
 
     case 'ingredient':
-      return `${basePrompt} Focus on skincare routines, ingredient analysis, skin health evaluation, and personalized skincare advice. Provide clear explanations of skincare ingredients, their functions, compatibility, and potential interactions. Consider common dermatological conditions and how ingredients or routines may affect them. Account for medication use (topical or oral) such as retinoids, antibiotics, hormonal treatments, and acne therapies, and provide safe, evidence-based guidance without giving medical prescriptions. Prioritize safety, sensitivity awareness, patch-test recommendations, and ingredient contraindications for pregnant or breastfeeding users. Then return an object with keys; name, scientificName, category, description, benefits, concerns, comedogenicRating, irritationRating, goodFor, avoidWith`;
+      return `${basePrompt} Focus on skincare routines, ingredient analysis, skin health evaluation, and personalized skincare advice. Provide clear explanations of skincare ingredients, their functions, compatibility, and potential interactions. Consider common dermatological conditions and how ingredients or routines may affect them. Account for medication use (topical or oral) such as retinoids, antibiotics, hormonal treatments, and acne therapies, and provide safe, evidence-based guidance without giving medical prescriptions. Prioritize safety, sensitivity awareness, patch-test recommendations, and ingredient contraindications for pregnant or breastfeeding users. 
+      IMPORTANT: You must return the analysis as a raw JSON object string (no markdown blocks) containing exactly these keys: "name", "scientificName", "category", "description", "benefits", "concerns", "comedogenicRating", "irritationRating", "goodFor" (array), "avoidWith" (array). If information is unknown, use an empty string or empty array.`;
 
 
     default:
@@ -120,3 +122,51 @@ exports.generateAIResponse = functions.https.onCall(async (data, context) => {
     );
   }
 });
+
+/**
+ * Syncs subscription data to the user document to ensure consistency across the app.
+ * This is critical for usage tracking (credits) and tier status.
+ */
+exports.syncSubscriptionToUser = functions.firestore
+  .document("subscriptions/{userId}")
+  .onWrite(async (change, context) => {
+    const userId = context.params.userId;
+    const db = admin.firestore();
+
+    // If the document was deleted
+    if (!change.after.exists) {
+      console.log(`Subscription for user ${userId} was deleted. Resetting to free/expired.`);
+      try {
+        await db.collection("users").doc(userId).set(
+          {
+            subscription: {
+              tier: "free",
+              status: "expired",
+              dailyCreditsRemaining: 3.0, // Default free credits
+              updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+            },
+          },
+          { merge: true }
+        );
+      } catch (error) {
+        console.error(`Error resetting subscription for user ${userId}:`, error);
+      }
+      return;
+    }
+
+    // If the document was created or updated
+    const newSubscriptionData = change.after.data();
+    console.log(`Syncing subscription for user ${userId}. Tier: ${newSubscriptionData.tier}`);
+
+    try {
+      await db.collection("users").doc(userId).set(
+        {
+          subscription: newSubscriptionData,
+        },
+        { merge: true }
+      );
+    } catch (error) {
+      console.error(`Error syncing subscription for user ${userId}:`, error);
+    }
+  });
+

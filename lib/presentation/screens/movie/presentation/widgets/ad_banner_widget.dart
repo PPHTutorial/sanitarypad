@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../app/themes/app_colors.dart';
-import '../../app/themes/app_dimensions.dart';
 import '../../services/iap/subscription_manager.dart';
-import '../../presentation/providers/subscription_provider.dart';
 
 /// Ad banner widget (respects Pro status - no ads for Pro users)
 class AdBannerWidget extends ConsumerStatefulWidget {

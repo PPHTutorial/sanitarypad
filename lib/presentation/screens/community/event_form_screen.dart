@@ -8,6 +8,7 @@ import '../../../core/widgets/back_button_handler.dart';
 import '../../../data/models/event_model.dart';
 import '../../../services/event_service.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../services/credit_manager.dart';
 
 class EventFormScreen extends ConsumerStatefulWidget {
   final String? category;
@@ -94,6 +95,15 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
         return;
       }
 
+      // Credit Check
+      final hasCredit = await ref
+          .read(creditManagerProvider)
+          .requestCredit(context, ActionType.createEvent);
+      if (!hasCredit) {
+        setState(() => _isLoading = false);
+        return;
+      }
+
       final event = EventModel(
         title: _titleController.text.trim(),
         description: _descriptionController.text.trim(),
@@ -117,6 +127,11 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
       );
 
       await _eventService.createEvent(event);
+
+      // Consume Credit
+      await ref
+          .read(creditManagerProvider)
+          .consumeCredits(ActionType.createEvent);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -258,7 +273,13 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
                       lastDate: DateTime.now().add(const Duration(days: 365)),
                     );
                     if (date != null) {
-                      setState(() => _startDate = date);
+                      setState(() {
+                        _startDate = date;
+                        // If end date is before new start date, update end date to match start date
+                        if (_endDate.isBefore(_startDate)) {
+                          _endDate = _startDate;
+                        }
+                      });
                     }
                   },
                 ),

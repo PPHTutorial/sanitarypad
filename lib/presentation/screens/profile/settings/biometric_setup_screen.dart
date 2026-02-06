@@ -1,21 +1,21 @@
 import 'package:flutter/material.dart';
-import 'package:local_auth/local_auth.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/config/responsive_config.dart';
 import '../../../../services/security_service.dart';
+import '../../../../core/providers/auth_provider.dart';
 
 /// Biometric setup screen
-class BiometricSetupScreen extends StatefulWidget {
+class BiometricSetupScreen extends ConsumerStatefulWidget {
   const BiometricSetupScreen({super.key});
 
   @override
-  State<BiometricSetupScreen> createState() => _BiometricSetupScreenState();
+  ConsumerState<BiometricSetupScreen> createState() =>
+      _BiometricSetupScreenState();
 }
 
-class _BiometricSetupScreenState extends State<BiometricSetupScreen> {
-  final _securityService = SecurityService();
+class _BiometricSetupScreenState extends ConsumerState<BiometricSetupScreen> {
   bool _isAvailable = false;
   bool _isEnabled = false;
-  List<BiometricType> _availableTypes = [];
   bool _isLoading = false;
 
   @override
@@ -25,27 +25,37 @@ class _BiometricSetupScreenState extends State<BiometricSetupScreen> {
   }
 
   Future<void> _checkAvailability() async {
-    final isAvailable = await _securityService.isBiometricAvailable();
-    final isEnabled = await _securityService.isBiometricLockEnabled();
-    final types = await _securityService.getAvailableBiometrics();
+    final securityService = ref.read(securityServiceProvider);
+    final isAvailable = await securityService.isBiometricAvailable();
+    final isEnabled = await securityService.isBiometricEnabled();
 
     setState(() {
       _isAvailable = isAvailable;
       _isEnabled = isEnabled;
-      _availableTypes = types;
     });
   }
 
   Future<void> _toggleBiometric(bool value) async {
     setState(() => _isLoading = true);
     try {
+      final securityService = ref.read(securityServiceProvider);
+      final user = ref.read(currentUserStreamProvider).value;
+      if (user == null || !user.subscription.isActive) {
+        throw Exception('Premium required for Biometric lock');
+      }
+
       if (value) {
         // Test biometric first
-        final authenticated = await _securityService.authenticateWithBiometrics(
-          localizedReason: 'Enable biometric lock for FemCare+',
-        );
+        final authenticated = await securityService.authenticateBiometric();
         if (authenticated) {
-          await _securityService.enableBiometricLock();
+          await securityService.setBiometricEnabled(true);
+
+          // Update Firestore
+          final updatedUser = user.copyWith(
+            settings: user.settings.copyWith(biometricLock: true),
+          );
+          await ref.read(authServiceProvider).updateUserData(updatedUser);
+
           setState(() => _isEnabled = true);
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -60,7 +70,14 @@ class _BiometricSetupScreenState extends State<BiometricSetupScreen> {
           }
         }
       } else {
-        await _securityService.disableBiometricLock();
+        await securityService.setBiometricEnabled(false);
+
+        // Update Firestore
+        final updatedUser = user.copyWith(
+          settings: user.settings.copyWith(biometricLock: false),
+        );
+        await ref.read(authServiceProvider).updateUserData(updatedUser);
+
         setState(() => _isEnabled = false);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -78,21 +95,6 @@ class _BiometricSetupScreenState extends State<BiometricSetupScreen> {
       if (mounted) {
         setState(() => _isLoading = false);
       }
-    }
-  }
-
-  String _getBiometricTypeName(BiometricType type) {
-    switch (type) {
-      case BiometricType.face:
-        return 'Face ID';
-      case BiometricType.fingerprint:
-        return 'Fingerprint';
-      case BiometricType.iris:
-        return 'Iris';
-      case BiometricType.strong:
-        return 'Strong Authentication';
-      case BiometricType.weak:
-        return 'Weak Authentication';
     }
   }
 
@@ -148,38 +150,7 @@ class _BiometricSetupScreenState extends State<BiometricSetupScreen> {
                   ),
                 )
               else ...[
-                if (_availableTypes.isNotEmpty) ...[
-                  Text(
-                    'Available methods:',
-                    style: ResponsiveConfig.textStyle(
-                      size: 16,
-                      weight: FontWeight.w600,
-                    ),
-                  ),
-                  ResponsiveConfig.heightBox(8),
-                  ..._availableTypes.map((type) {
-                    return Padding(
-                      padding: ResponsiveConfig.padding(vertical: 4),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.check_circle,
-                            color: Theme.of(context).colorScheme.primary,
-                            size: ResponsiveConfig.iconSize(20),
-                          ),
-                          ResponsiveConfig.widthBox(8),
-                          Text(
-                            _getBiometricTypeName(type),
-                            style: ResponsiveConfig.textStyle(
-                              size: 14,
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  }),
-                  ResponsiveConfig.heightBox(24),
-                ],
+                ResponsiveConfig.heightBox(24),
                 Card(
                   child: SwitchListTile(
                     title: const Text('Enable Biometric Lock'),

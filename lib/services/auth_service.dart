@@ -1,3 +1,4 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../core/constants/app_constants.dart';
@@ -7,11 +8,15 @@ import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
 /// Authentication service
 class AuthService {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  // Use getters to prevent [core/no-app] error before initialization
+  FirebaseAuth get _auth => FirebaseAuth.instance;
+  FirebaseFirestore get _firestore => FirebaseFirestore.instance;
 
-  /// Get current user
-  User? get currentUser => _auth.currentUser;
+  /// Get current user (safe check for initialization)
+  User? get currentUser {
+    if (Firebase.apps.isEmpty) return null;
+    return _auth.currentUser;
+  }
 
   /// Get current user stream
   Stream<User?> get authStateChanges => _auth.authStateChanges();

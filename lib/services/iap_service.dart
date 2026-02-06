@@ -8,11 +8,30 @@ import 'subscription_service.dart';
 
 /// IAP Product IDs
 class IAPProductIds {
-  static const String monthly = 'femcare_premium_monthly';
-  static const String quarterly = 'femcare_premium_quarterly';
-  static const String yearly = 'femcare_premium_yearly';
+  // Eco Tier (Mostly free/ad-supported)
+  static const String ecoForever = 'femcare_eco_forever';
 
-  static const List<String> all = [monthly, quarterly, yearly];
+  // Pro Tier
+  static const String proMonthly = 'femcare_pro_monthly';
+  static const String proYearly = 'femcare_pro_yearly';
+
+  // Advance Tier
+  static const String advMonthly = 'femcare_adv_monthly';
+  static const String advYearly = 'femcare_adv_yearly';
+
+  // Plus Tier
+  static const String pluMonthly = 'femcare_plu_monthly';
+  static const String pluYearly = 'femcare_plu_yearly';
+
+  static const List<String> all = [
+    ecoForever,
+    proMonthly,
+    proYearly,
+    advMonthly,
+    advYearly,
+    pluMonthly,
+    pluYearly,
+  ];
 }
 
 /// IAP Service for handling in-app purchases

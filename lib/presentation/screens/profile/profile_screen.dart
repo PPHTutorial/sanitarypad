@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,7 +13,13 @@ import '../../../core/widgets/back_button_handler.dart';
 import '../../../core/constants/legal_constants.dart';
 import '../../../core/constants/export_constants.dart';
 import '../../../services/data_backup_service.dart';
+import '../../../services/credit_manager.dart';
+import 'package:sanitarypad/core/providers/subscription_provider.dart';
+import 'package:sanitarypad/data/models/transaction_model.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:in_app_review/in_app_review.dart';
+import 'package:intl/intl.dart';
+import '../admin/admin_dashboard_screen.dart';
 import 'policy_viewer_screen.dart';
 
 /// Profile screen
@@ -22,144 +29,230 @@ class ProfileScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final userAsync = ref.watch(currentUserStreamProvider);
-    final user = userAsync.value;
+
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
     return BackButtonHandler(
       fallbackRoute: '/home',
       child: Scaffold(
-        backgroundColor: Colors.transparent, // Use theme background
+        // Remove manual background color to use theme's scaffoldBackgroundColor
         appBar: AppBar(
           title: const Text('Profile'),
         ),
         bottomNavigationBar: const FemCareBottomNav(currentRoute: '/profile'),
-        body: user == null
-            ? const Center(child: CircularProgressIndicator())
-            : SingleChildScrollView(
-                padding: ResponsiveConfig.padding(all: 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Profile Header
-                    _buildProfileHeader(context, user),
-                    ResponsiveConfig.heightBox(16),
-
-                    // Subscription Card
-                    _buildSubscriptionCard(context, user),
-                    ResponsiveConfig.heightBox(16),
-
-                    // Settings Sections
-                    _buildSettingsSection(context, ref),
-                    ResponsiveConfig.heightBox(16),
-
-                    // Account Actions
-                    _buildAccountActions(context, ref),
-                    ResponsiveConfig.heightBox(16),
-
-                    // Social Section
-                    _buildSocialSection(context),
-                    ResponsiveConfig.heightBox(16),
-
-                    // Legal Section
-                    _buildLegalSection(context),
-                    ResponsiveConfig.heightBox(32), // Bottom padding
-                  ],
+        body: userAsync.when(
+          data: (user) => user == null
+              ? const Center(child: Text('User not found'))
+              : SingleChildScrollView(
+                  padding: ResponsiveConfig.padding(all: 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildProfileHeader(context, user),
+                      _buildSubscriptionCard(context, user),
+                      ResponsiveConfig.heightBox(16),
+                      _buildTransactionLedger(context, ref, user.userId),
+                      ResponsiveConfig.heightBox(24),
+                      _buildSectionLabel(context, 'PREFERENCES & HEALTH'),
+                      _buildSettingsSection(context, ref),
+                      ResponsiveConfig.heightBox(24),
+                      _buildSectionLabel(context, 'LEGAL & COMPLIANCE'),
+                      _buildLegalSection(context),
+                      ResponsiveConfig.heightBox(24),
+                      _buildSectionLabel(context, 'COMMUNITY & SUPPORT'),
+                      _buildSocialSection(context),
+                      ResponsiveConfig.heightBox(24),
+                      _buildSectionLabel(context, 'ACCOUNT ACTIONS'),
+                      _buildAccountActions(context, ref),
+                      ResponsiveConfig.heightBox(32),
+                    ],
+                  ),
                 ),
-              ),
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (error, stack) => Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.error_outline, color: Colors.red, size: 48),
+                const SizedBox(height: 16),
+                Text('Error loading profile',
+                    style: ResponsiveConfig.textStyle(
+                        size: 16, weight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                Text(error.toString(),
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: () => ref.invalidate(currentUserStreamProvider),
+                  child: const Text('Try Again'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSectionLabel(BuildContext context, String text) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Padding(
+      padding: const EdgeInsets.only(left: 4, bottom: 8),
+      child: Text(
+        text,
+        style: theme.textTheme.labelMedium?.copyWith(
+          color: colorScheme.onSurfaceVariant.withOpacity(0.7),
+          fontWeight: FontWeight.bold,
+          letterSpacing: 1.2,
+        ),
       ),
     );
   }
 
   Widget _buildProfileHeader(BuildContext context, user) {
-    return Card(
-      shadowColor: Colors.black.withValues(alpha: 0.08),
-      margin: const EdgeInsets.only(bottom: 0),
-      child: Padding(
-        padding: ResponsiveConfig.padding(all: 20),
-        child: Row(
-          children: [
-            CircleAvatar(
-              radius: 40,
-              backgroundColor: AppTheme.lightPink,
-              child: Text(
-                user.displayName?.substring(0, 1).toUpperCase() ?? 'U',
-                style: ResponsiveConfig.textStyle(
-                  size: 24,
-                  weight: FontWeight.bold,
-                  color: AppTheme.primaryPink,
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return GestureDetector(
+      onTap: () => context.push('/profile-details'),
+      child: Card(
+        // shadowColor handled by CardTheme
+        margin: const EdgeInsets.only(bottom: 0),
+        child: Padding(
+          padding: ResponsiveConfig.padding(all: 20),
+          child: Row(
+            children: [
+              CircleAvatar(
+                radius: 40,
+                backgroundColor: colorScheme.primaryContainer,
+                backgroundImage: user.photoUrl != null
+                    ? CachedNetworkImageProvider(user.photoUrl!)
+                    : null,
+                child: user.photoUrl == null
+                    ? Text(
+                        user.displayName?.substring(0, 1).toUpperCase() ?? 'U',
+                        style: ResponsiveConfig.textStyle(
+                          size: 24,
+                          weight: FontWeight.bold,
+                          color: colorScheme.primary,
+                        ),
+                      )
+                    : null,
+              ),
+              ResponsiveConfig.widthBox(16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      (user.fullName != null && user.fullName!.isNotEmpty)
+                          ? user.fullName!
+                          : (user.displayName ?? 'User'),
+                      style: theme.textTheme.headlineMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    ResponsiveConfig.heightBox(4),
+                    Text(
+                      '@${user.username ?? 'user'}',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ),
-            ResponsiveConfig.widthBox(16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    (user.fullName != null && user.fullName!.isNotEmpty)
-                        ? user.fullName!
-                        : (user.displayName ?? 'User'),
-                    style: ResponsiveConfig.textStyle(
-                      size: 20,
-                      weight: FontWeight.bold,
-                    ),
-                  ),
-                  ResponsiveConfig.heightBox(4),
-                  Text(
-                    user.email,
-                    style: ResponsiveConfig.textStyle(
-                      size: 14,
-                      color: AppTheme.mediumGray,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            IconButton(
-              onPressed: () => context.push('/edit-profile'),
-              icon: const FaIcon(FontAwesomeIcons.userPen,
-                  size: 20, color: AppTheme.primaryPink),
-              tooltip: 'Edit Profile',
-            ),
-          ],
+              Icon(Icons.chevron_right, color: colorScheme.onSurfaceVariant),
+            ],
+          ),
         ),
       ),
     );
   }
 
   Widget _buildSubscriptionCard(BuildContext context, user) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     final isPremium = user.subscription.isActive;
+
     return SizedBox(
       width: double.infinity,
       child: Card(
-        shadowColor: Colors.black.withValues(alpha: 0.08),
-        margin: const EdgeInsets.only(bottom: 0),
-        color: isPremium ? AppTheme.lightPink : null,
+        // shadowColor handled by CardTheme
+        margin: const EdgeInsets.only(top: 16),
+        color: isPremium ? colorScheme.primaryContainer : null,
         child: Padding(
-          padding: ResponsiveConfig.padding(all: 20),
+          padding: ResponsiveConfig.padding(all: 16),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    isPremium ? 'FemCare+ Premium' : 'Free Plan',
-                    style: ResponsiveConfig.textStyle(
-                      size: 18,
-                      weight: FontWeight.bold,
-                    ),
+              InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: () => context.push('/credit-history'),
+                child: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Text(
+                        isPremium ? 'FemCare+ Premium' : 'Free Plan',
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: isPremium ? colorScheme.onSurface : null,
+                          fontSize: ResponsiveConfig.fontSize(20),
+                        ),
+                      ),
+                      ResponsiveConfig.heightBox(4),
+                      Text(
+                        isPremium
+                            ? 'Active ${user.subscription.tier == 'economy' ? 'Forever' : 'until ${user.subscription.endDate?.toString().split(' ')[0] ?? 'N/A'}'}'
+                            : 'Upgrade to unlock premium features',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: isPremium
+                              ? colorScheme.onSurface.withOpacity(0.8)
+                              : colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      ResponsiveConfig.heightBox(12),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: isPremium
+                              ? colorScheme.onPrimaryContainer.withOpacity(0.12)
+                              : colorScheme.primary.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            FaIcon(
+                              FontAwesomeIcons.coins,
+                              size: 14,
+                              color: isPremium
+                                  ? colorScheme.onSurface
+                                  : colorScheme.primary,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              '${user.subscription.dailyCreditsRemaining} Credits Remaining',
+                              style: theme.textTheme.labelLarge?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: isPremium
+                                    ? colorScheme.onSurface
+                                    : colorScheme.primary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                  ResponsiveConfig.heightBox(4),
-                  Text(
-                    isPremium
-                        ? 'Active until ${user.subscription.endDate?.toString().split(' ')[0] ?? 'N/A'}'
-                        : 'Upgrade to unlock premium features',
-                    style: ResponsiveConfig.textStyle(
-                      size: 14,
-                      color: AppTheme.mediumGray,
-                    ),
-                  ),
-                ],
+                ),
               ),
               ResponsiveConfig.heightBox(16),
               if (!isPremium)
@@ -177,8 +270,10 @@ class ProfileScreen extends ConsumerWidget {
   }
 
   Widget _buildSettingsSection(BuildContext context, WidgetRef ref) {
+    final userAsync = ref.watch(currentUserStreamProvider);
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Card(
-      shadowColor: Colors.black.withValues(alpha: 0.08),
       margin: const EdgeInsets.only(bottom: 0),
       child: Column(
         children: [
@@ -207,7 +302,16 @@ class ProfileScreen extends ConsumerWidget {
             icon: FontAwesomeIcons.lock,
             title: 'Privacy & Security',
             onTap: () {
-              _showSecurityOptions(context);
+              context.push('/security-settings');
+            },
+          ),
+          const Divider(),
+          _buildSettingsTile(
+            context,
+            icon: FontAwesomeIcons.shieldHalved,
+            title: 'Privacy Settings',
+            onTap: () {
+              context.push('/privacy-settings');
             },
           ),
           const Divider(),
@@ -256,17 +360,34 @@ class ProfileScreen extends ConsumerWidget {
             },
           ),
           const Divider(),
+          // Help & Support
           _buildSettingsTile(
             context,
-            icon: FontAwesomeIcons.circleQuestion,
             title: 'Help & Support',
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Support: support@femcare.app')),
-              );
-            },
+            icon: Icons.help_outline,
+            onTap: () => context.push('/help-support'),
           ),
-          const Divider(),
+
+          // Admin Dashboard
+          if (userAsync.value?.isAdmin == true) ...[
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.admin_panel_settings,
+                  color: Colors.redAccent, size: 24),
+              title: const Text('Professional Dashboard',
+                  style: TextStyle(
+                      color: Colors.redAccent, fontWeight: FontWeight.bold)),
+              trailing: FaIcon(FontAwesomeIcons.chevronRight,
+                  size: 16, color: colorScheme.onSurfaceVariant),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                    builder: (context) => const AdminDashboardScreen()),
+              ),
+            ),
+          ],
+
+          const SizedBox(height: 32),
+
           _buildSettingsTile(
             context,
             icon: FontAwesomeIcons.circleInfo,
@@ -286,10 +407,12 @@ class ProfileScreen extends ConsumerWidget {
     required String title,
     required VoidCallback onTap,
   }) {
+    final colorScheme = Theme.of(context).colorScheme;
     return ListTile(
-      leading: FaIcon(icon, color: AppTheme.primaryPink, size: 20),
+      leading: FaIcon(icon, color: colorScheme.primary, size: 20),
       title: Text(title),
-      trailing: const FaIcon(FontAwesomeIcons.chevronRight, size: 16),
+      trailing: FaIcon(FontAwesomeIcons.chevronRight,
+          size: 16, color: colorScheme.onSurfaceVariant),
       onTap: onTap,
     );
   }
@@ -317,7 +440,8 @@ class ProfileScreen extends ConsumerWidget {
     }
 
     return ListTile(
-      leading: FaIcon(themeIcon, color: AppTheme.primaryPink, size: 20),
+      leading: FaIcon(themeIcon,
+          color: Theme.of(context).colorScheme.primary, size: 20),
       title: const Text('Theme'),
       subtitle: Text(themeLabel),
       trailing: Switch(
@@ -329,7 +453,7 @@ class ProfileScreen extends ConsumerWidget {
             themeNotifier.setThemeMode(ThemeMode.light);
           }
         },
-        activeColor: AppTheme.primaryPink,
+        activeColor: Theme.of(context).colorScheme.primary,
       ),
       onTap: () {
         // Show theme mode selection dialog
@@ -365,7 +489,7 @@ class ProfileScreen extends ConsumerWidget {
                   Navigator.of(context).pop();
                 }
               },
-              activeColor: AppTheme.primaryPink,
+              activeColor: Theme.of(context).colorScheme.primary,
             ),
             RadioListTile<ThemeMode>(
               title: const Text('Dark'),
@@ -377,7 +501,7 @@ class ProfileScreen extends ConsumerWidget {
                   Navigator.of(context).pop();
                 }
               },
-              activeColor: AppTheme.primaryPink,
+              activeColor: Theme.of(context).colorScheme.primary,
             ),
             RadioListTile<ThemeMode>(
               title: const Text('System Default'),
@@ -389,7 +513,9 @@ class ProfileScreen extends ConsumerWidget {
                   Navigator.of(context).pop();
                 }
               },
-              activeColor: AppTheme.primaryPink,
+              activeColor: themeMode == ThemeMode.system
+                  ? Theme.of(context).colorScheme.primary
+                  : null,
             ),
           ],
         ),
@@ -404,32 +530,32 @@ class ProfileScreen extends ConsumerWidget {
   }
 
   Widget _buildAccountActions(BuildContext context, WidgetRef ref) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
     return Card(
-      shadowColor: Colors.black.withValues(alpha: 0.08),
       margin: const EdgeInsets.only(bottom: 0),
       child: Column(
         children: [
           ListTile(
-            leading: const FaIcon(FontAwesomeIcons.rightFromBracket,
-                color: AppTheme.errorRed, size: 20),
+            leading: FaIcon(FontAwesomeIcons.rightFromBracket,
+                color: colorScheme.error, size: 20),
             title: Text(
               'Sign Out',
-              style: ResponsiveConfig.textStyle(
-                size: 16,
-                color: AppTheme.errorRed,
+              style: textTheme.bodyLarge?.copyWith(
+                color: colorScheme.error,
               ),
             ),
             onTap: () => _handleSignOut(context, ref),
           ),
           const Divider(),
           ListTile(
-            leading: const FaIcon(FontAwesomeIcons.trash,
-                color: AppTheme.errorRed, size: 20),
+            leading: FaIcon(FontAwesomeIcons.trash,
+                color: colorScheme.error, size: 20),
             title: Text(
               'Delete Account',
-              style: ResponsiveConfig.textStyle(
-                size: 16,
-                color: AppTheme.errorRed,
+              style: textTheme.bodyLarge?.copyWith(
+                color: colorScheme.error,
               ),
             ),
             onTap: () => _showDeleteAccountDialog(context, ref),
@@ -439,60 +565,9 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 
-  void _showSecurityOptions(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      builder: (context) => Container(
-        padding: ResponsiveConfig.padding(all: 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              'Privacy & Security',
-              style: ResponsiveConfig.textStyle(
-                size: 20,
-                weight: FontWeight.bold,
-              ),
-            ),
-            ResponsiveConfig.heightBox(16),
-            ListTile(
-              leading: const FaIcon(FontAwesomeIcons.key, size: 20),
-              title: const Text('PIN Lock'),
-              trailing: const FaIcon(FontAwesomeIcons.chevronRight, size: 16),
-              onTap: () {
-                Navigator.pop(context);
-                context.push('/pin-setup');
-              },
-            ),
-            ListTile(
-              leading: const FaIcon(FontAwesomeIcons.fingerprint, size: 20),
-              title: const Text('Biometric Lock'),
-              trailing: const FaIcon(FontAwesomeIcons.chevronRight, size: 16),
-              onTap: () {
-                Navigator.pop(context);
-                context.push('/biometric-setup');
-              },
-            ),
-            ListTile(
-              leading: const FaIcon(FontAwesomeIcons.eyeSlash, size: 20),
-              title: const Text('Anonymous Mode'),
-              trailing: Switch(
-                value: false,
-                onChanged: (value) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Anonymous mode coming soon')),
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   void _showDataManagementOptions(BuildContext context, WidgetRef ref) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     showModalBottomSheet(
       context: context,
       builder: (context) => Container(
@@ -542,7 +617,7 @@ class ProfileScreen extends ConsumerWidget {
                 'Delete All Data',
                 style: ResponsiveConfig.textStyle(
                   size: 16,
-                  color: AppTheme.errorRed,
+                  color: colorScheme.error,
                 ),
               ),
               onTap: () {
@@ -590,7 +665,6 @@ class ProfileScreen extends ConsumerWidget {
 
   Widget _buildLegalSection(BuildContext context) {
     return Card(
-      shadowColor: Colors.black.withValues(alpha: 0.08),
       margin: const EdgeInsets.only(bottom: 0),
       child: Column(
         children: [
@@ -632,7 +706,6 @@ class ProfileScreen extends ConsumerWidget {
 
   Widget _buildSocialSection(BuildContext context) {
     return Card(
-      shadowColor: Colors.black.withValues(alpha: 0.08),
       margin: const EdgeInsets.only(bottom: 0),
       child: Column(
         children: [
@@ -662,13 +735,18 @@ class ProfileScreen extends ConsumerWidget {
             context,
             icon: FontAwesomeIcons.solidStar,
             title: 'Rate App',
-            onTap: () {
-              // For now, just show a snackbar or link to store
-              // In production, use in_app_review package
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                    content: Text('Rating feature coming to app store soon!')),
-              );
+            onTap: () async {
+              final InAppReview inAppReview = InAppReview.instance;
+              if (await inAppReview.isAvailable()) {
+                await inAppReview.requestReview();
+              } else {
+                // Fallback: Open store listing manually
+                await inAppReview.openStoreListing(
+                  // Replace with actual app ID once published
+                  appStoreId: 'com.femcare.app', // iOS App Store ID
+                  // microsoftStoreId: '...' // Optional for Windows
+                );
+              }
             },
           ),
         ],
@@ -744,6 +822,12 @@ class ProfileScreen extends ConsumerWidget {
       return;
     }
 
+    // Credit Check
+    final hasCredit = await ref
+        .read(creditManagerProvider)
+        .requestCredit(context, ActionType.export);
+    if (!hasCredit) return;
+
     // Show format selection dialog
     final format = await showDialog<ExportFormat>(
       context: context,
@@ -796,6 +880,8 @@ class ProfileScreen extends ConsumerWidget {
         userId: user.userId,
         format: format,
       );
+
+      await ref.read(creditManagerProvider).consumeCredits(ActionType.export);
 
       if (context.mounted) {
         Navigator.pop(context); // Dismiss loading dialog
@@ -924,5 +1010,102 @@ class ProfileScreen extends ConsumerWidget {
         );
       }
     }
+  }
+
+  Widget _buildTransactionLedger(
+      BuildContext context, WidgetRef ref, String userId) {
+    final transactionsAsync = ref.watch(userTransactionsProvider(userId));
+    final theme = Theme.of(context);
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(left: 16, right: 16, top: 16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Transaction History',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                TextButton(
+                  onPressed: () => context.push('/credit-history'),
+                  child: const Text('View All'),
+                ),
+              ],
+            ),
+          ),
+          transactionsAsync.when(
+            data: (transactions) {
+              if (transactions.isEmpty) {
+                return const Padding(
+                  padding: EdgeInsets.all(16.0),
+                  child: Center(
+                    child: Text('No transactions yet.',
+                        style: TextStyle(color: Colors.grey)),
+                  ),
+                );
+              }
+
+              // Show only last 5
+              final displayList = transactions.take(3).toList();
+
+              return ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: displayList.length,
+                separatorBuilder: (context, index) => const Divider(height: 1),
+                itemBuilder: (context, index) {
+                  final tx = displayList[index];
+                  final isCredit = tx.type == TransactionType.credit;
+
+                  return ListTile(
+                    dense: true,
+                    leading: CircleAvatar(
+                      radius: 14,
+                      backgroundColor: isCredit
+                          ? Colors.green.withOpacity(0.1)
+                          : Colors.red.withOpacity(0.1),
+                      child: FaIcon(
+                        isCredit
+                            ? FontAwesomeIcons.arrowUp
+                            : FontAwesomeIcons.arrowDown,
+                        size: 10,
+                        color: isCredit ? Colors.green : Colors.red,
+                      ),
+                    ),
+                    title: Text(tx.description),
+                    subtitle: Text(
+                      DateFormat('MMM d, h:mm a').format(tx.timestamp),
+                      style: const TextStyle(fontSize: 10),
+                    ),
+                    trailing: Text(
+                      '${isCredit ? '+' : '-'}${tx.amount}',
+                      style: theme.textTheme.labelLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: isCredit ? Colors.green : Colors.red,
+                      ),
+                    ),
+                  );
+                },
+              );
+            },
+            loading: () => const Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Center(child: CircularProgressIndicator()),
+            ),
+            error: (e, s) => Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Text('Error: $e'),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

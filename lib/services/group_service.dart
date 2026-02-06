@@ -217,8 +217,15 @@ class GroupService {
     });
   }
 
-  // Delete group
-  Future<void> deleteGroup(String groupId) async {
+  // Delete group (restricted to creator)
+  Future<void> deleteGroup(String groupId, String userId) async {
+    final group = await getGroup(groupId);
+    if (group == null) throw Exception('Group not found');
+
+    if (group.createdBy != userId && group.adminId != userId) {
+      throw Exception('Only the owner or admin can delete this group');
+    }
+
     // Delete all members
     final members = await _firestore
         .collection(AppConstants.collectionGroupMembers)

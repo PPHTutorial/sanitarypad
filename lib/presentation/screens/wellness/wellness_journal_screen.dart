@@ -8,6 +8,7 @@ import '../../../core/providers/auth_provider.dart';
 import '../../../data/models/wellness_model.dart';
 import '../../../services/wellness_service.dart';
 import '../../../services/storage_service.dart';
+import '../../../services/credit_manager.dart';
 import '../../../core/utils/date_utils.dart' as app_date_utils;
 import '../../../core/widgets/back_button_handler.dart';
 
@@ -210,6 +211,12 @@ class _WellnessJournalScreenState extends ConsumerState<WellnessJournalScreen> {
   Future<void> _saveEntry() async {
     if (!_formKey.currentState!.validate()) return;
 
+    // Credit Check
+    final hasCredit = await ref
+        .read(creditManagerProvider)
+        .requestCredit(context, ActionType.wellness);
+    if (!hasCredit) return;
+
     setState(() => _isLoading = true);
 
     try {
@@ -270,6 +277,9 @@ class _WellnessJournalScreenState extends ConsumerState<WellnessJournalScreen> {
           createdAt: _existingEntry!.createdAt,
         );
         await _wellnessService.updateWellnessEntry(updated);
+        await ref
+            .read(creditManagerProvider)
+            .consumeCredits(ActionType.wellness);
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -290,6 +300,10 @@ class _WellnessJournalScreenState extends ConsumerState<WellnessJournalScreen> {
               _journalController.text.isEmpty ? null : _journalController.text,
           photoUrls: _photoUrls.isEmpty ? null : _photoUrls,
         );
+
+        await ref
+            .read(creditManagerProvider)
+            .consumeCredits(ActionType.wellness);
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -324,78 +338,82 @@ class _WellnessJournalScreenState extends ConsumerState<WellnessJournalScreen> {
                 ? 'Edit Wellness Entry'
                 : 'Wellness Journal'),
           ),
-          body: SingleChildScrollView(
-            padding: ResponsiveConfig.padding(all: 16),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // Date Selector
-                  InkWell(
-                    onTap: _selectDate,
-                    child: InputDecorator(
+          body: SafeArea(
+            bottom: true,
+            top: false,
+            child: SingleChildScrollView(
+              padding: ResponsiveConfig.padding(all: 16),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Date Selector
+                    InkWell(
+                      onTap: _selectDate,
+                      child: InputDecorator(
+                        decoration: const InputDecoration(
+                          labelText: 'Date',
+                          suffixIcon: Icon(Icons.calendar_today),
+                        ),
+                        child: Text(
+                          app_date_utils.DateUtils.formatDate(_selectedDate),
+                        ),
+                      ),
+                    ),
+                    ResponsiveConfig.heightBox(24),
+
+                    // Mood Tracker
+                    _buildMoodSection(),
+                    ResponsiveConfig.heightBox(24),
+
+                    // Hydration
+                    _buildHydrationSection(),
+                    ResponsiveConfig.heightBox(24),
+
+                    // Sleep
+                    _buildSleepSection(),
+                    ResponsiveConfig.heightBox(24),
+
+                    // Appetite
+                    _buildAppetiteSection(),
+                    ResponsiveConfig.heightBox(24),
+
+                    // Exercise (Optional)
+                    _buildExerciseSection(),
+                    ResponsiveConfig.heightBox(24),
+
+                    // Photo Diary
+                    _buildPhotoDiarySection(),
+                    ResponsiveConfig.heightBox(24),
+
+                    // Journal Entry
+                    TextFormField(
+                      controller: _journalController,
                       decoration: const InputDecoration(
-                        labelText: 'Date',
-                        suffixIcon: Icon(Icons.calendar_today),
+                        labelText: 'Journal Entry (Optional)',
+                        hintText: 'How are you feeling today?',
                       ),
-                      child: Text(
-                        app_date_utils.DateUtils.formatDate(_selectedDate),
-                      ),
+                      maxLines: 5,
                     ),
-                  ),
-                  ResponsiveConfig.heightBox(24),
+                    ResponsiveConfig.heightBox(32),
 
-                  // Mood Tracker
-                  _buildMoodSection(),
-                  ResponsiveConfig.heightBox(24),
-
-                  // Hydration
-                  _buildHydrationSection(),
-                  ResponsiveConfig.heightBox(24),
-
-                  // Sleep
-                  _buildSleepSection(),
-                  ResponsiveConfig.heightBox(24),
-
-                  // Appetite
-                  _buildAppetiteSection(),
-                  ResponsiveConfig.heightBox(24),
-
-                  // Exercise (Optional)
-                  _buildExerciseSection(),
-                  ResponsiveConfig.heightBox(24),
-
-                  // Photo Diary
-                  _buildPhotoDiarySection(),
-                  ResponsiveConfig.heightBox(24),
-
-                  // Journal Entry
-                  TextFormField(
-                    controller: _journalController,
-                    decoration: const InputDecoration(
-                      labelText: 'Journal Entry (Optional)',
-                      hintText: 'How are you feeling today?',
+                    // Save Button
+                    ElevatedButton(
+                      onPressed:
+                          (_isLoading || _isLoadingEntry) ? null : _saveEntry,
+                      child: (_isLoading || _isLoadingEntry)
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : Text(_existingEntry != null
+                              ? 'Update Entry'
+                              : 'Save Entry'),
                     ),
-                    maxLines: 5,
-                  ),
-                  ResponsiveConfig.heightBox(32),
-
-                  // Save Button
-                  ElevatedButton(
-                    onPressed:
-                        (_isLoading || _isLoadingEntry) ? null : _saveEntry,
-                    child: (_isLoading || _isLoadingEntry)
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : Text(_existingEntry != null
-                            ? 'Update Entry'
-                            : 'Save Entry'),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),

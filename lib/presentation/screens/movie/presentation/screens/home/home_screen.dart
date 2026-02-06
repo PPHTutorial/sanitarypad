@@ -11,6 +11,8 @@ import 'widgets/trending_carousel.dart';
 import 'widgets/horizontal_movie_card.dart';
 import '../search/search_screen.dart';
 import '../../widgets/app_logo.dart';
+import 'package:sanitarypad/presentation/widgets/ads/eco_ad_wrapper.dart';
+import 'package:sanitarypad/services/ads_service.dart';
 
 /// Home screen with real data - Complete implementation
 class MovieMovieHomeScreen extends ConsumerStatefulWidget {
@@ -216,6 +218,10 @@ class _MovieMovieHomeScreenState extends ConsumerState<MovieMovieHomeScreen> {
                 ),
               ),
 
+            const SliverToBoxAdapter(
+              child: EcoAdWrapper(adType: AdType.native),
+            ),
+
             SliverToBoxAdapter(child: SizedBox(height: AppDimensions.space12)),
 
             SliverToBoxAdapter(child: SizedBox(height: AppDimensions.space12)),
@@ -414,7 +420,7 @@ class _MovieMovieHomeScreenState extends ConsumerState<MovieMovieHomeScreen> {
                       final movie = freeAgg.items[index];
                       return HorizontalMovieCard(
                         movie: movie,
-                        typeBadge: 'Free',
+                        typeBadge: 'Eco',
                         onTap: () {
                           context.push('/movies/detail', extra: movie);
                         },

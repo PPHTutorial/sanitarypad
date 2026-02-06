@@ -187,184 +187,187 @@ class _FertilityEntryFormScreenState
               : 'Add Entry',
         ),
       ),
-      body: SingleChildScrollView(
-        padding: ResponsiveConfig.padding(all: 16),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Date
-              TextFormField(
-                readOnly: true,
-                decoration: InputDecoration(
-                  labelText: 'Date',
-                  prefixIcon: const Icon(Icons.calendar_today),
-                  border: OutlineInputBorder(
-                    borderRadius: ResponsiveConfig.borderRadius(12),
+      body: SafeArea(
+        bottom: true,
+        top: false,
+        child: SingleChildScrollView(
+          padding: ResponsiveConfig.padding(all: 16),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Date
+                TextFormField(
+                  readOnly: true,
+                  decoration: InputDecoration(
+                    labelText: 'Date',
+                    prefixIcon: const Icon(Icons.calendar_today),
+                    border: OutlineInputBorder(
+                      borderRadius: ResponsiveConfig.borderRadius(12),
+                    ),
                   ),
-                ),
-                controller: TextEditingController(
-                  text: _selectedDate != null
-                      ? DateFormat('yyyy-MM-dd').format(_selectedDate!)
-                      : '',
-                ),
-                onTap: _selectDate,
-                validator: (value) {
-                  if (_selectedDate == null) {
-                    return 'Please select a date';
-                  }
-                  return null;
-                },
-              ),
-              ResponsiveConfig.heightBox(16),
-
-              // BBT
-              TextFormField(
-                controller: _bbtController,
-                decoration: InputDecoration(
-                  labelText: 'Basal Body Temperature (°C) - Optional',
-                  prefixIcon: const Icon(Icons.thermostat),
-                  border: OutlineInputBorder(
-                    borderRadius: ResponsiveConfig.borderRadius(12),
+                  controller: TextEditingController(
+                    text: _selectedDate != null
+                        ? DateFormat('yyyy-MM-dd').format(_selectedDate!)
+                        : '',
                   ),
-                  helperText: 'Take temperature first thing in the morning',
-                ),
-                keyboardType: TextInputType.number,
-                validator: (value) {
-                  if (value != null && value.trim().isNotEmpty) {
-                    final temp = double.tryParse(value.trim());
-                    if (temp == null) {
-                      return 'Please enter a valid temperature';
+                  onTap: _selectDate,
+                  validator: (value) {
+                    if (_selectedDate == null) {
+                      return 'Please select a date';
                     }
-                    if (temp < 35.0 || temp > 40.0) {
-                      return 'Temperature should be between 35°C and 40°C';
-                    }
-                  }
-                  return null;
-                },
-              ),
-              ResponsiveConfig.heightBox(16),
-
-              // Cervical Mucus
-              DropdownButtonFormField<String>(
-                value: _selectedCervicalMucus,
-                decoration: InputDecoration(
-                  labelText: 'Cervical Mucus - Optional',
-                  prefixIcon: const Icon(Icons.water_drop),
-                  border: OutlineInputBorder(
-                    borderRadius: ResponsiveConfig.borderRadius(12),
-                  ),
-                ),
-                items: [
-                  const DropdownMenuItem<String>(
-                    value: null,
-                    child: Text('None'),
-                  ),
-                  ..._cervicalMucusOptions.map((option) {
-                    return DropdownMenuItem(
-                      value: option,
-                      child: Text(option.replaceAll('-', ' ').toUpperCase()),
-                    );
-                  }),
-                ],
-                onChanged: (value) {
-                  setState(() => _selectedCervicalMucus = value);
-                },
-              ),
-              ResponsiveConfig.heightBox(16),
-
-              // Cervical Position
-              DropdownButtonFormField<String>(
-                value: _selectedCervicalPosition,
-                decoration: InputDecoration(
-                  labelText: 'Cervical Position - Optional',
-                  prefixIcon: const Icon(Icons.location_on),
-                  border: OutlineInputBorder(
-                    borderRadius: ResponsiveConfig.borderRadius(12),
-                  ),
-                ),
-                items: [
-                  const DropdownMenuItem<String>(
-                    value: null,
-                    child: Text('None'),
-                  ),
-                  ..._cervicalPositionOptions.map((option) {
-                    return DropdownMenuItem(
-                      value: option,
-                      child: Text(option.toUpperCase()),
-                    );
-                  }),
-                ],
-                onChanged: (value) {
-                  setState(() => _selectedCervicalPosition = value);
-                },
-              ),
-              ResponsiveConfig.heightBox(16),
-
-              // LH Test
-              Card(
-                child: SwitchListTile(
-                  title: const Text('LH Test Positive'),
-                  subtitle: const Text('Ovulation predictor test result'),
-                  value: _lhTestPositive ?? false,
-                  onChanged: (value) {
-                    setState(() => _lhTestPositive = value);
+                    return null;
                   },
                 ),
-              ),
-              ResponsiveConfig.heightBox(8),
+                ResponsiveConfig.heightBox(16),
 
-              // Intercourse
-              Card(
-                child: SwitchListTile(
+                // BBT
+                TextFormField(
+                  controller: _bbtController,
+                  decoration: InputDecoration(
+                    labelText: 'Basal Body Temperature (°C) - Optional',
+                    prefixIcon: const Icon(Icons.thermostat),
+                    border: OutlineInputBorder(
+                      borderRadius: ResponsiveConfig.borderRadius(12),
+                    ),
+                    helperText: 'Take temperature first thing in the morning',
+                  ),
+                  keyboardType: TextInputType.number,
+                  validator: (value) {
+                    if (value != null && value.trim().isNotEmpty) {
+                      final temp = double.tryParse(value.trim());
+                      if (temp == null) {
+                        return 'Please enter a valid temperature';
+                      }
+                      if (temp < 35.0 || temp > 40.0) {
+                        return 'Temperature should be between 35°C and 40°C';
+                      }
+                    }
+                    return null;
+                  },
+                ),
+                ResponsiveConfig.heightBox(16),
+
+                // Cervical Mucus
+                DropdownButtonFormField<String>(
+                  value: _selectedCervicalMucus,
+                  decoration: InputDecoration(
+                    labelText: 'Cervical Mucus - Optional',
+                    prefixIcon: const Icon(Icons.water_drop),
+                    border: OutlineInputBorder(
+                      borderRadius: ResponsiveConfig.borderRadius(12),
+                    ),
+                  ),
+                  items: [
+                    const DropdownMenuItem<String>(
+                      value: null,
+                      child: Text('None'),
+                    ),
+                    ..._cervicalMucusOptions.map((option) {
+                      return DropdownMenuItem(
+                        value: option,
+                        child: Text(option.replaceAll('-', ' ').toUpperCase()),
+                      );
+                    }),
+                  ],
+                  onChanged: (value) {
+                    setState(() => _selectedCervicalMucus = value);
+                  },
+                ),
+                ResponsiveConfig.heightBox(16),
+
+                // Cervical Position
+                DropdownButtonFormField<String>(
+                  value: _selectedCervicalPosition,
+                  decoration: InputDecoration(
+                    labelText: 'Cervical Position - Optional',
+                    prefixIcon: const Icon(Icons.location_on),
+                    border: OutlineInputBorder(
+                      borderRadius: ResponsiveConfig.borderRadius(12),
+                    ),
+                  ),
+                  items: [
+                    const DropdownMenuItem<String>(
+                      value: null,
+                      child: Text('None'),
+                    ),
+                    ..._cervicalPositionOptions.map((option) {
+                      return DropdownMenuItem(
+                        value: option,
+                        child: Text(option.toUpperCase()),
+                      );
+                    }),
+                  ],
+                  onChanged: (value) {
+                    setState(() => _selectedCervicalPosition = value);
+                  },
+                ),
+                ResponsiveConfig.heightBox(16),
+
+                // LH Test
+                Card(
+                  child: SwitchListTile(
+                    title: const Text('LH Test Positive'),
+                    subtitle: const Text('Ovulation predictor test result'),
+                    value: _lhTestPositive ?? false,
+                    onChanged: (value) {
+                      setState(() => _lhTestPositive = value);
+                    },
+                  ),
+                ),
+                ResponsiveConfig.heightBox(8),
+
+                // Intercourse
+                Card(
+                    child: SwitchListTile(
                   title: const Text('Intercourse'),
                   subtitle: const Text('Track intercourse for conception'),
                   value: _intercourse ?? false,
                   onChanged: (value) {
                     setState(() => _intercourse = value);
                   },
-                ),
-              ),
-              ResponsiveConfig.heightBox(16),
+                )),
+                ResponsiveConfig.heightBox(16),
 
-              // Notes
-              TextFormField(
-                controller: _notesController,
-                decoration: InputDecoration(
-                  labelText: 'Notes (Optional)',
-                  prefixIcon: const Icon(Icons.note),
-                  border: OutlineInputBorder(
-                    borderRadius: ResponsiveConfig.borderRadius(12),
+                // Notes
+                TextFormField(
+                  controller: _notesController,
+                  decoration: InputDecoration(
+                    labelText: 'Notes (Optional)',
+                    prefixIcon: const Icon(Icons.note),
+                    border: OutlineInputBorder(
+                      borderRadius: ResponsiveConfig.borderRadius(12),
+                    ),
                   ),
+                  maxLines: 3,
                 ),
-                maxLines: 3,
-              ),
-              ResponsiveConfig.heightBox(24),
+                ResponsiveConfig.heightBox(24),
 
-              // Save Button
-              ElevatedButton(
-                onPressed: _isLoading ? null : _saveEntry,
-                style: ElevatedButton.styleFrom(
-                  padding: ResponsiveConfig.padding(vertical: 16),
-                ),
-                child: _isLoading
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : Text(
-                        (widget.entry != null && widget.entry!.id != null)
-                            ? 'Update Entry'
-                            : 'Save Entry',
-                        style: ResponsiveConfig.textStyle(
-                          size: 16,
-                          weight: FontWeight.bold,
+                // Save Button
+                ElevatedButton(
+                  onPressed: _isLoading ? null : _saveEntry,
+                  style: ElevatedButton.styleFrom(
+                    padding: ResponsiveConfig.padding(vertical: 16),
+                  ),
+                  child: _isLoading
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Text(
+                          (widget.entry != null && widget.entry!.id != null)
+                              ? 'Update Entry'
+                              : 'Save Entry',
+                          style: ResponsiveConfig.textStyle(
+                            size: 16,
+                            weight: FontWeight.bold,
+                          ),
                         ),
-                      ),
-              ),
-            ],
+                ),
+              ],
+            ),
           ),
         ),
       ),

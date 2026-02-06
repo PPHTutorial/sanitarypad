@@ -4,7 +4,9 @@ import '../../../core/config/responsive_config.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/providers/pad_provider.dart';
+import '../../../services/credit_manager.dart';
 import '../../../core/utils/date_utils.dart' as app_date_utils;
+import 'package:sanitarypad/presentation/widgets/ads/eco_ad_wrapper.dart';
 import '../../../core/widgets/back_button_handler.dart';
 
 /// Pad management screen
@@ -71,6 +73,12 @@ class _PadManagementScreenState extends ConsumerState<PadManagementScreen> {
   Future<void> _logPadChange() async {
     if (!_formKey.currentState!.validate()) return;
 
+    // Credit Check
+    final hasCredit = await ref
+        .read(creditManagerProvider)
+        .requestCredit(context, ActionType.padChange);
+    if (!hasCredit) return;
+
     setState(() => _isLoading = true);
 
     try {
@@ -81,6 +89,10 @@ class _PadManagementScreenState extends ConsumerState<PadManagementScreen> {
         flowIntensity: _flowIntensity,
         notes: _notesController.text.isEmpty ? null : _notesController.text,
       );
+
+      await ref
+          .read(creditManagerProvider)
+          .consumeCredits(ActionType.padChange);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -116,6 +128,7 @@ class _PadManagementScreenState extends ConsumerState<PadManagementScreen> {
           appBar: AppBar(
             title: const Text('Pad Management'),
           ),
+          bottomNavigationBar: const EcoAdWrapper(adType: AdType.banner),
           body: SingleChildScrollView(
             padding: ResponsiveConfig.padding(all: 16),
             child: Column(

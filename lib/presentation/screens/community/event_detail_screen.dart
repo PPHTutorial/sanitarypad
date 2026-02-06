@@ -41,6 +41,25 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Event Details'),
+          actions: [
+            FutureBuilder<EventModel?>(
+              future: _eventService.getEvent(widget.eventId),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) return const SizedBox.shrink();
+                final event = snapshot.data!;
+                final user = ref.read(currentUserStreamProvider).value;
+                if (user == null) return const SizedBox.shrink();
+
+                final isOwner = event.createdBy == user.userId;
+
+                return IconButton(
+                  icon: const Icon(Icons.bolt_outlined),
+                  tooltip: 'Quick actions',
+                  onPressed: () => _showQuickActions(context, event, isOwner),
+                );
+              },
+            ),
+          ],
         ),
         body: FutureBuilder<EventModel?>(
           future: _eventService.getEvent(widget.eventId),
@@ -274,5 +293,116 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
         ),
       ),
     );
+  }
+
+  void _showQuickActions(
+    BuildContext context,
+    EventModel event,
+    bool isOwner,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: ResponsiveConfig.padding(all: 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 48,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: AppTheme.mediumGray.withOpacity(0.3),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+                Text(
+                  'Event quick actions',
+                  style: ResponsiveConfig.textStyle(
+                    size: 18,
+                    weight: FontWeight.bold,
+                  ),
+                ),
+                ResponsiveConfig.heightBox(16),
+                ListTile(
+                  leading: const Icon(Icons.share_outlined),
+                  title: const Text('Share event'),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    // Implement share logic
+                  },
+                ),
+                if (isOwner) ...[
+                  const Divider(),
+                  ListTile(
+                    leading:
+                        const Icon(Icons.delete_outline, color: Colors.red),
+                    title: const Text('Delete event',
+                        style: TextStyle(color: Colors.red)),
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      _showDeleteEventConfirmation(context);
+                    },
+                  ),
+                ],
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showDeleteEventConfirmation(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Event?'),
+        content: const Text(
+            'This action is permanent. All attendee records will be removed.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              _deleteEvent(context);
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _deleteEvent(BuildContext context) async {
+    try {
+      final user = ref.read(currentUserStreamProvider).value;
+      if (user == null) return;
+      await _eventService.deleteEvent(widget.eventId, user.userId);
+      if (mounted) {
+        context.pop(); // Go back
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Event deleted successfully.')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: ${e.toString()}')),
+        );
+      }
+    }
   }
 }

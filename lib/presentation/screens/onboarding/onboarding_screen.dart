@@ -39,8 +39,29 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     OnboardingPage(
       title: 'Manage Your Wellness',
       description:
-          'Monitor your health, track pad usage, and access wellness content.',
+          'Monitor your preriod, pregnancy, fertility, track pad usage, and access wellness content.',
       icon: Icons.health_and_safety,
+      color: AppTheme.lavender,
+    ),
+    OnboardingPage(
+      title: 'Smart Reminders',
+      description:
+          'Never miss a pill or a period start with customizable notifications.',
+      icon: Icons.notifications_active,
+      color: AppTheme.primaryPink,
+    ),
+    OnboardingPage(
+      title: 'Personalized Insights',
+      description:
+          'Get deep insights into your health patterns and cycle trends.',
+      icon: Icons.insights,
+      color: AppTheme.deepPink,
+    ),
+    OnboardingPage(
+      title: 'Community Support',
+      description:
+          'Connect with others, share experiences, and find support in our community.',
+      icon: Icons.group,
       color: AppTheme.lavender,
     ),
     OnboardingPage(

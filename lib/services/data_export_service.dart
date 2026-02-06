@@ -104,7 +104,7 @@ class DataExportService {
       return;
     }
     for (var item in items) {
-      buffer.writeln(JsonEncoder.withIndent('  ').convert(item));
+      buffer.writeln(const JsonEncoder.withIndent('  ').convert(item));
       buffer.writeln("-" * 20);
     }
     buffer.writeln("\n");
@@ -284,7 +284,7 @@ class DataExportService {
   /// Original export logic (RESTORED/KEPT for compatibility if needed)
   Future<String> exportUserData(String userId) async {
     final data = await _fetchAllUserData(userId);
-    return JsonEncoder.withIndent('  ').convert(data);
+    return const JsonEncoder.withIndent('  ').convert(data);
   }
 
   /// Generate export file name

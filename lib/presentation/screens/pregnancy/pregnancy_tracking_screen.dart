@@ -12,9 +12,11 @@ import '../../../core/config/responsive_config.dart';
 import '../../../core/providers/auth_provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/back_button_handler.dart';
+import 'package:sanitarypad/presentation/widgets/ads/eco_ad_wrapper.dart';
 import '../../../data/models/pregnancy_model.dart';
 import '../../../services/pregnancy_service.dart';
 import '../reminders/create_reminder_dialog.dart';
+import '../../../services/credit_manager.dart';
 
 class PregnancyTrackingScreen extends ConsumerStatefulWidget {
   const PregnancyTrackingScreen({super.key});
@@ -136,55 +138,60 @@ class _PregnancyTrackingScreenState
                 child: _buildModernTabSwitcher(context),
               ),
             ),
-            body: TabBarView(
-              controller: _tabController,
-              children: [
-                OverviewTab(
-                  pregnancy: pregnancy,
-                  kickStream: kickStream,
-                  appointmentStream: appointmentStream,
-                  medicationStream: medicationStream,
-                  onScheduleKickReminder: () =>
-                      _scheduleReminder(user.userId, 'kick_check'),
-                  onAddAppointment: () =>
-                      _showAppointmentSheet(context, user.userId, pregnancyId),
-                  onAddMedication: () =>
-                      _showMedicationSheet(context, user.userId, pregnancyId),
-                ),
-                _JournalTab(
-                  pregnancy: pregnancy,
-                  journalStream: journalStream,
-                  weightStream: weightStream,
-                  onLogJournal: () =>
-                      _showJournalSheet(context, user.userId, pregnancyId),
-                  onLogWeight: () =>
-                      _showWeightSheet(context, user.userId, pregnancyId),
-                ),
-                _PlannerTab(
-                  pregnancy: pregnancy,
-                  appointmentStream: appointmentStream,
-                  medicationStream: medicationStream,
-                  checklistStream: checklistStream,
-                  onAddAppointment: () =>
-                      _showAppointmentSheet(context, user.userId, pregnancyId),
-                  onAddMedication: () =>
-                      _showMedicationSheet(context, user.userId, pregnancyId),
-                  onAddChecklist: () =>
-                      _showChecklistSheet(context, user.userId, pregnancyId),
-                ),
-                _InsightsTab(
-                  pregnancy: pregnancy,
-                  kickStream: kickStream,
-                  contractionStream: contractionStream,
-                  weightStream: weightStream,
-                  journalStream: journalStream,
-                  onLogKick: () =>
-                      _showKickSheet(context, user.userId, pregnancyId),
-                  onLogContraction: () =>
-                      _showContractionSheet(context, user.userId, pregnancyId),
-                ),
-              ],
+            body: SafeArea(
+              bottom: true,
+              top: false,
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  OverviewTab(
+                    pregnancy: pregnancy,
+                    kickStream: kickStream,
+                    appointmentStream: appointmentStream,
+                    medicationStream: medicationStream,
+                    onScheduleKickReminder: () =>
+                        _scheduleReminder(user.userId, 'kick_check'),
+                    onAddAppointment: () => _showAppointmentSheet(
+                        context, user.userId, pregnancyId),
+                    onAddMedication: () =>
+                        _showMedicationSheet(context, user.userId, pregnancyId),
+                  ),
+                  _JournalTab(
+                    pregnancy: pregnancy,
+                    journalStream: journalStream,
+                    weightStream: weightStream,
+                    onLogJournal: () =>
+                        _showJournalSheet(context, user.userId, pregnancyId),
+                    onLogWeight: () =>
+                        _showWeightSheet(context, user.userId, pregnancyId),
+                  ),
+                  _PlannerTab(
+                    pregnancy: pregnancy,
+                    appointmentStream: appointmentStream,
+                    medicationStream: medicationStream,
+                    checklistStream: checklistStream,
+                    onAddAppointment: () => _showAppointmentSheet(
+                        context, user.userId, pregnancyId),
+                    onAddMedication: () =>
+                        _showMedicationSheet(context, user.userId, pregnancyId),
+                    onAddChecklist: () =>
+                        _showChecklistSheet(context, user.userId, pregnancyId),
+                  ),
+                  _InsightsTab(
+                    pregnancy: pregnancy,
+                    kickStream: kickStream,
+                    contractionStream: contractionStream,
+                    weightStream: weightStream,
+                    journalStream: journalStream,
+                    onLogKick: () =>
+                        _showKickSheet(context, user.userId, pregnancyId),
+                    onLogContraction: () => _showContractionSheet(
+                        context, user.userId, pregnancyId),
+                  ),
+                ],
+              ),
             ),
+            bottomNavigationBar: const EcoAdWrapper(adType: AdType.banner),
           );
         },
       ),
@@ -413,6 +420,12 @@ class _PregnancyTrackingScreenState
                   onPressed: () async {
                     if (!formKey.currentState!.validate()) return;
 
+                    // Credit Check
+                    final hasCredit = await ref
+                        .read(creditManagerProvider)
+                        .requestCredit(context, ActionType.pregnancy);
+                    if (!hasCredit) return;
+
                     try {
                       final entry = KickEntry(
                         userId: userId,
@@ -428,6 +441,9 @@ class _PregnancyTrackingScreenState
                       );
 
                       await _pregnancyService.logKickEntry(entry);
+                      await ref
+                          .read(creditManagerProvider)
+                          .consumeCredits(ActionType.pregnancy);
 
                       if (!mounted) return;
 
@@ -547,6 +563,12 @@ class _PregnancyTrackingScreenState
                 ResponsiveConfig.heightBox(24),
                 ElevatedButton(
                   onPressed: () async {
+                    // Credit Check
+                    final hasCredit = await ref
+                        .read(creditManagerProvider)
+                        .requestCredit(context, ActionType.pregnancy);
+                    if (!hasCredit) return;
+
                     final now = DateTime.now();
                     final start = DateTime(now.year, now.month, now.day,
                         startTime.hour, startTime.minute);
@@ -565,6 +587,10 @@ class _PregnancyTrackingScreenState
                       createdAt: DateTime.now(),
                     );
                     await _pregnancyService.logContraction(entry);
+                    await ref
+                        .read(creditManagerProvider)
+                        .consumeCredits(ActionType.pregnancy);
+
                     if (!mounted) return;
                     Navigator.of(context).pop();
                   },
@@ -665,6 +691,12 @@ class _PregnancyTrackingScreenState
                 ResponsiveConfig.heightBox(24),
                 ElevatedButton(
                   onPressed: () async {
+                    // Credit Check
+                    final hasCredit = await ref
+                        .read(creditManagerProvider)
+                        .requestCredit(context, ActionType.pregnancy);
+                    if (!hasCredit) return;
+
                     final entry = PregnancyJournalEntry(
                       userId: userId,
                       pregnancyId: pregnancyId,
@@ -684,6 +716,10 @@ class _PregnancyTrackingScreenState
                       createdAt: DateTime.now(),
                     );
                     await _pregnancyService.saveJournalEntry(entry);
+                    await ref
+                        .read(creditManagerProvider)
+                        .consumeCredits(ActionType.pregnancy);
+
                     if (!mounted) return;
                     Navigator.of(context).pop();
                   },
@@ -782,6 +818,13 @@ class _PregnancyTrackingScreenState
                     ElevatedButton(
                       onPressed: () async {
                         if (!formKey.currentState!.validate()) return;
+
+                        // Credit Check
+                        final hasCredit = await ref
+                            .read(creditManagerProvider)
+                            .requestCredit(context, ActionType.pregnancy);
+                        if (!hasCredit) return;
+
                         final entry = PregnancyWeightEntry(
                           userId: userId,
                           pregnancyId: pregnancyId,
@@ -793,6 +836,10 @@ class _PregnancyTrackingScreenState
                           createdAt: DateTime.now(),
                         );
                         await _pregnancyService.logWeightEntry(entry);
+                        await ref
+                            .read(creditManagerProvider)
+                            .consumeCredits(ActionType.pregnancy);
+
                         if (!mounted) return;
                         Navigator.of(context).pop();
                       },
@@ -924,6 +971,13 @@ class _PregnancyTrackingScreenState
                     ElevatedButton(
                       onPressed: () async {
                         if (!formKey.currentState!.validate()) return;
+
+                        // Credit Check
+                        final hasCredit = await ref
+                            .read(creditManagerProvider)
+                            .requestCredit(context, ActionType.pregnancy);
+                        if (!hasCredit) return;
+
                         final appointment = PregnancyAppointment(
                           userId: userId,
                           pregnancyId: pregnancyId,
@@ -942,6 +996,10 @@ class _PregnancyTrackingScreenState
                           createdAt: DateTime.now(),
                         );
                         await _pregnancyService.saveAppointment(appointment);
+                        await ref
+                            .read(creditManagerProvider)
+                            .consumeCredits(ActionType.pregnancy);
+
                         if (!mounted) return;
                         Navigator.of(context).pop();
                       },
@@ -1119,6 +1177,13 @@ class _PregnancyTrackingScreenState
                     ElevatedButton(
                       onPressed: () async {
                         if (!formKey.currentState!.validate()) return;
+
+                        // Credit Check
+                        final hasCredit = await ref
+                            .read(creditManagerProvider)
+                            .requestCredit(context, ActionType.pregnancy);
+                        if (!hasCredit) return;
+
                         final medication = PregnancyMedication(
                           userId: userId,
                           pregnancyId: pregnancyId,
@@ -1136,6 +1201,10 @@ class _PregnancyTrackingScreenState
                           createdAt: DateTime.now(),
                         );
                         await _pregnancyService.saveMedication(medication);
+                        await ref
+                            .read(creditManagerProvider)
+                            .consumeCredits(ActionType.pregnancy);
+
                         if (!mounted) return;
                         Navigator.of(context).pop();
                       },
@@ -1227,6 +1296,13 @@ class _PregnancyTrackingScreenState
                     ElevatedButton(
                       onPressed: () async {
                         if (!formKey.currentState!.validate()) return;
+
+                        // Credit Check
+                        final hasCredit = await ref
+                            .read(creditManagerProvider)
+                            .requestCredit(context, ActionType.pregnancy);
+                        if (!hasCredit) return;
+
                         final item = HospitalChecklistItem(
                           userId: userId,
                           pregnancyId: pregnancyId,
@@ -1236,6 +1312,10 @@ class _PregnancyTrackingScreenState
                           createdAt: DateTime.now(),
                         );
                         await _pregnancyService.saveHospitalChecklistItem(item);
+                        await ref
+                            .read(creditManagerProvider)
+                            .consumeCredits(ActionType.pregnancy);
+
                         if (!mounted) return;
                         Navigator.of(context).pop();
                       },
@@ -1255,7 +1335,8 @@ class _PregnancyTrackingScreenState
 // --- Pregnancy Tabs ---
 
 class OverviewTab extends StatelessWidget {
-  const OverviewTab({super.key, 
+  const OverviewTab({
+    super.key,
     required this.pregnancy,
     required this.kickStream,
     required this.appointmentStream,
@@ -1342,7 +1423,8 @@ class OverviewTab extends StatelessWidget {
 }
 
 class ProgressCard extends StatelessWidget {
-  const ProgressCard({super.key, required this.pregnancy, required this.daysUntilDue});
+  const ProgressCard(
+      {super.key, required this.pregnancy, required this.daysUntilDue});
 
   final Pregnancy pregnancy;
   final int? daysUntilDue;
@@ -1461,7 +1543,8 @@ class MilestoneCard extends StatelessWidget {
 }
 
 class KickSummaryCard extends StatelessWidget {
-  const KickSummaryCard({super.key, 
+  const KickSummaryCard({
+    super.key,
     required this.entries,
     required this.onSchedule,
     this.isReadOnly = false,
@@ -1581,7 +1664,8 @@ class KickSummaryCard extends StatelessWidget {
 }
 
 class UpcomingAppointmentsCard extends StatelessWidget {
-  const UpcomingAppointmentsCard({super.key, 
+  const UpcomingAppointmentsCard({
+    super.key,
     required this.appointments,
     required this.onAddAppointment,
     this.isReadOnly = false,
@@ -1653,7 +1737,8 @@ class UpcomingAppointmentsCard extends StatelessWidget {
 }
 
 class MedicationReminderCard extends StatelessWidget {
-  const MedicationReminderCard({super.key, 
+  const MedicationReminderCard({
+    super.key,
     required this.medications,
     required this.onAddMedication,
     this.isReadOnly = false,

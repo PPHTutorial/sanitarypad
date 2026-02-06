@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:logger/logger.dart';
 import 'package:sanitarypad/core/providers/auth_provider.dart';
 import 'package:sanitarypad/services/ai_service.dart';
@@ -391,19 +393,39 @@ class SkincareEnhancedService {
     if (ing.isEmpty) return "**Enter an ingredient name to see details.**";
 
     try {
-      // 1. Check database first (case-insensitive search if possible, or exact match)
-      final normalizedIng = ing.trim().toLowerCase();
-      final snapshot = await _firestore
+      // 1. Check database first (EXACT case-insensitive search via nameLower)
+      final queryLower = ing.trim().toLowerCase();
+
+      // Try exact match on nameLower or scientificNameLower
+      var snapshot = await _firestore
           .collection(AppConstants.collectionIngredients)
-          .where('name', isGreaterThanOrEqualTo: normalizedIng)
-          .where('name', isLessThanOrEqualTo: '$normalizedIng\uf8ff')
+          .where('nameLower', isEqualTo: queryLower)
           .limit(1)
           .get();
+
+      if (snapshot.docs.isEmpty) {
+        snapshot = await _firestore
+            .collection(AppConstants.collectionIngredients)
+            .where('scientificNameLower', isEqualTo: queryLower)
+            .limit(1)
+            .get();
+      }
+
+      // Try prefix match on nameLower as fallback
+      if (snapshot.docs.isEmpty) {
+        snapshot = await _firestore
+            .collection(AppConstants.collectionIngredients)
+            .where('nameLower', isGreaterThanOrEqualTo: queryLower)
+            .where('nameLower', isLessThanOrEqualTo: '$queryLower\uf8ff')
+            .limit(1)
+            .get();
+      }
 
       if (snapshot.docs.isNotEmpty) {
         final ingredient = Ingredient.fromFirestore(snapshot.docs.first);
         if (ingredient.description != null &&
             ingredient.description!.isNotEmpty) {
+          debugPrint("Ingredient found in DB: ${ingredient.name}");
           return ingredient.description!;
         }
       }
@@ -421,9 +443,47 @@ class SkincareEnhancedService {
 
       // 3. Save to database for future use
       if (response.isNotEmpty && !response.contains("Error")) {
+        try {
+          // Attempt to parse JSON
+          final start = response.indexOf('{');
+          final end = response.lastIndexOf('}');
+          if (start != -1 && end != -1) {
+            final jsonStr = response.substring(start, end + 1);
+            final Map<String, dynamic> data =
+                Map<String, dynamic>.from(json.decode(jsonStr));
+
+            final newIngredient = Ingredient(
+              name: data['name'] ?? ing,
+              scientificName: data['scientificName'],
+              category: data['category'] ?? "General",
+              description: data['description'] ?? response,
+              benefits: data['benefits'],
+              concerns: data['concerns'],
+              comedogenicRating: data['comedogenicRating']?.toString(),
+              irritationRating: data['irritationRating']?.toString(),
+              goodFor: data['goodFor'] != null
+                  ? List<String>.from(data['goodFor'])
+                  : null,
+              avoidWith: data['avoidWith'] != null
+                  ? List<String>.from(data['avoidWith'])
+                  : null,
+              createdAt: DateTime.now(),
+            );
+
+            await _firestore
+                .collection(AppConstants.collectionIngredients)
+                .add(newIngredient.toFirestore());
+
+            return data['description'] ?? response;
+          }
+        } catch (e) {
+          debugPrint("Failed to parse AI ingredient JSON: $e");
+          // Fallback to plain saving if JSON fails
+        }
+
         final newIngredient = Ingredient(
           name: ing,
-          category: "General", // AI could be asked to provide this too
+          category: "General",
           description: response,
           createdAt: DateTime.now(),
         );

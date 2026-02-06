@@ -25,17 +25,34 @@ class NotificationSchedulerService {
   /// Schedule all notifications based on user data
   Future<void> scheduleAllNotifications(String userId) async {
     try {
+      final user = await _authService.getUserData(userId);
+      if (user == null) return;
+
       // Schedule period prediction notifications
-      await _schedulePeriodPredictions(userId);
+      if (user.settings.predictPeriod) {
+        await _schedulePeriodPredictions(userId);
+      } else {
+        await _cancelRemindersByType(
+            userId, AppConstants.reminderPeriodPrediction);
+      }
 
       // Schedule pad change reminders
       await _schedulePadChangeReminders(userId);
 
       // Schedule wellness check reminders
-      await _scheduleWellnessReminders(userId);
+      if (user.settings.dailyLogPrompt) {
+        await _scheduleWellnessReminders(userId);
+      } else {
+        await _cancelRemindersByType(
+            userId, AppConstants.reminderWellnessCheck);
+      }
 
       // Schedule fertility window notifications
-      await _scheduleFertilityNotifications(userId);
+      if (user.settings.predictOvulation) {
+        await _scheduleFertilityNotifications(userId);
+      } else {
+        await _cancelRemindersByType(userId, 'fertility_window');
+      }
     } catch (e) {
       // Handle errors silently to avoid disrupting app flow
       print('Error scheduling notifications: $e');

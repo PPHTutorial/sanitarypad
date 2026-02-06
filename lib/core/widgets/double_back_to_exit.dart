@@ -43,7 +43,10 @@ class _DoubleBackToExitState extends State<DoubleBackToExit> {
     // Check if we can pop the navigation stack (and not on home)
     if (router.canPop() && !isOnHome) {
       // If we can pop and not on home, just pop (normal navigation)
-      router.pop();
+      // Use microtask to avoid Navigator lock errors during pop transitions
+      Future.microtask(() {
+        if (mounted) router.pop();
+      });
       return;
     }
 

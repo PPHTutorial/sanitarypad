@@ -565,7 +565,9 @@ class Ingredient extends Equatable {
   Map<String, dynamic> toFirestore() {
     return {
       'name': name,
+      'nameLower': name.toLowerCase(),
       'scientificName': scientificName,
+      'scientificNameLower': scientificName?.toLowerCase(),
       'category': category,
       'description': description,
       'benefits': benefits,

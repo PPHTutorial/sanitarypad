@@ -80,8 +80,9 @@ class HealthReportService {
     var query =
         _firestore.collection('pad_logs').where('userId', isEqualTo: userId);
 
-    if (start != null)
+    if (start != null) {
       query = query.where('timestamp', isGreaterThanOrEqualTo: start);
+    }
     if (end != null) query = query.where('timestamp', isLessThanOrEqualTo: end);
 
     final snapshot =
@@ -95,8 +96,9 @@ class HealthReportService {
         .collection('wellness_journal')
         .where('userId', isEqualTo: userId);
 
-    if (start != null)
+    if (start != null) {
       query = query.where('createdAt', isGreaterThanOrEqualTo: start);
+    }
     if (end != null) query = query.where('createdAt', isLessThanOrEqualTo: end);
 
     final snapshot =
@@ -131,7 +133,7 @@ class HealthReportService {
             pw.SizedBox(height: 20),
             pw.Text(
                 'Patient: ${user['fullName'] ?? user['displayName'] ?? 'N/A'}',
-                style: pw.TextStyle(fontSize: 14)),
+                style: const pw.TextStyle(fontSize: 14)),
             pw.Text(
                 'DOB: ${user['dateOfBirth'] != null ? DateFormat('MMM dd, yyyy').format((user['dateOfBirth'] as Timestamp).toDate()) : 'N/A'}'),
             pw.SizedBox(height: 20),

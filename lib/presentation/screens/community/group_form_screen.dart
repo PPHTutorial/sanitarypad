@@ -6,6 +6,7 @@ import '../../../core/providers/auth_provider.dart';
 import '../../../core/widgets/back_button_handler.dart';
 import '../../../data/models/group_model.dart';
 import '../../../services/group_service.dart';
+import '../../../services/credit_manager.dart';
 
 class GroupFormScreen extends ConsumerStatefulWidget {
   final String? category;
@@ -103,6 +104,15 @@ class _GroupFormScreenState extends ConsumerState<GroupFormScreen> {
           context.pop();
         }
       } else {
+        // Credit Check
+        final hasCredit = await ref
+            .read(creditManagerProvider)
+            .requestCredit(context, ActionType.createGroup);
+        if (!hasCredit) {
+          setState(() => _isLoading = false);
+          return;
+        }
+
         final group = GroupModel(
           name: _nameController.text.trim(),
           description: _descriptionController.text.trim(),
@@ -116,6 +126,11 @@ class _GroupFormScreenState extends ConsumerState<GroupFormScreen> {
         );
 
         await _groupService.createGroup(group);
+
+        // Consume Credit
+        await ref
+            .read(creditManagerProvider)
+            .consumeCredits(ActionType.createGroup);
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(

@@ -7,6 +7,7 @@ import '../../../core/widgets/back_button_handler.dart';
 import '../../../data/models/ai_chat_model.dart';
 import '../../../services/ai_service.dart';
 import '../../../services/ai_chat_service.dart';
+import '../../../services/credit_manager.dart';
 
 class AIChatScreen extends ConsumerStatefulWidget {
   final String category; // 'pregnancy', 'fertility', 'skincare', 'general'
@@ -48,6 +49,16 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
     final text = _messageController.text.trim();
     if (text.isEmpty || _isLoading) return;
 
+    // Credit Check
+    final hasCredit = await ref
+        .read(creditManagerProvider)
+        .requestCredit(context, ActionType.aiChat);
+    if (!hasCredit) return;
+
+    _performSendMessage(text);
+  }
+
+  Future<void> _performSendMessage(String text) async {
     final user = ref.read(currentUserStreamProvider).value;
     if (user == null) return;
 
@@ -55,8 +66,8 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content:
-                Text('FemCare+ Assistant is not configured. Please contact support.'),
+            content: Text(
+                'FemCare+ Assistant is not configured. Please contact support.'),
             backgroundColor: Colors.orange,
           ),
         );
@@ -105,6 +116,8 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
         timestamp: DateTime.now(),
       );
       await _chatService.saveMessage(aiMessage);
+
+      await ref.read(creditManagerProvider).consumeCredits(ActionType.aiChat);
 
       // Scroll to bottom
       if (_scrollController.hasClients) {

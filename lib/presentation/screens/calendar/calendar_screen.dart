@@ -9,6 +9,7 @@ import '../../../core/utils/date_utils.dart' as app_date_utils;
 import '../../../services/cycle_service.dart';
 import '../../../core/widgets/femcare_bottom_nav.dart';
 import '../../../data/models/cycle_model.dart';
+import 'package:sanitarypad/presentation/widgets/ads/eco_ad_wrapper.dart';
 
 /// Calendar screen with cycle visualization
 class CalendarScreen extends ConsumerStatefulWidget {
@@ -55,6 +56,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
       bottomNavigationBar: const FemCareBottomNav(currentRoute: '/calendar'),
       body: Column(
         children: [
+          const EcoAdWrapper(adType: AdType.banner),
           // Calendar
           Card(
             shape: RoundedRectangleBorder(

@@ -4,7 +4,6 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sanitarypad/core/config/responsive_config.dart';
 import 'package:sanitarypad/core/theme/app_theme.dart';
-import '../../../app/themes/app_colors.dart';
 import '../../../app/themes/app_text_styles.dart';
 import '../../../app/themes/app_dimensions.dart';
 import '../../../domain/entities/movie.dart';
@@ -23,6 +22,8 @@ import '../../../services/scraping/scraping_service.dart';
 import '../../../core/utils/logger.dart';
 import '../../../core/constants/tmdb_endpoints.dart';
 import '../../../core/constants/app_constants.dart';
+import 'package:sanitarypad/services/credit_manager.dart';
+import 'package:sanitarypad/presentation/widgets/ads/eco_ad_wrapper.dart';
 
 /// Complete movie detail screen with posters and backdrops gallery
 class MovieDetailScreen extends ConsumerStatefulWidget {
@@ -111,6 +112,7 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      bottomNavigationBar: const EcoAdWrapper(adType: AdType.banner),
       appBar: AppBar(
         elevation: 0,
         leading: IconButton(
@@ -158,194 +160,209 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
           ),
         ],
       ),
-      body: CustomScrollView(
-        slivers: [
-          // Sliver hero with overview overlay
-          SliverAppBar(
-            elevation: 0,
-            pinned: false,
-            stretch: true,
-            automaticallyImplyLeading: false,
-            expandedHeight: ResponsiveConfig.height(400),
-            flexibleSpace: FlexibleSpaceBar(
-              background: Stack(
-                fit: StackFit.expand,
-                children: [
-                  if (widget.movie.hasBackdrop)
-                    CachedImageWidget(
-                      imageUrl: TMDBEndpoints.backdropUrl(
-                        widget.movie.backdropPath!,
-                        size: BackdropSize.w1280,
-                      ),
-                      fit: BoxFit.cover,
-                    )
-                  else if (widget.movie.hasPoster)
-                    CachedImageWidget(
-                      imageUrl: TMDBEndpoints.posterUrl(
-                        widget.movie.posterPath!,
-                        size: PosterSize.w780,
-                      ),
-                      fit: BoxFit.cover,
-                    )
-                  else
-                    Container(color: Theme.of(context).colorScheme.surface),
-                  Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.black.withOpacity(0.2),
-                          Colors.black.withOpacity(0.7),
-                        ],
-                      ),
-                    ),
-                  ),
-                  // Overview overlay
-
-                  Positioned(
-                    left: AppDimensions.space20,
-                    right: AppDimensions.space20,
-                    bottom: AppDimensions.space16 * 3,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          widget.movie.title,
-                          style: AppTextStyles.headline3
-                              .copyWith(color: Colors.white),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
+      body: SafeArea(
+        bottom: true,
+        top: false,
+        child: CustomScrollView(
+          slivers: [
+            // Sliver hero with overview overlay
+            SliverAppBar(
+              elevation: 0,
+              pinned: false,
+              stretch: true,
+              automaticallyImplyLeading: false,
+              expandedHeight: ResponsiveConfig.height(400),
+              flexibleSpace: FlexibleSpaceBar(
+                background: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    if (widget.movie.hasBackdrop)
+                      CachedImageWidget(
+                        imageUrl: TMDBEndpoints.backdropUrl(
+                          widget.movie.backdropPath!,
+                          size: BackdropSize.w1280,
                         ),
-                        SizedBox(height: AppDimensions.space8),
-                        Row(
-                          children: [
-                            Icon(Icons.star,
-                                size: 18.w,
-                                color: Theme.of(context).colorScheme.primary),
-                            SizedBox(width: 4.w),
-                            Text(widget.movie.formattedRating,
-                                style: AppTextStyles.bodyLarge.copyWith(
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.white)),
+                        fit: BoxFit.cover,
+                      )
+                    else if (widget.movie.hasPoster)
+                      CachedImageWidget(
+                        imageUrl: TMDBEndpoints.posterUrl(
+                          widget.movie.posterPath!,
+                          size: PosterSize.w780,
+                        ),
+                        fit: BoxFit.cover,
+                      )
+                    else
+                      Container(color: Theme.of(context).colorScheme.surface),
+                    Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.black.withOpacity(0.2),
+                            Colors.black.withOpacity(0.7),
                           ],
                         ),
-                        if (_overview != null && _overview!.isNotEmpty) ...[
-                          SizedBox(height: AppDimensions.space12),
+                      ),
+                    ),
+                    // Overview overlay
+
+                    Positioned(
+                      left: AppDimensions.space20,
+                      right: AppDimensions.space20,
+                      bottom: AppDimensions.space16 * 3,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
                           Text(
-                            _overview!,
-                            style: AppTextStyles.bodyMedium
-                                .copyWith(height: 1.5, color: Colors.white70),
-                            maxLines: 4,
+                            widget.movie.title,
+                            style: AppTextStyles.headline3
+                                .copyWith(color: Colors.white),
+                            maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                           ),
                           SizedBox(height: AppDimensions.space8),
-                          GestureDetector(
-                            onTap: () => _showFullOverview(context),
-                            child: Text(
-                              'Read more',
-                              style: AppTextStyles.bodyMedium.copyWith(
-                                color: AppTheme.deepPink,
-                                fontWeight: FontWeight.bold,
+                          Row(
+                            children: [
+                              Icon(Icons.star,
+                                  size: 18.w,
+                                  color: Theme.of(context).colorScheme.primary),
+                              SizedBox(width: 4.w),
+                              Text(widget.movie.formattedRating,
+                                  style: AppTextStyles.bodyLarge.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.white)),
+                            ],
+                          ),
+                          if (_overview != null && _overview!.isNotEmpty) ...[
+                            SizedBox(height: AppDimensions.space12),
+                            Text(
+                              _overview!,
+                              style: AppTextStyles.bodyMedium
+                                  .copyWith(height: 1.5, color: Colors.white70),
+                              maxLines: 4,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            SizedBox(height: AppDimensions.space8),
+                            GestureDetector(
+                              onTap: () => _showFullOverview(context),
+                              child: Text(
+                                'Read more',
+                                style: AppTextStyles.bodyMedium.copyWith(
+                                  color: AppTheme.deepPink,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
-                          ),
+                          ],
                         ],
+                      ),
+                    ),
+                    Positioned(
+                        bottom: ResponsiveConfig.height(20),
+                        right: ResponsiveConfig.width(20),
+                        child: InkWell(
+                          onTap: () async {
+                            // Credit Check
+                            final hasCredit = await ref
+                                .read(creditManagerProvider)
+                                .requestCredit(context, ActionType.movie);
+
+                            if (hasCredit) {
+                              if (context.mounted) {
+                                context.push('/movies/play',
+                                    extra: widget.movie);
+                              }
+                            }
+                          },
+                          child: Container(
+                            width: ResponsiveConfig.width(60),
+                            height: ResponsiveConfig.height(60),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).colorScheme.primary,
+                              borderRadius: BorderRadius.circular(
+                                ResponsiveConfig.radius(100),
+                              ),
+                              boxShadow: const [
+                                BoxShadow(
+                                    color: Colors.black,
+                                    blurRadius: 2,
+                                    offset: Offset(0, 5),
+                                    spreadRadius: 2),
+                              ],
+                            ),
+                            child: Icon(Icons.play_arrow_rounded,
+                                color: Theme.of(context).colorScheme.onPrimary,
+                                size: 35),
+                          ),
+                        )),
+                  ],
+                ),
+              ),
+            ),
+
+            // Sticky tabs header
+            //SizedBox(height: AppDimensions.space12),
+            SliverPersistentHeader(
+              key: const ValueKey("123"),
+              pinned: true,
+              delegate: _StickyTabHeader(
+                minExtentHeight: ResponsiveConfig.height(60),
+                maxExtentHeight: ResponsiveConfig.height(60),
+                builder: (context) => Container(
+                  height: ResponsiveConfig.height(80),
+                  //color: AppColors.darkBackground,
+                  //margin: EdgeInsets.only(top: AppDimensions.space4),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: AppDimensions.space20,
+                    //vertical: AppDimensions.space8
+                  ),
+                  child: Container(
+                    height: ResponsiveConfig.height(80),
+                    padding: ResponsiveConfig.padding(all: 4),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.surface,
+                      borderRadius:
+                          BorderRadius.circular(AppDimensions.radiusMedium),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                            child: _buildTabButton(
+                                'Posters', 1, Icons.aspect_ratio)),
+                        SizedBox(width: ResponsiveConfig.width(8)),
+                        Expanded(
+                            child:
+                                _buildTabButton('Backdrops', 0, Icons.photo)),
                       ],
                     ),
                   ),
-                  Positioned(
-                      bottom: ResponsiveConfig.height(20),
-                      right: ResponsiveConfig.width(20),
-                      child: InkWell(
-                        onTap: () {
-                          context.push('/movies/play', extra: widget.movie);
-                        },
-                        child: Container(
-                          width: ResponsiveConfig.width(60),
-                          height: ResponsiveConfig.height(60),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.primary,
-                            borderRadius: BorderRadius.circular(
-                              ResponsiveConfig.radius(100),
-                            ),
-                            boxShadow: const [
-                              BoxShadow(
-                                  color: Colors.black,
-                                  blurRadius: 2,
-                                  offset: Offset(0, 5),
-                                  spreadRadius: 2),
-                            ],
-                          ),
-                          child: Icon(Icons.play_arrow_rounded,
-                              color: Theme.of(context).colorScheme.onPrimary,
-                              size: 35),
-                        ),
-                      )),
+                ),
+              ),
+            ),
+
+            // Content
+            SliverToBoxAdapter(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(height: AppDimensions.space20),
+
+                  // Gallery
+                  Padding(
+                    padding:
+                        EdgeInsets.symmetric(horizontal: AppDimensions.space20),
+                    child: _buildGallery(),
+                  ),
+
+                  ResponsiveConfig.spacingBox(height: 100),
                 ],
               ),
             ),
-          ),
-
-          // Sticky tabs header
-          //SizedBox(height: AppDimensions.space12),
-          SliverPersistentHeader(
-            key: const ValueKey("123"),
-            pinned: true,
-            delegate: _StickyTabHeader(
-              minExtentHeight: ResponsiveConfig.height(60),
-              maxExtentHeight: ResponsiveConfig.height(60),
-              builder: (context) => Container(
-                height: ResponsiveConfig.height(80),
-                //color: AppColors.darkBackground,
-                //margin: EdgeInsets.only(top: AppDimensions.space4),
-                padding: EdgeInsets.symmetric(
-                  horizontal: AppDimensions.space20,
-                  //vertical: AppDimensions.space8
-                ),
-                child: Container(
-                  height: ResponsiveConfig.height(80),
-                  padding: ResponsiveConfig.padding(all: 4),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surface,
-                    borderRadius:
-                        BorderRadius.circular(AppDimensions.radiusMedium),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                          child: _buildTabButton(
-                              'Posters', 1, Icons.aspect_ratio)),
-                      SizedBox(width: ResponsiveConfig.width(8)),
-                      Expanded(
-                          child: _buildTabButton('Backdrops', 0, Icons.photo)),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-
-          // Content
-          SliverToBoxAdapter(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SizedBox(height: AppDimensions.space20),
-
-                // Gallery
-                Padding(
-                  padding:
-                      EdgeInsets.symmetric(horizontal: AppDimensions.space20),
-                  child: _buildGallery(),
-                ),
-
-                ResponsiveConfig.spacingBox(height: 100),
-              ],
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
       // Removed bottom actions; toolbar buttons handle downloads
     );

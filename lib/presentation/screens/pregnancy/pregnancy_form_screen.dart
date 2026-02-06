@@ -145,125 +145,129 @@ class _PregnancyFormScreenState extends ConsumerState<PregnancyFormScreen> {
         title: Text(
             widget.pregnancy != null ? 'Edit Pregnancy' : 'Start Tracking'),
       ),
-      body: SingleChildScrollView(
-        padding: ResponsiveConfig.padding(all: 16),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // LMP Date
-              TextFormField(
-                readOnly: true,
-                decoration: InputDecoration(
-                  labelText: 'Last Menstrual Period (LMP)',
-                  prefixIcon: const Icon(Icons.calendar_today),
-                  border: OutlineInputBorder(
-                    borderRadius: ResponsiveConfig.borderRadius(12),
+      body: SafeArea(
+        bottom: true,
+        top: false,
+        child: SingleChildScrollView(
+          padding: ResponsiveConfig.padding(all: 16),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // LMP Date
+                TextFormField(
+                  readOnly: true,
+                  decoration: InputDecoration(
+                    labelText: 'Last Menstrual Period (LMP)',
+                    prefixIcon: const Icon(Icons.calendar_today),
+                    border: OutlineInputBorder(
+                      borderRadius: ResponsiveConfig.borderRadius(12),
+                    ),
+                    hintText: 'Select date',
                   ),
-                  hintText: 'Select date',
+                  controller: TextEditingController(
+                    text: _lastMenstrualPeriod != null
+                        ? DateFormat('yyyy-MM-dd').format(_lastMenstrualPeriod!)
+                        : '',
+                  ),
+                  onTap: _selectLMPDate,
+                  validator: (value) {
+                    if (_lastMenstrualPeriod == null) {
+                      return 'Please select your last menstrual period date';
+                    }
+                    return null;
+                  },
                 ),
-                controller: TextEditingController(
-                  text: _lastMenstrualPeriod != null
-                      ? DateFormat('yyyy-MM-dd').format(_lastMenstrualPeriod!)
-                      : '',
-                ),
-                onTap: _selectLMPDate,
-                validator: (value) {
-                  if (_lastMenstrualPeriod == null) {
-                    return 'Please select your last menstrual period date';
-                  }
-                  return null;
-                },
-              ),
-              ResponsiveConfig.heightBox(16),
+                ResponsiveConfig.heightBox(16),
 
-              // Due Date Preview
-              if (_lastMenstrualPeriod != null)
-                Card(
-                  color: AppTheme.lightPink,
-                  child: Padding(
-                    padding: ResponsiveConfig.padding(all: 16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Estimated Due Date',
-                          style: ResponsiveConfig.textStyle(
-                            size: 14,
-                            color: AppTheme.mediumGray,
+                // Due Date Preview
+                if (_lastMenstrualPeriod != null)
+                  Card(
+                    color: AppTheme.lightPink,
+                    child: Padding(
+                      padding: ResponsiveConfig.padding(all: 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Estimated Due Date',
+                            style: ResponsiveConfig.textStyle(
+                              size: 14,
+                              color: AppTheme.mediumGray,
+                            ),
                           ),
-                        ),
-                        ResponsiveConfig.heightBox(4),
-                        Text(
-                          DateFormat('MMMM dd, yyyy').format(
-                            Pregnancy.calculateDueDate(_lastMenstrualPeriod!),
+                          ResponsiveConfig.heightBox(4),
+                          Text(
+                            DateFormat('MMMM dd, yyyy').format(
+                              Pregnancy.calculateDueDate(_lastMenstrualPeriod!),
+                            ),
+                            style: ResponsiveConfig.textStyle(
+                              size: 20,
+                              weight: FontWeight.bold,
+                            ),
                           ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ResponsiveConfig.heightBox(16),
+
+                // Weight (Optional)
+                TextFormField(
+                  decoration: InputDecoration(
+                    labelText: 'Current Weight (kg) - Optional',
+                    prefixIcon: const Icon(Icons.monitor_weight),
+                    border: OutlineInputBorder(
+                      borderRadius: ResponsiveConfig.borderRadius(12),
+                    ),
+                  ),
+                  keyboardType: TextInputType.number,
+                  initialValue: _weight?.toString(),
+                  onChanged: (value) {
+                    _weight = value.isEmpty ? null : double.tryParse(value);
+                  },
+                ),
+                ResponsiveConfig.heightBox(16),
+
+                // Notes
+                TextFormField(
+                  controller: _notesController,
+                  decoration: InputDecoration(
+                    labelText: 'Notes (Optional)',
+                    prefixIcon: const Icon(Icons.note),
+                    border: OutlineInputBorder(
+                      borderRadius: ResponsiveConfig.borderRadius(12),
+                    ),
+                  ),
+                  maxLines: 4,
+                ),
+                ResponsiveConfig.heightBox(24),
+
+                // Save Button
+                ElevatedButton(
+                  onPressed: _isLoading ? null : _savePregnancy,
+                  style: ElevatedButton.styleFrom(
+                    padding: ResponsiveConfig.padding(vertical: 16),
+                  ),
+                  child: _isLoading
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Text(
+                          widget.pregnancy != null
+                              ? 'Update Pregnancy'
+                              : 'Start Tracking',
                           style: ResponsiveConfig.textStyle(
-                            size: 20,
+                            size: 16,
                             weight: FontWeight.bold,
                           ),
                         ),
-                      ],
-                    ),
-                  ),
                 ),
-              ResponsiveConfig.heightBox(16),
-
-              // Weight (Optional)
-              TextFormField(
-                decoration: InputDecoration(
-                  labelText: 'Current Weight (kg) - Optional',
-                  prefixIcon: const Icon(Icons.monitor_weight),
-                  border: OutlineInputBorder(
-                    borderRadius: ResponsiveConfig.borderRadius(12),
-                  ),
-                ),
-                keyboardType: TextInputType.number,
-                initialValue: _weight?.toString(),
-                onChanged: (value) {
-                  _weight = value.isEmpty ? null : double.tryParse(value);
-                },
-              ),
-              ResponsiveConfig.heightBox(16),
-
-              // Notes
-              TextFormField(
-                controller: _notesController,
-                decoration: InputDecoration(
-                  labelText: 'Notes (Optional)',
-                  prefixIcon: const Icon(Icons.note),
-                  border: OutlineInputBorder(
-                    borderRadius: ResponsiveConfig.borderRadius(12),
-                  ),
-                ),
-                maxLines: 4,
-              ),
-              ResponsiveConfig.heightBox(24),
-
-              // Save Button
-              ElevatedButton(
-                onPressed: _isLoading ? null : _savePregnancy,
-                style: ElevatedButton.styleFrom(
-                  padding: ResponsiveConfig.padding(vertical: 16),
-                ),
-                child: _isLoading
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : Text(
-                        widget.pregnancy != null
-                            ? 'Update Pregnancy'
-                            : 'Start Tracking',
-                        style: ResponsiveConfig.textStyle(
-                          size: 16,
-                          weight: FontWeight.bold,
-                        ),
-                      ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

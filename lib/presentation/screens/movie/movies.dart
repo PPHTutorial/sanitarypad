@@ -1,19 +1,13 @@
-import 'dart:async';
-import 'dart:convert';
-import 'dart:typed_data';
+// ignore_for_file: unnecessary_string_escapes
 
+import 'dart:collection';
+
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
-import 'package:logger/logger.dart';
-import 'package:sanitarypad/core/config/responsive_config.dart';
+import 'package:go_router/go_router.dart';
 import 'package:sanitarypad/presentation/screens/movie/core/constants/tmdb_endpoints.dart';
-import 'package:sanitarypad/presentation/screens/movie/customplayer.dart';
 import 'package:sanitarypad/presentation/screens/movie/domain/entities/movie.dart';
-import 'package:sanitarypad/presentation/screens/movie/presentation/widgets/cached_image_widget.dart';
-import 'package:palette_generator/palette_generator.dart';
-
-enum StreamState { loading, extracting, playing, error }
 
 class MovieScreen extends StatefulWidget {
   const MovieScreen({super.key, required this.movie});
@@ -24,219 +18,407 @@ class MovieScreen extends StatefulWidget {
 }
 
 class _MovieScreenState extends State<MovieScreen> {
-  InAppWebViewController? controller;
-  StreamState _state = StreamState.loading;
-  String _vidUrl = "";
-  String _statusMessage = "Initializing secure connection...";
-  Timer? _extractionTimeout;
+  InAppWebViewController? _controller;
+  bool _streamFound = false;
+  String _statusMessage = "Connecting to server...";
+
+  String get _sourceUrl =>
+      'https://vidsrc-embed.ru/embed/movie?tmdb=${widget.movie.id}';
+
+  final List<String> _adDomains = [
+    "google",
+    "doubleclick",
+    "facebook",
+    "pop",
+    "ads",
+    "track",
+    "analytics",
+    "exoclick",
+    "propeller",
+    "juicyads",
+    "adnxs",
+    "adskeeper",
+    "adsterra",
+    "trafficjunky",
+    "mgid",
+    "outbrain",
+    "taboola",
+    "criteo",
+    "bidvertiser",
+    "livejasmin",
+    "clickadu",
+    "hilltopads",
+  ];
 
   @override
   void initState() {
     super.initState();
-    _startTimeoutTimer();
   }
 
-  @override
-  void dispose() {
-    _extractionTimeout?.cancel();
-    super.dispose();
-  }
+  String get _backgroundScript => r"""
+    (function() {
+      console.log("[Stream Sniffer] Extraction hooks initialized.");
 
-  void _startTimeoutTimer() {
-    _extractionTimeout?.cancel();
-    _extractionTimeout = Timer(const Duration(seconds: 20), () {
-      if (_state != StreamState.playing) {
-        setState(() {
-          _state = StreamState.error;
-          _statusMessage = "Connection timed out. Please try again.";
-        });
+      const patterns = [/\.m3u8($|\?)/i, /\.mp4($|\?)/i, /\.mpd($|\?)/i, /master\.json($|\?)/i];
+      
+      const notifyFound = (url) => {
+        if (patterns.some(p => p.test(url))) {
+           console.log("[Stream Sniffer] Intercepted: " + url);
+           window.flutter_inappwebview.callHandler('onStreamFound', url);
+        }
+      };
+
+      // 1. Hook XMLHttpRequest
+      const originOpen = XMLHttpRequest.prototype.open;
+      XMLHttpRequest.prototype.open = function(method, url) {
+        notifyFound(url);
+        return originOpen.apply(this, arguments);
+      };
+
+      // 2. Hook Fetch
+      const originFetch = window.fetch;
+      window.fetch = function() {
+        const url = (typeof arguments[0] === 'string') ? arguments[0] : (arguments[0] && arguments[0].url);
+        if (url) notifyFound(url);
+        return originFetch.apply(this, arguments);
+      };
+
+      // 3. Block Popups (Nuclear)
+      window.open = function() {
+        console.log("[Stream Sniffer] window.open blocked.");
+        return null;
+      };
+
+    })();
+  """;
+
+  String get _contentScript => """
+    (function() {
+          // content.js
+          console.log("[Stream Sniffer] Content script (Isolated) loaded.");
+
+          function triggerEvent(element, eventType) {
+              const event = new MouseEvent(eventType, {
+                  view: window, bubbles: true, cancelable: true, buttons: 1
+              });
+              element.dispatchEvent(event);
+          }
+
+          const MAX_ATTEMPTS = 50;
+          let attempts = 0;
+
+          const clickInterval = setInterval(() => {
+              try {
+            /*       // 1. KNOWN AD/OVERLAYS
+                  const adClose = document.querySelector('#ad720 #close');
+                  if (adClose && adClose.offsetParent) {
+                      console.log("[Stream Sniffer] Closing Ad.");
+                      triggerEvent(adClose, 'click');
+                      adClose.remove();
+                  }
+
+                  const loader = document.getElementById('loading_overlay');
+                  if (loader && loader.offsetParent) {
+                      console.log("[Stream Sniffer] Clicking Loader.");
+                      triggerEvent(loader, 'click');
+                      loader.style.display = 'none';
+                  } */
+
+                  // 2. PRIMARY TARGET: #pl_but
+                  const plBut = document.getElementById('pl_but');
+                  if (plBut && plBut.offsetParent) {
+                      console.log("[Stream Sniffer] Clicking Primary #pl_but");
+                      triggerEvent(plBut, 'click');
+                      plBut.click();
+                      clearInterval(clickInterval);
+
+                      if (plBut.parentElement) {
+                          triggerEvent(plBut.parentElement, 'click');
+                          plBut.parentElement.click();
+                          clearInterval(clickInterval);
+                      }
+                  }
+
+                  /* // 3. GENERIC BACKUP
+                  const candidates = [];
+                  const selectors = [
+                      '#pl_but_background', '.play', '.play-button', '.vjs-big-play-button',
+                      'button[aria-label="Play"]'
+                  ];
+
+                  selectors.forEach(sel => {
+                      document.querySelectorAll(sel).forEach(el => candidates.push(el));
+                  });
+
+                  for (let el of candidates) {
+                      if (!el.offsetParent) continue;
+                      if (el.id === 'pl_but') continue; 
+
+                      console.log("[Stream Sniffer] Clicking backup:", el.className);
+                      triggerEvent(el, 'click');
+                      el.click();
+                  }
+
+                  attempts++;
+                  if (attempts > MAX_ATTEMPTS) clearInterval(clickInterval); */
+
+              } catch (e) {
+                  console.log(e);
+              }
+          }, 1000);
+
+          window.flutter_inappwebview.callHandler('onContentReady', 'initialized');
+    })();
+  """;
+
+  String get _injectScript => """
+    (function(){
+      // inject.js
+      // Runs in MAIN world.
+      console.log("[Stream Sniffer] Nuclear Anti-Defense Active.");
+
+      try {
+          const noop = () => { };
+
+          // 1. NEUTRALIZE DETECTORS (DisableDevtool)
+          Object.defineProperty(window, 'DisableDevtool', {
+              value: function () { return { isRunning: false, isSuspend: true }; },
+              writable: false,
+              configurable: false
+          });
+
+          // 2. BLOCK CLOSING & POPUPS
+          window.close = function () { console.log("[Stream Sniffer] window.close blocked."); };
+          window.open = function () { console.log("[Stream Sniffer] window.open blocked."); return null; };
+          console.clear = function () { console.log("[Stream Sniffer] console.clear blocked."); };
+
+          // 3. AGGRESSIVE DEBUGGER NEUTRALIZATION
+
+          // A. Hook Function constructor (classic "debugger" check)
+          const _constructor = Function.prototype.constructor;
+          Function.prototype.constructor = function (string) {
+              if (string && typeof string === 'string') {
+                  if (string.includes('debugger')) return noop;
+                  // Some use obfuscated calls
+              }
+              return _constructor.apply(this, arguments);
+          };
+          Function.prototype.constructor.prototype = _constructor.prototype;
+          Function.prototype.constructor.toString = function () { return _constructor.toString(); };
+
+          // B. Hook setInterval (async debugger loops)
+          const _setInterval = window.setInterval;
+          window.setInterval = function (callback, delay, ...args) {
+              if (typeof callback === 'function') {
+                  const code = callback.toString();
+                  if (code.includes('debugger')) {
+                      console.log("[Stream Sniffer] Blocked setInterval with debugger.");
+                      return -1;
+                  }
+              } else if (typeof callback === 'string') {
+                  if (callback.includes('debugger')) return -1;
+              }
+              return _setInterval.apply(this, arguments);
+          };
+
+          // C. Hook eval (just in case)
+          const _eval = window.eval;
+          window.eval = function (string) {
+              if (string && string.includes('debugger')) {
+                  console.log("[Stream Sniffer] Blocked eval with debugger.");
+                  return noop;
+              }
+              return _eval.apply(this, arguments);
+          };
+
+          // 5. EVENT STOPPING
+          window.addEventListener('contextmenu', (e) => e.stopImmediatePropagation(), true);
+
+      } catch (e) {
+          console.log("[Stream Sniffer] Inject Error: " + e);
       }
+      
+    })();
+  """;
+
+  /// Called when a valid stream URL is intercepted.
+  void _onStreamExtracted(String url) {
+    if (_streamFound) return;
+    _streamFound = true;
+
+    print("🎬 Stream URL extracted: $url");
+    _controller?.stopLoading(); // Stop resource usage immediately
+
+    // Use Future.microtask to ensure we don't navigate during a build phase
+    // or while the navigator is locked by another transition (like back press)
+    Future.microtask(() {
+      if (!mounted) return;
+      context.pushReplacementNamed(
+        'movie-player',
+        extra: {
+          'url': url,
+          'movieId': widget.movie.id.toString(),
+        },
+      );
     });
-  }
-
-  void _onStreamFound(String url) {
-    if (_state == StreamState.playing) return;
-
-    _extractionTimeout?.cancel();
-    print("🎬 Stream found: $url");
-
-    setState(() {
-      _vidUrl = url;
-      _state = StreamState.playing;
-    });
-
-    // Enter immersive mode for playback
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
   }
 
   @override
   Widget build(BuildContext context) {
+    debugPrint("🎬 Stream Poster URL extracted: ${widget.movie.posterPath}");
     return Scaffold(
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // 1. The WebView (Hidden but active)
-          // We use Opacity 0 instead of Offstage to ensure it renders/executes JS
-          Opacity(
-            opacity: 0,
+          Positioned.fill(
             child: InAppWebView(
+              initialUrlRequest: URLRequest(url: WebUri(_sourceUrl)),
+              initialUserScripts: UnmodifiableListView<UserScript>([
+                UserScript(
+                  source: _backgroundScript,
+                  injectionTime: UserScriptInjectionTime.AT_DOCUMENT_START,
+                ),
+                UserScript(
+                  source: _contentScript,
+                  injectionTime: UserScriptInjectionTime.AT_DOCUMENT_START,
+                  forMainFrameOnly: false, // Run in iframes too
+                ),
+                /* UserScript(
+                  source: _injectScript,
+                  injectionTime: UserScriptInjectionTime.AT_DOCUMENT_START,
+                ),
+                */
+              ]),
               initialSettings: InAppWebViewSettings(
                 javaScriptEnabled: true,
                 mediaPlaybackRequiresUserGesture: false,
                 allowsInlineMediaPlayback: true,
                 iframeAllowFullscreen: true,
                 userAgent:
-                    "Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.5481.153 Mobile Safari/537.36",
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
               ),
-              initialUrlRequest: URLRequest(
-                url: WebUri(
-                    "https://vidsrc-embed.ru/embed/movie?tmdb=${widget.movie.id}"),
-              ),
-              onWebViewCreated: (ctrl) {
-                controller = ctrl;
+              onWebViewCreated: (controller) {
+                _controller = controller;
+
+                // Set up the JS handler for 'onStreamFound'
+                controller.addJavaScriptHandler(
+                  handlerName: 'onStreamFound',
+                  callback: (args) {
+                    if (args.isNotEmpty) {
+                      _onStreamExtracted(args[0].toString());
+                    }
+                  },
+                );
+
+                controller.addJavaScriptHandler(
+                  handlerName: 'onContentReady',
+                  callback: (args) {
+                    debugPrint("💻 [Content] Status: ${args[0]}");
+                  },
+                );
               },
-              onLoadStop: (ctrl, url) async {
-                setState(() {
-                  if (_state == StreamState.loading) {
-                    _state = StreamState.extracting;
-                    _statusMessage = "Decrypting stream...";
-                  }
-                });
-
-                // Automated "Play" clicker
-                // Tries to click #pl_but or any large play overlay
-                await ctrl.evaluateJavascript(source: """
-                  (function() {
-                    console.log("[AutoPlayer] Starting auto-click sequence...");
-                    
-                    function clickPlay() {
-                      const btn = document.querySelector("#pl_but") || document.querySelector(".play-button") || document.querySelector("button[class*='play']");
-                      if(btn) {
-                        console.log("[AutoPlayer] Found play button, clicking...");
-                        btn.click();
-                        return true;
-                      }
-                      return false;
-                    }
-
-                    // Attempt immediate click
-                    if(!clickPlay()) {
-                      // Observe for button appearance
-                      const observer = new MutationObserver((mutations) => {
-                        if(clickPlay()) {
-                          observer.disconnect();
-                        }
-                      });
-                      observer.observe(document.body, {childList: true, subtree: true});
-                      
-                      // Fallback interval
-                      setInterval(clickPlay, 1000);
-                    }
-                  })();
-                """);
+              onLoadStart: (controller, url) {
+                setState(() => _statusMessage = "Loading player...");
+              },
+              onLoadStop: (controller, url) {
+                setState(() => _statusMessage = "Scanning for stream...");
+              },
+              onLoadError: (controller, url, error, description) {
+                setState(() => _statusMessage = "Error: $description");
+              },
+              /* shouldOverrideUrlLoading: (controller, navigationAction) async {
+                if (navigationAction.isForMainFrame == false) {
+                  return NavigationActionPolicy.CANCEL;
+                }
+                final url =
+                    navigationAction.request.url.toString().toLowerCase();
+                for (final d in _adDomains) {
+                  if (url.contains(d)) return NavigationActionPolicy.CANCEL;
+                }
+                return NavigationActionPolicy.ALLOW;
               },
               shouldInterceptRequest: (controller, request) async {
-                final url = request.url.toString();
-
-                // Block devtool detection scripts
-                if (url.contains("disable-devtool") ||
-                    url.contains("debugger")) {
-                  return WebResourceResponse(
-                    contentType: "application/javascript",
-                    data: Uint8List.fromList("".codeUnits),
-                  );
+                final url = request.url.toString().toLowerCase();
+                for (final d in _adDomains) {
+                  if (url.contains(d)) {
+                    return WebResourceResponse(
+                        contentType: "text/plain",
+                        data: Uint8List.fromList("".codeUnits));
+                  }
                 }
                 return null;
-              },
+              }, */
               onLoadResource: (controller, resource) {
                 final url = resource.url.toString();
-                if (url.contains(".m3u8") ||
-                    (url.contains(".mp4") && !url.contains("preview"))) {
-                  _onStreamFound(url);
+                final patterns = [
+                  RegExp(r'\.m3u8($|\?)', caseSensitive: false),
+                  RegExp(r'\.mp4($|\?)', caseSensitive: false),
+                  RegExp(r'\.mpd($|\?)', caseSensitive: false),
+                ];
+
+                if (patterns.any((p) => p.hasMatch(url))) {
+                  if (!url.contains("segment") && !url.contains("ad")) {
+                    _onStreamExtracted(url);
+                  }
+                }
+              },
+              onConsoleMessage: (controller, consoleMessage) {
+                if (consoleMessage.message
+                    .contains("[Stream Sniffer] Intercepted:")) {
+                  debugPrint(
+                      "[Stream Sniffer] Intercepted flutter: ${consoleMessage.message}");
                 }
               },
             ),
           ),
 
-          // 2. Loading / Status UI (When not playing)
-          if (_state != StreamState.playing)
-            Container(
-              width: double.infinity,
-              height: double.infinity,
-              decoration: BoxDecoration(
-                image: DecorationImage(
-                  image: NetworkImage(
-                    TMDBEndpoints.posterUrl(widget.movie.posterPath!,
+          // 2. Loading UI
+          Positioned.fill(
+            child: widget.movie.posterPath != null
+                ? CachedNetworkImage(
+                    imageUrl: TMDBEndpoints.posterUrl(widget.movie.posterPath!,
                         size: PosterSize.original),
+                    fit: BoxFit.cover,
+                  )
+                : Container(
+                    color: Colors.black,
                   ),
-                  fit: BoxFit.cover,
-                  colorFilter: ColorFilter.mode(
-                      Colors.black.withOpacity(0.7), BlendMode.darken),
-                ),
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  if (_state == StreamState.error) ...[
-                    const Icon(Icons.error_outline,
-                        color: Colors.white, size: 64),
-                    const SizedBox(height: 16),
+          ),
+
+          Positioned.fill(
+            child: IgnorePointer(
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const CircularProgressIndicator(color: Colors.pinkAccent),
+                    const SizedBox(height: 24),
                     Text(
                       _statusMessage,
                       style: const TextStyle(color: Colors.white, fontSize: 16),
-                      textAlign: TextAlign.center,
                     ),
-                    const SizedBox(height: 24),
-                    ElevatedButton(
-                      onPressed: () {
-                        setState(() {
-                          _state = StreamState.loading;
-                          _statusMessage = "Retrying...";
-                          _startTimeoutTimer();
-                        });
-                        controller?.reload();
-                      },
-                      child: const Text("Retry"),
-                    )
-                  ] else ...[
-                    const CircularProgressIndicator(color: Colors.white),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 8),
                     Text(
-                      "$_statusMessage\nPlease wait...",
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500),
-                      textAlign: TextAlign.center,
+                      widget.movie.title,
+                      style: TextStyle(
+                          color: Colors.white.withOpacity(0.5), fontSize: 12),
                     ),
-                  ]
-                ],
+                  ],
+                ),
               ),
             ),
+          ),
 
-          // 3. The Video Player (One playing)
-          if (_state == StreamState.playing && _vidUrl.isNotEmpty)
-            Positioned.fill(
-              child: CustomVideoPlayer(
-                url: _vidUrl,
-                movieId: widget.movie.id.toString(),
-              ),
-            ),
-
-          // 4. Back Button (Always visible)
+          // 3. Back Button
           Positioned(
-            top: 40,
-            left: 20,
-            child: IconButton(
-              icon: const Icon(Icons.arrow_back, color: Colors.white, size: 30),
-              onPressed: () {
-                // Reset orientation on exit
-                SystemChrome.setPreferredOrientations([
-                  DeviceOrientation.portraitUp,
-                ]);
-                SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-                Navigator.pop(context);
-              },
+            top: 25,
+            left: 10,
+            child: SafeArea(
+              child: IconButton(
+                icon:
+                    const Icon(Icons.arrow_back, color: Colors.white, size: 28),
+                onPressed: () => Navigator.pop(context),
+              ),
             ),
           ),
         ],

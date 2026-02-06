@@ -16,6 +16,8 @@ import '../../../core/widgets/back_button_handler.dart';
 import '../../../data/models/fertility_model.dart';
 import '../../../services/fertility_service.dart';
 import '../../../services/reminder_service.dart';
+import '../../widgets/ads/eco_ad_wrapper.dart';
+import '../../../services/credit_manager.dart';
 
 class FertilityTrackingScreen extends ConsumerStatefulWidget {
   const FertilityTrackingScreen({super.key});
@@ -102,30 +104,35 @@ class _FertilityTrackingScreenState
               builder: (context, predictionSnapshot) {
                 final prediction = predictionSnapshot.data;
 
-                return TabBarView(
-                  controller: _tabController,
-                  children: [
-                    _buildOverviewTab(
-                        context, user.userId, entries, prediction),
-                    _buildCalendarTab(
-                      context,
-                      user.userId,
-                      entries,
-                      prediction,
-                    ),
-                    _buildLogsTab(context, user.userId, entries),
-                    _buildInsightsTab(
-                      context,
-                      user.userId,
-                      entries,
-                      prediction,
-                    ),
-                  ],
+                return SafeArea(
+                  bottom: true,
+                  top: false,
+                  child: TabBarView(
+                    controller: _tabController,
+                    children: [
+                      _buildOverviewTab(
+                          context, user.userId, entries, prediction),
+                      _buildCalendarTab(
+                        context,
+                        user.userId,
+                        entries,
+                        prediction,
+                      ),
+                      _buildLogsTab(context, user.userId, entries),
+                      _buildInsightsTab(
+                        context,
+                        user.userId,
+                        entries,
+                        prediction,
+                      ),
+                    ],
+                  ),
                 );
               },
             );
           },
         ),
+        bottomNavigationBar: const EcoAdWrapper(adType: AdType.banner),
       ),
     );
   }
@@ -1097,7 +1104,8 @@ class _FertilityTrackingScreenState
                       tooltipRoundedRadius: 8,
                     ),
                   ),
-                  gridData: const FlGridData(show: true, drawVerticalLine: false),
+                  gridData:
+                      const FlGridData(show: true, drawVerticalLine: false),
                   titlesData: FlTitlesData(
                     leftTitles: AxisTitles(
                       sideTitles: SideTitles(
@@ -2040,6 +2048,12 @@ class _FertilityTrackingScreenState
                     onPressed: () async {
                       if (!formKey.currentState!.validate()) return;
 
+                      // Credit Check
+                      final hasCredit = await ref
+                          .read(creditManagerProvider)
+                          .requestCredit(context, ActionType.fertility);
+                      if (!hasCredit) return;
+
                       final entry = FertilityEntry(
                         id: existingEntry?.id,
                         userId: userId,
@@ -2063,6 +2077,9 @@ class _FertilityTrackingScreenState
                         } else {
                           await _fertilityService.createFertilityEntry(entry);
                         }
+                        await ref
+                            .read(creditManagerProvider)
+                            .consumeCredits(ActionType.fertility);
                         if (context.mounted) Navigator.of(context).pop();
                       } catch (e) {
                         if (context.mounted) {
@@ -2138,6 +2155,12 @@ class _FertilityTrackingScreenState
             ),
             ElevatedButton(
               onPressed: () async {
+                // Credit Check
+                final hasCredit = await ref
+                    .read(creditManagerProvider)
+                    .requestCredit(context, ActionType.fertility);
+                if (!hasCredit) return;
+
                 final reminder = OvulationTestReminder(
                   userId: userId,
                   scheduledDate: scheduledDate,
@@ -2147,6 +2170,9 @@ class _FertilityTrackingScreenState
                   createdAt: DateTime.now(),
                 );
                 await _fertilityService.scheduleOvulationTest(reminder);
+                await ref
+                    .read(creditManagerProvider)
+                    .consumeCredits(ActionType.fertility);
                 if (context.mounted) Navigator.of(context).pop();
               },
               child: const Text('Schedule'),
@@ -2260,6 +2286,12 @@ class _FertilityTrackingScreenState
             ),
             ElevatedButton(
               onPressed: () async {
+                // Credit Check
+                final hasCredit = await ref
+                    .read(creditManagerProvider)
+                    .requestCredit(context, ActionType.fertility);
+                if (!hasCredit) return;
+
                 await _fertilityService.logHormoneCycle(
                   HormoneCycle(
                     userId: userId,
@@ -2273,6 +2305,9 @@ class _FertilityTrackingScreenState
                     createdAt: DateTime.now(),
                   ),
                 );
+                await ref
+                    .read(creditManagerProvider)
+                    .consumeCredits(ActionType.fertility);
                 if (context.mounted) Navigator.of(context).pop();
               },
               child: const Text('Save'),
@@ -2333,6 +2368,13 @@ class _FertilityTrackingScreenState
             ElevatedButton(
               onPressed: () async {
                 if (!formKey.currentState!.validate()) return;
+
+                // Credit Check
+                final hasCredit = await ref
+                    .read(creditManagerProvider)
+                    .requestCredit(context, ActionType.fertility);
+                if (!hasCredit) return;
+
                 await _fertilityService.logFertilitySymptom(
                   FertilitySymptom(
                     userId: userId,
@@ -2349,6 +2391,9 @@ class _FertilityTrackingScreenState
                     createdAt: DateTime.now(),
                   ),
                 );
+                await ref
+                    .read(creditManagerProvider)
+                    .consumeCredits(ActionType.fertility);
                 if (context.mounted) Navigator.of(context).pop();
               },
               child: const Text('Save'),
@@ -2428,6 +2473,12 @@ class _FertilityTrackingScreenState
             ),
             ElevatedButton(
               onPressed: () async {
+                // Credit Check
+                final hasCredit = await ref
+                    .read(creditManagerProvider)
+                    .requestCredit(context, ActionType.fertility);
+                if (!hasCredit) return;
+
                 await _fertilityService.logMoodEnergy(
                   MoodEnergyEntry(
                     userId: userId,
@@ -2442,6 +2493,9 @@ class _FertilityTrackingScreenState
                     createdAt: DateTime.now(),
                   ),
                 );
+                await ref
+                    .read(creditManagerProvider)
+                    .consumeCredits(ActionType.fertility);
                 if (context.mounted) Navigator.of(context).pop();
               },
               child: const Text('Save'),
@@ -2511,6 +2565,13 @@ class _FertilityTrackingScreenState
             ElevatedButton(
               onPressed: () async {
                 if (!formKey.currentState!.validate()) return;
+
+                // Credit Check
+                final hasCredit = await ref
+                    .read(creditManagerProvider)
+                    .requestCredit(context, ActionType.fertility);
+                if (!hasCredit) return;
+
                 await _fertilityService.addFertilityMedication(
                   FertilityMedication(
                     userId: userId,
@@ -2531,6 +2592,9 @@ class _FertilityTrackingScreenState
                     createdAt: DateTime.now(),
                   ),
                 );
+                await ref
+                    .read(creditManagerProvider)
+                    .consumeCredits(ActionType.fertility);
                 if (context.mounted) Navigator.of(context).pop();
               },
               child: const Text('Save'),
@@ -2574,6 +2638,12 @@ class _FertilityTrackingScreenState
             ),
             ElevatedButton(
               onPressed: () async {
+                // Credit Check
+                final hasCredit = await ref
+                    .read(creditManagerProvider)
+                    .requestCredit(context, ActionType.fertility);
+                if (!hasCredit) return;
+
                 await _fertilityService.logIntercourse(
                   IntercourseEntry(
                     userId: userId,
@@ -2585,6 +2655,9 @@ class _FertilityTrackingScreenState
                     createdAt: DateTime.now(),
                   ),
                 );
+                await ref
+                    .read(creditManagerProvider)
+                    .consumeCredits(ActionType.fertility);
                 if (context.mounted) Navigator.of(context).pop();
               },
               child: const Text('Save'),
@@ -2647,6 +2720,12 @@ class _FertilityTrackingScreenState
             ),
             ElevatedButton(
               onPressed: () async {
+                // Credit Check
+                final hasCredit = await ref
+                    .read(creditManagerProvider)
+                    .requestCredit(context, ActionType.fertility);
+                if (!hasCredit) return;
+
                 await _fertilityService.logPregnancyTest(
                   PregnancyTestEntry(
                     userId: userId,
@@ -2662,6 +2741,9 @@ class _FertilityTrackingScreenState
                     createdAt: DateTime.now(),
                   ),
                 );
+                await ref
+                    .read(creditManagerProvider)
+                    .consumeCredits(ActionType.fertility);
                 if (context.mounted) Navigator.of(context).pop();
               },
               child: const Text('Save'),
@@ -2725,6 +2807,13 @@ class _FertilityTrackingScreenState
             ElevatedButton(
               onPressed: () async {
                 if (!formKey.currentState!.validate()) return;
+
+                // Credit Check
+                final hasCredit = await ref
+                    .read(creditManagerProvider)
+                    .requestCredit(context, ActionType.fertility);
+                if (!hasCredit) return;
+
                 await _fertilityService.addHealthRecommendation(
                   HealthRecommendation(
                     userId: userId,
@@ -2736,6 +2825,9 @@ class _FertilityTrackingScreenState
                     createdAt: DateTime.now(),
                   ),
                 );
+                await ref
+                    .read(creditManagerProvider)
+                    .consumeCredits(ActionType.fertility);
                 if (context.mounted) Navigator.of(context).pop();
               },
               child: const Text('Save'),

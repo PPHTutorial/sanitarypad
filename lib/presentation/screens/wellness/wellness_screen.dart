@@ -8,6 +8,7 @@ import '../../../core/constants/app_constants.dart';
 import '../../../services/wellness_content_service.dart';
 import '../../../core/providers/auth_provider.dart';
 import '../../../core/widgets/femcare_bottom_nav.dart';
+import 'package:sanitarypad/presentation/widgets/ads/eco_ad_wrapper.dart';
 
 /// Wellness screen with content library
 class WellnessScreen extends ConsumerWidget {
@@ -73,29 +74,37 @@ class WellnessScreen extends ConsumerWidget {
           ),
         ),
         bottomNavigationBar: const FemCareBottomNav(currentRoute: '/wellness'),
-        body: TabBarView(
+        body: Column(
           children: [
-            _buildContentList(context, ref, contentService, null, isPremium),
-            _buildContentList(
-              context,
-              ref,
-              contentService,
-              AppConstants.contentTypeTip,
-              isPremium,
-            ),
-            _buildContentList(
-              context,
-              ref,
-              contentService,
-              AppConstants.contentTypeArticle,
-              isPremium,
-            ),
-            _buildContentList(
-              context,
-              ref,
-              contentService,
-              AppConstants.contentTypeMeditation,
-              isPremium,
+            const EcoAdWrapper(adType: AdType.banner),
+            Expanded(
+              child: TabBarView(
+                children: [
+                  _buildContentList(
+                      context, ref, contentService, null, isPremium),
+                  _buildContentList(
+                    context,
+                    ref,
+                    contentService,
+                    AppConstants.contentTypeTip,
+                    isPremium,
+                  ),
+                  _buildContentList(
+                    context,
+                    ref,
+                    contentService,
+                    AppConstants.contentTypeArticle,
+                    isPremium,
+                  ),
+                  _buildContentList(
+                    context,
+                    ref,
+                    contentService,
+                    AppConstants.contentTypeMeditation,
+                    isPremium,
+                  ),
+                ],
+              ),
             ),
           ],
         ),
