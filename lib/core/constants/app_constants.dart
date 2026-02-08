@@ -161,12 +161,16 @@ class AppConstants {
   static const double costPadChange = 2.0;
   static const double costNotification = 2.0;
   static const double costAIChat = 5.0;
-  static const double costMovie = 2;
+  static const double costMovie = 2.0;
   static const double costCreateGroup = 5.0;
   static const double costCreateEvent = 5.0;
   static const double costDermatologist = 5.0;
   static const double costExport = 2.0;
   static const double costEmergencyNumber = 1.0;
+  static const double costVideoWatch = 5.0;
+  static const double costNutritionSearch = 5.0;
+  static const double costWorkoutSearch = 5.0;
+  static const double costLogActivity = 2.0;
 
   // Daily Credit Limits (per tier)
   static const double creditsEco = 108.0;
@@ -184,7 +188,7 @@ class AppConstants {
 
   // Ad Rewards
   static const int adsNeededForReward = 3;
-  static const double creditsPerAdReward = 2.0;
+  static const double creditsPerAdReward = 5;
 
   // Download Links
   static const String playStoreUrl =

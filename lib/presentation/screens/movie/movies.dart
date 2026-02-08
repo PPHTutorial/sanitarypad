@@ -1,5 +1,6 @@
 // ignore_for_file: unnecessary_string_escapes
 
+
 import 'dart:collection';
 
 import 'package:cached_network_image/cached_network_image.dart';
@@ -10,8 +11,15 @@ import 'package:sanitarypad/presentation/screens/movie/core/constants/tmdb_endpo
 import 'package:sanitarypad/presentation/screens/movie/domain/entities/movie.dart';
 
 class MovieScreen extends StatefulWidget {
-  const MovieScreen({super.key, required this.movie});
+  const MovieScreen({
+    super.key,
+    required this.movie,
+    this.season,
+    this.episode,
+  });
   final Movie movie;
+  final String? season;
+  final String? episode;
 
   @override
   State<MovieScreen> createState() => _MovieScreenState();
@@ -22,8 +30,14 @@ class _MovieScreenState extends State<MovieScreen> {
   bool _streamFound = false;
   String _statusMessage = "Connecting to server...";
 
-  String get _sourceUrl =>
-      'https://vidsrc-embed.ru/embed/movie?tmdb=${widget.movie.id}';
+  String get _sourceUrl {
+    if (widget.movie.mediaType == 'tv') {
+      final s = widget.season ?? '1';
+      final e = widget.episode ?? '1';
+      return 'https://vidsrc-embed.ru/embed/tv?tmdb=${widget.movie.id}&season=$s&episode=$e';
+    }
+    return 'https://vidsrc-embed.ru/embed/movie?tmdb=${widget.movie.id}';
+  }
 
   final List<String> _adDomains = [
     "google",
@@ -258,6 +272,12 @@ class _MovieScreenState extends State<MovieScreen> {
         extra: {
           'url': url,
           'movieId': widget.movie.id.toString(),
+          'movie': widget.movie,
+          'episodes': widget.movie.episodes,
+          'currentEpisode': {
+            'season': int.tryParse(widget.season ?? '1'),
+            'episode': int.tryParse(widget.episode ?? '1'),
+          }
         },
       );
     });
@@ -375,11 +395,14 @@ class _MovieScreenState extends State<MovieScreen> {
           // 2. Loading UI
           Positioned.fill(
             child: widget.movie.posterPath != null
-                ? CachedNetworkImage(
-                    imageUrl: TMDBEndpoints.posterUrl(widget.movie.posterPath!,
-                        size: PosterSize.original),
-                    fit: BoxFit.cover,
-                  )
+                ? Container(
+                    color: Colors.black,
+                    child: CachedNetworkImage(
+                      imageUrl: TMDBEndpoints.posterUrl(widget.movie.posterPath!,
+                          size: PosterSize.original),
+                      fit: BoxFit.cover,
+                    ),
+                )
                 : Container(
                     color: Colors.black,
                   ),

@@ -12,7 +12,6 @@ import 'widgets/horizontal_movie_card.dart';
 import '../search/search_screen.dart';
 import '../../widgets/app_logo.dart';
 import 'package:sanitarypad/presentation/widgets/ads/eco_ad_wrapper.dart';
-import 'package:sanitarypad/services/ads_service.dart';
 
 /// Home screen with real data - Complete implementation
 class MovieMovieHomeScreen extends ConsumerStatefulWidget {

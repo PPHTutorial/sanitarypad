@@ -257,6 +257,77 @@ service cloud.firestore {
     }
 
     // ============================================
+    // NUTRITION COLLECTIONS (Subcollections of users)
+    // ============================================
+    match /users/{userId}/nutrition_meals/{mealId} {
+      allow read, write: if isOwner(userId);
+    }
+    match /users/{userId}/nutrition_water/{waterId} {
+      allow read, write: if isOwner(userId);
+    }
+    match /users/{userId}/nutrition_recipes/{recipeId} {
+      allow read, write: if isOwner(userId);
+    }
+    match /users/{userId}/nutrition_goals/{goalId} {
+      allow read, write: if isOwner(userId);
+    }
+
+    // ============================================
+    // WORKOUT COLLECTIONS (Subcollections of users)
+    // ============================================
+    match /users/{userId}/workout_exercises/{exerciseId} {
+      allow read, write: if isOwner(userId);
+    }
+    match /users/{userId}/workout_sessions/{sessionId} {
+      allow read, write: if isOwner(userId);
+    }
+    match /users/{userId}/workout_enrolled_programs/{programId} {
+      allow read, write: if isOwner(userId);
+    }
+    match /users/{userId}/workout_progress_photos/{photoId} {
+      allow read, write: if isOwner(userId);
+    }
+    match /users/{userId}/workout_measurements/{measurementId} {
+      allow read, write: if isOwner(userId);
+    }
+    match /users/{userId}/workout_saved_videos/{videoId} {
+      allow read, write: if isOwner(userId);
+    }
+    match /users/{userId}/workout_settings/{settingId} {
+      allow read, write: if isOwner(userId);
+    }
+    match /users/{userId}/joined_challenges/{challengeId} {
+      allow read, write: if isOwner(userId);
+    }
+    match /users/{userId}/achievements/{achievementId} {
+      allow read, write: if isOwner(userId);
+    }
+
+    // ============================================
+    // WORKOUT PROGRAMS (Global Read, Admin Write)
+    // ============================================
+    // ============================================
+    // WORKOUT PROGRAMS (Global Read, Admin Write)
+    // ============================================
+    match /workout_programs/{programId} {
+      allow read: if request.auth != null;
+      allow write: if isAdmin();
+    }
+
+    // ============================================
+    // WORKOUT CHALLENGES
+    // ============================================
+    match /workout_challenges/{challengeId} {
+      allow read: if request.auth != null;
+      allow write: if isAdmin(); // Only admins create challenges
+    }
+
+    match /workout_centers/{centerId} {
+      allow read: if request.auth != null;
+      allow write: if isAdmin(); // Only admins add centers
+    }
+
+    // ============================================
     // FERTILITY ENTRIES COLLECTION
     // ============================================
     match /fertilityEntries/{entryId} {

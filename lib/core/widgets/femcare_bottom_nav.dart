@@ -74,8 +74,8 @@ class FemCareBottomNav extends StatelessWidget {
           child: SafeArea(
             top: false,
             child: Container(
-              height: ResponsiveConfig.height(90),
-              padding: ResponsiveConfig.padding(horizontal: 4, vertical: 8),
+              height: ResponsiveConfig.height(70),
+              padding: ResponsiveConfig.padding(horizontal: 4, vertical: 0),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 crossAxisAlignment: CrossAxisAlignment.center,

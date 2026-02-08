@@ -19,6 +19,7 @@ class AdNavigationHelper {
 
   /// Preload ads on app start
   static Future<void> preloadAds() async {
+    if (!DevConfig.shouldShowAds) return;
     await Future.wait([
       _interstitialService.loadAd(),
       _rewardedService.loadAd(),
@@ -68,6 +69,11 @@ class AdNavigationHelper {
     required Function(RewardItem) onRewardEarned,
     VoidCallback? onAdDismissed,
   }) async {
+    if (!DevConfig.shouldShowAds) {
+      if (onAdDismissed != null) onAdDismissed();
+      return;
+    }
+
     final shown = await _rewardedService.show(
       onUserEarnedReward: (reward) {
         onRewardEarned(reward);
@@ -94,6 +100,7 @@ class AdNavigationHelper {
     required BuildContext context,
     required Function(RewardItem) onRewardEarned,
   }) async {
+    if (!DevConfig.shouldShowAds) return;
     await _rewardedInterstitialService.show(
       onUserEarnedReward: (reward) {
         onRewardEarned(reward);
@@ -104,6 +111,7 @@ class AdNavigationHelper {
 
   /// Show app open ad (typically called on app resume)
   static Future<void> showAppOpenAd() async {
+    if (!DevConfig.shouldShowAds) return;
     await _appOpenAdService.show();
   }
 

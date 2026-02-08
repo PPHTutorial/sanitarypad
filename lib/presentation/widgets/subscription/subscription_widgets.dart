@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/constants/app_constants.dart';
 
 class PaywallDialog extends StatelessWidget {
   final String title;
@@ -110,12 +111,18 @@ class OutOfCreditsDialog extends StatelessWidget {
   final bool canWatchAd;
   final VoidCallback? onWatchAd;
   final VoidCallback? onUpgrade;
+  final double availableCredits;
+  final double requiredCredits;
+  final int currentAdProgress;
 
   const OutOfCreditsDialog({
     super.key,
     this.canWatchAd = true,
     this.onWatchAd,
     this.onUpgrade,
+    this.availableCredits = 0,
+    this.requiredCredits = 0,
+    this.currentAdProgress = 0,
   });
 
   @override
@@ -144,11 +151,31 @@ class OutOfCreditsDialog extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Text(
-              'You have used all your daily credits. Upgrade to a higher tier or watch an ad to earn more.',
+              'No problem! You can watch a few ads to square up the credits needed. You can upgrade to a higher tier to get more credits.',
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: Colors.white.withOpacity(0.7),
                 fontSize: 14,
+              ),
+            ),
+            const SizedBox(height: 20),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.05),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.white.withOpacity(0.1)),
+              ),
+              child: Column(
+                children: [
+                  _buildDetailRow('Needed',
+                      '${requiredCredits.toStringAsFixed(1)} credits'),
+                  const SizedBox(height: 8),
+                  _buildDetailRow('Available',
+                      '${availableCredits.toStringAsFixed(1)} credits'),
+                  const Divider(height: 24, color: Colors.white10),
+                  _buildAdsNeededRow(),
+                ],
               ),
             ),
             const SizedBox(height: 24),
@@ -200,6 +227,52 @@ class OutOfCreditsDialog extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label,
+            style:
+                TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 13)),
+        Text(value,
+            style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 13)),
+      ],
+    );
+  }
+
+  Widget _buildAdsNeededRow() {
+    final deficit = requiredCredits - availableCredits;
+    if (deficit <= 0) return const SizedBox.shrink();
+
+    // Each reward cycle grants creditsPerAdReward.
+    final rewardsNeeded = (deficit / AppConstants.creditsPerAdReward).ceil();
+    final totalAdsToWatch =
+        (rewardsNeeded * AppConstants.adsNeededForReward) - currentAdProgress;
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        const Text('Ads to watch',
+            style: TextStyle(color: Colors.amber, fontWeight: FontWeight.bold)),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          decoration: BoxDecoration(
+            color: Colors.amber.withOpacity(0.2),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Text(
+            '$totalAdsToWatch ads',
+            style: const TextStyle(
+                color: Colors.amber, fontWeight: FontWeight.bold),
+          ),
+        ),
+      ],
     );
   }
 }

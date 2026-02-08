@@ -39,7 +39,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       extendBodyBehindAppBar: false, // Keep AppBar on top but transparent
       backgroundColor: Colors.transparent, // Use theme background
       appBar: AppBar(
-        title: const Text('FemCare+'),
+        leading: Row(
+          children: [
+            ResponsiveConfig.widthBox(16),
+            Image.asset('assets/images/logo.png',
+                height: ResponsiveConfig.height(30)),
+          ],
+        ),
+        leadingWidth: ResponsiveConfig.width(48),
+        title: Text(
+          'FemCare+',
+          style: TextStyle(
+            fontSize: ResponsiveConfig.fontSize(24),
+            fontWeight: FontWeight.w900,
+            color: AppTheme.primaryPink,
+          ),
+        ),
         actions: [
           IconButton(
             icon: const FaIcon(FontAwesomeIcons.bell),
@@ -61,8 +76,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Welcome Message
-            _buildWelcomeCard(context),
-            ResponsiveConfig.heightBox(16),
+            //_buildWelcomeCard(context),
+            //ResponsiveConfig.heightBox(16),
 
             // Cycle Status Card (only if cycle exists)
             if (activeCycle != null) ...[
@@ -122,103 +137,116 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final now = DateTime.now();
     final cycleDay = cycle.getCycleDay(now);
 
-    return Card(
-      shadowColor: Colors.black.withValues(alpha: 0.08),
-      margin: const EdgeInsets.only(bottom: 0),
-      child: Padding(
-        padding: ResponsiveConfig.padding(all: 20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Current Cycle',
-                  style: ResponsiveConfig.textStyle(
-                    size: 18,
-                    weight: FontWeight.w600,
-                  ),
-                ),
-                IconButton(
-                  icon: const FaIcon(FontAwesomeIcons.penToSquare),
-                  onPressed: () {
-                    // Navigate to edit current cycle
-                    context.push('/log-period', extra: cycle);
-                  },
-                ),
-              ],
-            ),
-            ResponsiveConfig.heightBox(12),
-            Row(
-              children: [
-                FaIcon(
-                  FontAwesomeIcons.calendar,
-                  color: AppTheme.primaryPink,
-                  size: ResponsiveConfig.iconSize(24),
-                ),
-                ResponsiveConfig.widthBox(12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Day $cycleDay of Cycle',
-                        style: ResponsiveConfig.textStyle(
-                          size: 16,
-                          weight: FontWeight.w600,
-                        ),
-                      ),
-                      ResponsiveConfig.heightBox(4),
-                      Text(
-                        'Started ${_formatDate(cycle.startDate)}',
-                        style: ResponsiveConfig.textStyle(
-                          size: 14,
-                          color: AppTheme.mediumGray,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Consumer(
-                  builder: (context, ref, child) {
-                    final cyclesAsync = ref.watch(cyclesStreamProvider);
-                    final cycles = cyclesAsync.value ?? [];
-                    if (cycles.length > 1) {
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: InkWell(
-                          onTap: () => context.push('/cycles-list'),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                'View All',
-                                style: ResponsiveConfig.textStyle(
-                                  size: 14,
-                                  color: AppTheme.primaryPink,
-                                  weight: FontWeight.w600,
-                                ),
-                              ),
-                              const SizedBox(width: 4),
-                              const Icon(
-                                Icons.arrow_forward_ios,
-                                size: 12,
-                                color: AppTheme.primaryPink,
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    }
-                    return const SizedBox.shrink();
-                  },
-                ),
-              ],
-            ),
-          ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Current Cycle',
+          style: ResponsiveConfig.textStyle(
+            size: 18,
+            weight: FontWeight.w600,
+          ),
         ),
-      ),
+        ResponsiveConfig.heightBox(12),
+        Card(
+          shadowColor: Colors.black.withValues(alpha: 0.08),
+          margin: const EdgeInsets.only(bottom: 0),
+          child: Padding(
+            padding: ResponsiveConfig.padding(all: 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Most Recent Cycle',
+                      style: ResponsiveConfig.textStyle(
+                        size: 18,
+                        weight: FontWeight.w600,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const FaIcon(FontAwesomeIcons.penToSquare),
+                      onPressed: () {
+                        // Navigate to edit current cycle
+                        context.push('/log-period', extra: cycle);
+                      },
+                    ),
+                  ],
+                ),
+                ResponsiveConfig.heightBox(12),
+                Row(
+                  children: [
+                    FaIcon(
+                      FontAwesomeIcons.calendar,
+                      color: AppTheme.primaryPink,
+                      size: ResponsiveConfig.iconSize(24),
+                    ),
+                    ResponsiveConfig.widthBox(12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Day $cycleDay of Cycle',
+                            style: ResponsiveConfig.textStyle(
+                              size: 16,
+                              weight: FontWeight.w600,
+                            ),
+                          ),
+                          ResponsiveConfig.heightBox(4),
+                          Text(
+                            'Started ${_formatDate(cycle.startDate)}',
+                            style: ResponsiveConfig.textStyle(
+                              size: 14,
+                              color: AppTheme.mediumGray,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Consumer(
+                      builder: (context, ref, child) {
+                        final cyclesAsync = ref.watch(cyclesStreamProvider);
+                        final cycles = cyclesAsync.value ?? [];
+                        if (cycles.length > 1) {
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: InkWell(
+                              onTap: () => context.push('/cycles-list'),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    'View All',
+                                    style: ResponsiveConfig.textStyle(
+                                      size: 14,
+                                      color: AppTheme.primaryPink,
+                                      weight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  const Icon(
+                                    Icons.arrow_forward_ios,
+                                    size: 12,
+                                    color: AppTheme.primaryPink,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        }
+                        return const SizedBox.shrink();
+                      },
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -259,7 +287,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ),
           ],
         ),
-
         ResponsiveConfig.heightBox(12),
         // Second Row: Wellness & Calendar
         Row(
@@ -284,7 +311,44 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ],
         ),
         ResponsiveConfig.heightBox(12),
-        // Third Row: Pregnancy & Fertility
+        // Third Row: Movies & Entertainment
+        Row(
+          children: [
+            Expanded(
+              child: _buildActionButton(
+                context,
+                icon: FontAwesomeIcons.film,
+                label: 'Movies & Entertainment',
+                onTap: () => context.push('/movies'),
+              ),
+            ),
+          ],
+        ),
+        ResponsiveConfig.heightBox(12),
+        // Fourth Row: Nutrition & Workout
+        Row(
+          children: [
+            Expanded(
+              child: _buildActionButton(
+                context,
+                icon: FontAwesomeIcons.appleWhole,
+                label: 'Nutrition',
+                onTap: () => context.go('/nutrition-tracking'),
+              ),
+            ),
+            ResponsiveConfig.widthBox(12),
+            Expanded(
+              child: _buildActionButton(
+                context,
+                icon: FontAwesomeIcons.dumbbell,
+                label: 'Workout',
+                onTap: () => context.go('/workout-tracking'),
+              ),
+            ),
+          ],
+        ),
+        ResponsiveConfig.heightBox(12),
+        // Fifth Row: Pregnancy & Fertility
         Row(
           children: [
             Expanded(
@@ -307,19 +371,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ],
         ),
         ResponsiveConfig.heightBox(12),
-        Row(
-          children: [
-            Expanded(
-              child: _buildActionButton(
-                context,
-                icon: FontAwesomeIcons.film,
-                label: 'Movies',
-                onTap: () => context.push('/movies'),
-              ),
-            ),
-          ],
-        ),
-        ResponsiveConfig.heightBox(12),
+        // Sixth Row: Community
         const _CommunityCard(),
         ResponsiveConfig.heightBox(16),
         const Center(child: BannerAdWidget()),

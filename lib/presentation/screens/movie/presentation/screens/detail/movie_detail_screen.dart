@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
@@ -52,6 +53,7 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
   String? _releaseDate;
   String? _certification;
   List<String> _genres = [];
+  List<Map<String, dynamic>> _episodes = [];
 
   @override
   void initState() {
@@ -75,7 +77,10 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
         _runtime = map['runtime'] as String?;
         _releaseDate = map['releaseDate'] as String?;
         _certification = map['certification'] as String?;
+        _certification = map['certification'] as String?;
         _genres = (map['genres'] as List?)?.cast<String>() ?? [];
+        _episodes =
+            (map['episodes'] as List?)?.cast<Map<String, dynamic>>() ?? [];
       });
     } catch (e) {
       // keep UI resilient
@@ -106,6 +111,181 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _isLoadingImages = false);
+    }
+  }
+
+  // ============================================================================
+  // PLAY LOGIC (TV-aware with episode picker and continue-watching)
+  // ============================================================================
+  Future<void> _handlePlayPressed(BuildContext context) async {
+    final hasCredit = await ref
+        .read(creditManagerProvider)
+        .requestCredit(context, ActionType.movie);
+    if (!hasCredit || !context.mounted) return;
+
+    final isTv = widget.movie.mediaType == 'tv';
+
+    if (isTv && _episodes.isNotEmpty) {
+      // Check for last-watched episode
+      final prefs = await SharedPreferences.getInstance();
+      final lastWatchedKey = 'last_watched_${widget.movie.id}';
+      final lastWatchedData = prefs.getString(lastWatchedKey);
+
+      Map<String, dynamic>? lastEpisode;
+      if (lastWatchedData != null) {
+        try {
+          // Format: "S:1:E:3"
+          final parts = lastWatchedData.split(':');
+          if (parts.length == 4) {
+            lastEpisode = {
+              'season': int.parse(parts[1]),
+              'episode': int.parse(parts[3])
+            };
+          }
+        } catch (_) {}
+      }
+
+      if (!context.mounted) return;
+      _showEpisodePicker(context, lastEpisode);
+    } else {
+      // Movie - go directly
+      _navigateToPlayer(context, season: null, episode: null);
+    }
+  }
+
+  void _showEpisodePicker(
+      BuildContext context, Map<String, dynamic>? lastWatchedEpisode) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.grey[900],
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      isScrollControlled: true,
+      builder: (ctx) => DraggableScrollableSheet(
+        initialChildSize: 0.6,
+        minChildSize: 0.4,
+        maxChildSize: 0.9,
+        expand: false,
+        builder: (ctx, scrollController) => Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text("Select Episode",
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold)),
+                  IconButton(
+                      icon: const Icon(Icons.close, color: Colors.white70),
+                      onPressed: () => Navigator.pop(ctx)),
+                ],
+              ),
+            ),
+            // Continue Watching Card
+            if (lastWatchedEpisode != null)
+              Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: InkWell(
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _navigateToPlayer(context,
+                        season: lastWatchedEpisode['season'].toString(),
+                        episode: lastWatchedEpisode['episode'].toString());
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(colors: [
+                        Theme.of(context).colorScheme.primary,
+                        Theme.of(context).colorScheme.primary.withOpacity(0.8)
+                      ]),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.play_circle_fill,
+                            color: Colors.white, size: 40),
+                        const SizedBox(width: 16),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text("Continue Watching",
+                                style: TextStyle(
+                                    color:
+                                        Theme.of(context).colorScheme.onPrimary,
+                                    fontSize: 12)),
+                            Text(
+                                "Season ${lastWatchedEpisode['season']}, Episode ${lastWatchedEpisode['episode']}",
+                                style: TextStyle(
+                                    color:
+                                        Theme.of(context).colorScheme.onPrimary,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            const Divider(color: Colors.white24),
+            // Episodes List
+            Expanded(
+              child: ListView.builder(
+                controller: scrollController,
+                itemCount: _episodes.length,
+                itemBuilder: (ctx, index) {
+                  final ep = _episodes[index];
+                  return ListTile(
+                    leading:
+                        const Icon(Icons.movie_outlined, color: Colors.white70),
+                    title: Text("Episode ${ep['episode']}",
+                        style: const TextStyle(color: Colors.white)),
+                    subtitle: Text("Season ${ep['season']}",
+                        style: const TextStyle(color: Colors.white70)),
+                    trailing:
+                        const Icon(Icons.play_arrow, color: Colors.pinkAccent),
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _navigateToPlayer(context,
+                          season: ep['season'].toString(),
+                          episode: ep['episode'].toString());
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _navigateToPlayer(BuildContext context,
+      {String? season, String? episode}) async {
+    final movieToPlay = widget.movie.copyWith(episodes: _episodes);
+
+    // Save last-watched for TV series
+    if (widget.movie.mediaType == 'tv' && season != null && episode != null) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(
+          'last_watched_${widget.movie.id}', 'S:$season:E:$episode');
+    }
+
+    if (!context.mounted) return;
+
+    if (season != null && episode != null) {
+      context.pushNamed(
+        'movie-play',
+        extra: movieToPlay,
+        queryParameters: {'season': season, 'episode': episode},
+      );
+    } else {
+      context.pushNamed('movie-play', extra: movieToPlay);
     }
   }
 
@@ -264,19 +444,7 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
                         bottom: ResponsiveConfig.height(20),
                         right: ResponsiveConfig.width(20),
                         child: InkWell(
-                          onTap: () async {
-                            // Credit Check
-                            final hasCredit = await ref
-                                .read(creditManagerProvider)
-                                .requestCredit(context, ActionType.movie);
-
-                            if (hasCredit) {
-                              if (context.mounted) {
-                                context.push('/movies/play',
-                                    extra: widget.movie);
-                              }
-                            }
-                          },
+                          onTap: () => _handlePlayPressed(context),
                           child: Container(
                             width: ResponsiveConfig.width(60),
                             height: ResponsiveConfig.height(60),

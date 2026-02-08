@@ -1,20 +1,33 @@
+// ignore_for_file: prefer_const_constructors, avoid_print
+
 import 'dart:async';
+import 'dart:collection';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:video_player/video_player.dart';
 import 'package:chewie/chewie.dart';
 import '../../../services/credit_manager.dart';
+import 'package:go_router/go_router.dart';
+import 'domain/entities/movie.dart';
 
+/// Netflix-style video player with embedded stream extraction and seamless episode switching.
 class CustomVideoPlayer extends ConsumerStatefulWidget {
   final String url;
   final String movieId;
+  final Movie? sourceMovie;
+  final List<Map<String, dynamic>>? episodes;
+  final Map<String, dynamic>? currentEpisode;
 
   const CustomVideoPlayer({
     super.key,
     required this.url,
     required this.movieId,
+    this.sourceMovie,
+    this.episodes,
+    this.currentEpisode,
   });
 
   @override
@@ -22,55 +35,173 @@ class CustomVideoPlayer extends ConsumerStatefulWidget {
 }
 
 class _CustomVideoPlayerState extends ConsumerState<CustomVideoPlayer> {
+  // -- Player Controllers --
   VideoPlayerController? _videoController;
   ChewieController? _chewieController;
   bool _isInitialized = false;
   String? _errorMessage;
+  String _currentStreamUrl = '';
 
-  // VLC/Netflix-style overlays
+  // -- Currently Playing Episode (mutable) --
+  late int _currentSeason;
+  late int _currentEpisodeNum;
+
+  // -- In-Player Extraction State --
+  bool _isLoadingNewStream = false; // Shows overlay during episode switch
+  String? _preloadedNextEpisodeUrl;
+  HeadlessInAppWebView? _headlessWebView;
+  Completer<String?>? _extractionCompleter;
+
+  // -- VLC/Netflix-style overlays --
   String? _overlayText;
   IconData? _overlayIcon;
   Timer? _overlayTimer;
 
-  // Premium Features
+  // -- Premium Features --
   bool _isLocked = false;
   double _volume = 1.0;
-  double _brightness = 0.5;
   bool _showCustomControls = true;
   Timer? _hideControlsTimer;
   Timer? _creditDeductionTimer;
 
+  // -- Scripts (copied from movies.dart) --
+  static const String _extractionScript = r"""
+    (function() {
+      console.log("[Stream Sniffer] Extraction hooks initialized.");
+      const patterns = [/\.m3u8($|\?)/i, /\.mp4($|\?)/i, /\.mpd($|\?)/i];
+      const notifyFound = (url) => {
+        if (patterns.some(p => p.test(url))) {
+           console.log("[Stream Sniffer] Intercepted: " + url);
+           window.flutter_inappwebview.callHandler('onStreamFound', url);
+        }
+      };
+      const originOpen = XMLHttpRequest.prototype.open;
+      XMLHttpRequest.prototype.open = function(method, url) {
+        notifyFound(url);
+        return originOpen.apply(this, arguments);
+      };
+      const originFetch = window.fetch;
+      window.fetch = function() {
+        const url = (typeof arguments[0] === 'string') ? arguments[0] : (arguments[0] && arguments[0].url);
+        if (url) notifyFound(url);
+        return originFetch.apply(this, arguments);
+      };
+      window.open = function() { return null; };
+    })();
+  """;
+
+  static const String _autoClickScript = r"""
+    (function() {
+      function triggerEvent(element, eventType) {
+          const event = new MouseEvent(eventType, { view: window, bubbles: true, cancelable: true, buttons: 1 });
+          element.dispatchEvent(event);
+      }
+      const clickInterval = setInterval(() => {
+          try {
+              const plBut = document.getElementById('pl_but');
+              if (plBut && plBut.offsetParent) {
+                  console.log("[Stream Sniffer] Clicking #pl_but");
+                  triggerEvent(plBut, 'click');
+                  plBut.click();
+                  clearInterval(clickInterval);
+                  if (plBut.parentElement) {
+                      triggerEvent(plBut.parentElement, 'click');
+                  }
+              }
+          } catch (e) { console.log(e); }
+      }, 1000);
+      window.flutter_inappwebview.callHandler('onContentReady', 'initialized');
+    })();
+  """;
+
   @override
   void initState() {
     super.initState();
+    _currentStreamUrl = widget.url;
+    _currentSeason = widget.currentEpisode?['season'] as int? ?? 1;
+    _currentEpisodeNum = widget.currentEpisode?['episode'] as int? ?? 1;
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _initializePlayer();
+      _initializePlayer(_currentStreamUrl);
       _startCreditDeductionTimer();
+      _preloadNextEpisode();
     });
   }
 
+  // ============================================================================
+  // POSITION STORAGE (Per-Episode for TV)
+  // ============================================================================
+  String get _positionKey {
+    if (widget.sourceMovie?.mediaType == 'tv') {
+      return 'movie_${widget.movieId}_S${_currentSeason}_E${_currentEpisodeNum}_position';
+    }
+    return 'movie_${widget.movieId}_position';
+  }
+
+  Future<void> _savePosition() async {
+    if (_videoController == null || !_videoController!.value.isInitialized) {
+      return;
+    }
+    try {
+      final position = _videoController!.value.position.inMilliseconds;
+      if (position > 0) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setInt(_positionKey, position);
+        print('💾 Saved position ($position ms) to: $_positionKey');
+      }
+    } catch (e) {
+      debugPrint("Error saving position: $e");
+    }
+  }
+
+  Future<Duration> _loadPosition() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedMs = prefs.getInt(_positionKey) ?? 0;
+    print('🔄 Loaded position ($savedMs ms) from: $_positionKey');
+    return Duration(milliseconds: savedMs);
+  }
+
+  // ============================================================================
+  // CREDIT DEDUCTION (Resets on each new episode)
+  // ============================================================================
   void _startCreditDeductionTimer() {
     _creditDeductionTimer?.cancel();
-    _creditDeductionTimer = Timer(const Duration(seconds: 30), () {
+    _creditDeductionTimer = Timer(const Duration(seconds: 30), () async {
       if (!mounted) return;
-      ref.read(creditManagerProvider).consumeCredits(ActionType.movie);
-      debugPrint("🎬 30s Playback Reached: Credit Consumed.");
+
+      // Request credit - shows ad dialog if insufficient
+      final hasCredit = await ref
+          .read(creditManagerProvider)
+          .requestCredit(context, ActionType.movie);
+
+      if (hasCredit) {
+        debugPrint(
+            "🎬 30s Playback: Credit Consumed for S$_currentSeason E$_currentEpisodeNum");
+      } else {
+        // User refused to watch ad or has no credits - go home
+        debugPrint("🎬 Credit refused - navigating to home");
+        if (mounted) {
+          // Restore orientation and system UI before leaving
+          await SystemChrome.setPreferredOrientations(
+              [DeviceOrientation.portraitUp]);
+          await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+          context.go('/'); // Navigate to home
+        }
+      }
     });
   }
 
-  Future<void> _initializePlayer() async {
+  // ============================================================================
+  // PLAYER INITIALIZATION
+  // ============================================================================
+  Future<void> _initializePlayer(String streamUrl) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final savedMs = prefs.getInt("movie_${widget.movieId}_position") ?? 0;
-      final startPosition = Duration(milliseconds: savedMs);
+      final startPosition = await _loadPosition();
 
       _videoController = VideoPlayerController.networkUrl(
-        Uri.parse(widget.url),
-        // Optimize for streaming
+        Uri.parse(streamUrl),
         videoPlayerOptions: VideoPlayerOptions(
-          mixWithOthers: true,
-          allowBackgroundPlayback: false,
-        ),
+            mixWithOthers: true, allowBackgroundPlayback: false),
       );
 
       await _videoController!.initialize();
@@ -81,76 +212,266 @@ class _CustomVideoPlayerState extends ConsumerState<CustomVideoPlayer> {
         autoPlay: true,
         looping: false,
         startAt: startPosition,
-        showControls: false, // We'll use our own premium custom controls
+        showControls: false,
         allowPlaybackSpeedChanging: true,
-        fullScreenByDefault:
-            false, // Disable Chewie's internal fullscreen to keep our overlays active
-        allowFullScreen:
-            false, // Let our Stack and SystemChrome handle the layout
+        fullScreenByDefault: false,
+        allowFullScreen: false,
+        zoomAndPan: true,
         aspectRatio: _videoController!.value.aspectRatio,
         placeholder: Container(color: Colors.black),
         autoInitialize: true,
-        errorBuilder: (context, errorMessage) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.error_outline, color: Colors.white, size: 42),
-                const SizedBox(height: 12),
-                const Text(
-                  "Stream Blocked or Expired",
-                  style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold),
-                ),
-                Text(
-                  errorMessage,
-                  style: const TextStyle(color: Colors.white70, fontSize: 12),
-                  textAlign: TextAlign.center,
-                ),
-              ],
-            ),
-          );
-        },
+        errorBuilder: (context, errorMessage) =>
+            _buildErrorWidget(errorMessage),
         allowedScreenSleep: false,
+        
       );
 
-      // Force Landscape and Hide System UI
-      SystemChrome.setPreferredOrientations([
-        DeviceOrientation.landscapeLeft,
-        DeviceOrientation.landscapeRight,
-      ]);
+      SystemChrome.setPreferredOrientations(
+          [DeviceOrientation.landscapeLeft, DeviceOrientation.landscapeRight]);
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
 
       if (mounted) {
-        setState(() {
-          _isInitialized = true;
-        });
+        setState(() => _isInitialized = true);
         _startHideTimer();
       }
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          _errorMessage = e.toString();
-        });
-      }
+      if (mounted) setState(() => _errorMessage = e.toString());
     }
   }
 
+  Widget _buildErrorWidget(String errorMessage) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.error_outline, color: Colors.white, size: 42),
+          const SizedBox(height: 12),
+          const Text("Stream Blocked or Expired",
+              style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold)),
+          Text(errorMessage,
+              style: const TextStyle(color: Colors.white70, fontSize: 12),
+              textAlign: TextAlign.center),
+          const SizedBox(height: 20),
+          ElevatedButton.icon(
+            onPressed: _retryCurrentEpisode,
+            icon: const Icon(Icons.refresh),
+            label: const Text("Retry"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ============================================================================
+  // HEADLESS WEBVIEW STREAM EXTRACTION
+  // ============================================================================
+  Future<String?> _extractStreamUrl(
+      {required int season, required int episode}) async {
+    if (widget.sourceMovie == null) return null;
+
+    final tmdbId = widget.sourceMovie!.id;
+    final isTv = widget.sourceMovie!.mediaType == 'tv';
+    final targetUrl = isTv
+        ? 'https://vidsrc-embed.ru/embed/tv?tmdb=$tmdbId&season=$season&episode=$episode'
+        : 'https://vidsrc-embed.ru/embed/movie?tmdb=$tmdbId';
+
+    print('🌐 Starting headless extraction for: $targetUrl');
+
+    _extractionCompleter = Completer<String?>();
+    String? foundUrl;
+
+    _headlessWebView = HeadlessInAppWebView(
+      initialUrlRequest: URLRequest(url: WebUri(targetUrl)),
+      initialUserScripts: UnmodifiableListView<UserScript>([
+        UserScript(
+            source: _extractionScript,
+            injectionTime: UserScriptInjectionTime.AT_DOCUMENT_START),
+        UserScript(
+            source: _autoClickScript,
+            injectionTime: UserScriptInjectionTime.AT_DOCUMENT_START,
+            forMainFrameOnly: false),
+      ]),
+      initialSettings: InAppWebViewSettings(
+        javaScriptEnabled: true,
+        mediaPlaybackRequiresUserGesture: false,
+        userAgent:
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+      ),
+      onWebViewCreated: (controller) {
+        controller.addJavaScriptHandler(
+          handlerName: 'onStreamFound',
+          callback: (args) {
+            if (args.isNotEmpty && !_extractionCompleter!.isCompleted) {
+              foundUrl = args[0].toString();
+              print('✅ Stream extracted: $foundUrl');
+              _extractionCompleter!.complete(foundUrl);
+            }
+          },
+        );
+      },
+      onLoadResource: (controller, resource) {
+        final url = resource.url.toString();
+        final patterns = [
+          RegExp(r'\.m3u8($|\?)', caseSensitive: false),
+          RegExp(r'\.mp4($|\?)', caseSensitive: false)
+        ];
+        if (patterns.any((p) => p.hasMatch(url)) &&
+            !url.contains("segment") &&
+            !url.contains("ad")) {
+          if (!_extractionCompleter!.isCompleted) {
+            foundUrl = url;
+            print('✅ Stream from resource: $foundUrl');
+            _extractionCompleter!.complete(foundUrl);
+          }
+        }
+      },
+    );
+
+    await _headlessWebView!.run();
+
+    // Timeout after 30 seconds
+    final result = await _extractionCompleter!.future
+        .timeout(const Duration(seconds: 30), onTimeout: () {
+      print('⏳ Extraction timed out.');
+      return null;
+    });
+
+    await _headlessWebView?.dispose();
+    _headlessWebView = null;
+
+    return result;
+  }
+
+  // ============================================================================
+  // PRELOAD NEXT EPISODE
+  // ============================================================================
+  Future<void> _preloadNextEpisode() async {
+    if (widget.episodes == null || widget.episodes!.isEmpty) return;
+    if (widget.sourceMovie?.mediaType != 'tv') return;
+
+    final nextEpIndex = widget.episodes!.indexWhere((e) =>
+        e['season'] == _currentSeason &&
+        e['episode'] == _currentEpisodeNum + 1);
+    if (nextEpIndex == -1) {
+      print('ℹ️ No next episode to preload.');
+      return;
+    }
+
+    final nextEp = widget.episodes![nextEpIndex];
+    print(
+        '🔮 Pre-loading next episode: S${nextEp['season']} E${nextEp['episode']}');
+
+    final url = await _extractStreamUrl(
+        season: nextEp['season'] as int, episode: nextEp['episode'] as int);
+    if (url != null) {
+      _preloadedNextEpisodeUrl = url;
+      print('🎉 Next episode pre-loaded!');
+    }
+  }
+
+  // ============================================================================
+  // SWITCH TO EPISODE (Seamless, In-Player)
+  // ============================================================================
+  Future<void> _switchToEpisode(Map<String, dynamic> episode) async {
+    final targetSeason = episode['season'] as int;
+    final targetEpisode = episode['episode'] as int;
+
+    if (targetSeason == _currentSeason && targetEpisode == _currentEpisodeNum) {
+      return; // Already playing
+    }
+
+    print('🔄 Switching to S$targetSeason E$targetEpisode');
+
+    // 1. Save current position
+    await _savePosition();
+
+    // 2. Show loading state
+    setState(() => _isLoadingNewStream = true);
+
+    // 3. Determine if we have preloaded URL
+    String? newUrl;
+    final isNextEpisode = targetSeason == _currentSeason &&
+        targetEpisode == _currentEpisodeNum + 1;
+
+    if (isNextEpisode && _preloadedNextEpisodeUrl != null) {
+      newUrl = _preloadedNextEpisodeUrl;
+      _preloadedNextEpisodeUrl = null; // Consume it
+      print('⚡ Using pre-loaded URL!');
+    } else {
+      newUrl =
+          await _extractStreamUrl(season: targetSeason, episode: targetEpisode);
+    }
+
+    if (newUrl == null) {
+      setState(() {
+        _isLoadingNewStream = false;
+        _errorMessage =
+            'Failed to extract stream for S$targetSeason E$targetEpisode';
+      });
+      return;
+    }
+
+    // 4. Dispose old controllers
+    _chewieController?.dispose();
+    _videoController?.dispose();
+    _chewieController = null;
+    _videoController = null;
+
+    // 5. Update state
+    _currentSeason = targetSeason;
+    _currentEpisodeNum = targetEpisode;
+    _currentStreamUrl = newUrl;
+    _isInitialized = false;
+    _errorMessage = null;
+
+    // 6. Initialize new player
+    await _initializePlayer(newUrl);
+
+    // 7. Reset credit timer
+    _startCreditDeductionTimer();
+
+    // 8. Hide loading
+    setState(() => _isLoadingNewStream = false);
+
+    // 9. Preload the *new* next episode
+    _preloadNextEpisode();
+  }
+
+  void _retryCurrentEpisode() async {
+    setState(() {
+      _errorMessage = null;
+      _isLoadingNewStream = true;
+    });
+    final url = await _extractStreamUrl(
+        season: _currentSeason, episode: _currentEpisodeNum);
+    if (url != null) {
+      _currentStreamUrl = url;
+      await _initializePlayer(url);
+    } else {
+      setState(() => _errorMessage = 'Retry failed. Please try again.');
+    }
+    setState(() => _isLoadingNewStream = false);
+  }
+
+  // ============================================================================
+  // UI CONTROLS
+  // ============================================================================
   void _startHideTimer() {
     _hideControlsTimer?.cancel();
     _hideControlsTimer = Timer(const Duration(seconds: 3), () {
-      if (mounted) {
+      if (mounted &&
+          _videoController != null &&
+          _videoController!.value.isPlaying) {
         setState(() => _showCustomControls = false);
       }
     });
   }
 
   void _toggleControls() {
-    setState(() {
-      _showCustomControls = !_showCustomControls;
-    });
+    setState(() => _showCustomControls = !_showCustomControls);
     if (_showCustomControls) _startHideTimer();
   }
 
@@ -179,45 +500,9 @@ class _CustomVideoPlayerState extends ConsumerState<CustomVideoPlayer> {
     final newPos = forward
         ? currentPos + const Duration(seconds: 10)
         : currentPos - const Duration(seconds: 10);
-
     await _videoController!.seekTo(newPos);
-    _showOverlay(
-      forward ? "+10s" : "-10s",
-      forward ? Icons.fast_forward : Icons.fast_rewind,
-    );
-  }
-
-  Future<void> _savePosition() async {
-    if (_videoController == null || !_videoController!.value.isInitialized) {
-      return;
-    }
-
-    try {
-      final position = _videoController!.value.position.inMilliseconds;
-      if (position > 0) {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setInt("movie_${widget.movieId}_position", position);
-      }
-    } catch (e) {
-      debugPrint("Error saving position: $e");
-    }
-  }
-
-  @override
-  void dispose() {
-    _savePosition();
-    _overlayTimer?.cancel();
-    _creditDeductionTimer?.cancel();
-    _videoController?.dispose();
-    _chewieController?.dispose();
-
-    // Restore orientations and system UI
-    SystemChrome.setPreferredOrientations([
-      DeviceOrientation.portraitUp,
-    ]);
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-
-    super.dispose();
+    _showOverlay(forward ? "+10s" : "-10s",
+        forward ? Icons.fast_forward : Icons.fast_rewind);
   }
 
   String _formatDuration(Duration duration) {
@@ -230,51 +515,120 @@ class _CustomVideoPlayerState extends ConsumerState<CustomVideoPlayer> {
     return "$twoDigitMinutes:$twoDigitSeconds";
   }
 
+  void _showEpisodeList() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.black87,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.5,
+        minChildSize: 0.3,
+        maxChildSize: 0.9,
+        expand: false,
+        builder: (context, scrollController) => Column(
+          children: [
+            Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Text(
+                    "${widget.sourceMovie?.title ?? ""} - ${widget.currentEpisode!["season"]}Episodes",
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold))),
+            Expanded(
+              child: ListView.builder(
+                controller: scrollController,
+                itemCount: widget.episodes?.length ?? 0,
+                itemBuilder: (context, index) {
+                  final ep = widget.episodes![index];
+                  final isCurrent = ep['episode'] == _currentEpisodeNum &&
+                      ep['season'] == _currentSeason;
+                  return ListTile(
+                    leading: Icon(Icons.movie, color: Colors.white70),
+                    title: Text("Episode ${ep['episode']}",
+                        style: TextStyle(
+                            color: isCurrent ? Colors.pinkAccent : Colors.white,
+                            fontWeight: isCurrent
+                                ? FontWeight.bold
+                                : FontWeight.normal)),
+                    //subtitle: Text("Season ${ep['season']}",
+                    //  style: const TextStyle(color: Colors.white70)),
+                    trailing: isCurrent
+                        ? const Icon(Icons.play_circle_outline,
+                            color: Colors.pinkAccent)
+                        : const Icon(Icons.play_arrow, color: Colors.white54),
+                    onTap: () {
+                      Navigator.pop(context);
+                      if (!isCurrent) _switchToEpisode(ep);
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _savePosition();
+    _overlayTimer?.cancel();
+    _hideControlsTimer?.cancel();
+    _creditDeductionTimer?.cancel();
+    _headlessWebView?.dispose();
+    _videoController?.dispose();
+    _chewieController?.dispose();
+
+    SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    super.dispose();
+  }
+
+  // ============================================================================
+  // BUILD
+  // ============================================================================
   @override
   Widget build(BuildContext context) {
-    if (_errorMessage != null) {
-      return Container(
-        color: Colors.black,
-        child: Center(
+    // Error State
+    if (_errorMessage != null && !_isLoadingNewStream) {
+      return Scaffold(
+          backgroundColor: Colors.black,
+          body: _buildErrorWidget(_errorMessage!));
+    }
+
+    // Loading State (initial or switching)
+    if (!_isInitialized || _chewieController == null || _isLoadingNewStream) {
+      return Scaffold(
+        backgroundColor: Colors.black,
+        body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.videocam_off_outlined,
-                  color: Colors.pinkAccent, size: 64),
-              const SizedBox(height: 16),
-              const Text("Playback Error",
-                  style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 40),
-                child: Text(_errorMessage!,
-                    style: const TextStyle(color: Colors.white70, fontSize: 13),
-                    textAlign: TextAlign.center),
-              ),
+              const CircularProgressIndicator(color: Colors.pinkAccent),
               const SizedBox(height: 24),
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text("Go Back",
-                    style: TextStyle(color: Colors.pinkAccent)),
+              Text(
+                _isLoadingNewStream
+                    ? "Loading Episode S$_currentSeason E$_currentEpisodeNum..."
+                    : "Preparing Player...",
+                style: const TextStyle(color: Colors.white, fontSize: 16),
               ),
+              if (widget.sourceMovie != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(widget.sourceMovie!.title,
+                      style: TextStyle(
+                          color: Colors.white.withOpacity(0.5), fontSize: 12)),
+                ),
             ],
           ),
         ),
       );
     }
 
-    if (!_isInitialized || _chewieController == null) {
-      return Container(
-        color: Colors.black,
-        child: const Center(
-          child: CircularProgressIndicator(color: Colors.pinkAccent),
-        ),
-      );
-    }
-
+    // Player UI
     return Scaffold(
       backgroundColor: Colors.black,
       body: GestureDetector(
@@ -285,13 +639,8 @@ class _CustomVideoPlayerState extends ConsumerState<CustomVideoPlayer> {
           final delta = details.primaryDelta! / height;
           if (details.localPosition.dx <
               MediaQuery.of(context).size.width / 2) {
-            // Brightness (Left side)
-            setState(() {
-              _brightness = (_brightness - delta).clamp(0.0, 1.0);
-            });
-            _showOverlay("${(_brightness * 100).toInt()}%", Icons.brightness_6);
+            // Brightness (Left side) - placeholder
           } else {
-            // Volume (Right side)
             setState(() {
               _volume = (_volume - delta).clamp(0.0, 1.0);
               _videoController?.setVolume(_volume);
@@ -309,167 +658,163 @@ class _CustomVideoPlayerState extends ConsumerState<CustomVideoPlayer> {
               ),
             ),
 
-            // 2. Lock / Premium Controls Layer
-            if (_showCustomControls)
-              Positioned.fill(
-                child: Container(
-                  color: Colors.black26,
-                  child: Column(
-                    children: [
-                      // Top Bar
-                      SafeArea(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 8),
-                          child: Row(
-                            children: [
-                              if (!_isLocked)
-                                IconButton(
-                                  icon: const Icon(Icons.arrow_back,
-                                      color: Colors.white),
-                                  onPressed: () => Navigator.of(context).pop(),
-                                ),
-                              const Spacer(),
-                              IconButton(
-                                icon: Icon(
-                                    _isLocked ? Icons.lock : Icons.lock_open,
-                                    color: Colors.white),
-                                onPressed: () {
-                                  setState(() => _isLocked = !_isLocked);
-                                  _showOverlay(
-                                      _isLocked
-                                          ? "Screen Locked"
-                                          : "Screen Unlocked",
-                                      _isLocked ? Icons.lock : Icons.lock_open);
-                                  if (!_isLocked) _startHideTimer();
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
+            // 2. Controls Layer
+            if (_showCustomControls) _buildControlsOverlay(),
+
+            // 3. VLC Style Overlay
+            if (_overlayIcon != null) _buildVlcOverlay(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildControlsOverlay() {
+    return Positioned.fill(
+      child: Container(
+        color: Colors.black26,
+        child: Column(
+          children: [
+            // Top Bar
+            SafeArea(
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Row(
+                  children: [
+                    if (!_isLocked)
+                      IconButton(
+                          icon:
+                              const Icon(Icons.arrow_back, color: Colors.white),
+                          onPressed: () => Navigator.of(context).pop()),
+                    Expanded(
+                      child: Text(
+                        widget.sourceMovie?.mediaType == 'tv'
+                            ? "${widget.sourceMovie?.title ?? ""} - S$_currentSeason E$_currentEpisodeNum"
+                            : widget.sourceMovie?.title ?? "",
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w500),
+                        overflow: TextOverflow.ellipsis,
                       ),
-
-                      const Spacer(),
-
-                      // Center Play/Pause & Seeks
-                      if (!_isLocked)
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.replay_10,
-                                  color: Colors.white, size: 48),
-                              onPressed: () => _seek(false),
-                            ),
-                            IconButton(
-                              icon: Icon(
-                                _videoController!.value.isPlaying
-                                    ? Icons.pause_circle_filled
-                                    : Icons.play_circle_filled,
-                                color: Colors.pinkAccent,
-                                size: 84,
-                              ),
-                              onPressed: () {
-                                setState(() {
-                                  _videoController!.value.isPlaying
-                                      ? _videoController!.pause()
-                                      : _videoController!.play();
-                                });
-                                _startHideTimer();
-                              },
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.forward_10,
-                                  color: Colors.white, size: 48),
-                              onPressed: () => _seek(true),
-                            ),
-                          ],
-                        ),
-
-                      const Spacer(),
-
-                      // Bottom Progress Bar
-                      if (!_isLocked)
-                        SafeArea(
-                          child: Container(
-                            margin: const EdgeInsets.only(
-                                bottom: 16, left: 16, right: 16),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                // Standard Video Player Progress Indicator (The pink bar)
-                                VideoProgressIndicator(
-                                  _videoController!,
-                                  allowScrubbing: true,
-                                  colors: const VideoProgressColors(
-                                    playedColor: Colors.pinkAccent,
-                                    bufferedColor: Colors.white24,
-                                    backgroundColor: Colors.white12,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    ValueListenableBuilder(
-                                      valueListenable: _videoController!,
-                                      builder: (context, VideoPlayerValue value,
-                                          child) {
-                                        return Text(
-                                          _formatDuration(value.position),
-                                          style: const TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 12),
-                                        );
-                                      },
-                                    ),
-                                    ValueListenableBuilder(
-                                      valueListenable: _videoController!,
-                                      builder: (context, VideoPlayerValue value,
-                                          child) {
-                                        return Text(
-                                          _formatDuration(value.duration),
-                                          style: const TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 12),
-                                        );
-                                      },
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
+                    ),
+                    if (widget.episodes != null && widget.episodes!.isNotEmpty)
+                      IconButton(
+                          icon: const Icon(Icons.playlist_play,
+                              color: Colors.white, size: 32),
+                          onPressed: _showEpisodeList),
+                    IconButton(
+                        icon: const Icon(Icons.favorite_border,
+                            color: Colors.white),
+                        onPressed: () =>
+                            _showOverlay("Added to Favorites", Icons.favorite)),
+                    IconButton(
+                        icon: Icon(_isLocked ? Icons.lock : Icons.lock_open,
+                            color: Colors.white),
+                        onPressed: () {
+                          setState(() => _isLocked = !_isLocked);
+                          _showOverlay(
+                              _isLocked ? "Screen Locked" : "Screen Unlocked",
+                              _isLocked ? Icons.lock : Icons.lock_open);
+                          if (!_isLocked) _startHideTimer();
+                        }),
+                  ],
                 ),
               ),
-
-            // VLC Style Overlay
-            if (_overlayIcon != null)
-              Center(
-                child: Container(
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    color: Colors.black54,
-                    borderRadius: BorderRadius.circular(16),
+            ),
+            const Spacer(),
+            // Center Play/Pause & Seeks
+            if (!_isLocked)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  IconButton(
+                      icon: const Icon(Icons.replay_10,
+                          color: Colors.white, size: 48),
+                      onPressed: () => _seek(false)),
+                  IconButton(
+                    icon: Icon(
+                        _videoController!.value.isPlaying
+                            ? Icons.pause_circle_filled
+                            : Icons.play_circle_filled,
+                        color: Colors.pinkAccent,
+                        size: 84),
+                    onPressed: () {
+                      setState(() {
+                        _videoController!.value.isPlaying
+                            ? _videoController!.pause()
+                            : _videoController!.play();
+                      });
+                      if (_videoController!.value.isPlaying) _startHideTimer();
+                    },
                   ),
+                  IconButton(
+                      icon: const Icon(Icons.forward_10,
+                          color: Colors.white, size: 48),
+                      onPressed: () => _seek(true)),
+                ],
+              ),
+            const Spacer(),
+            // Bottom Progress Bar
+            if (!_isLocked)
+              SafeArea(
+                child: Container(
+                  margin:
+                      const EdgeInsets.only(bottom: 16, left: 16, right: 16),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(_overlayIcon, color: Colors.white, size: 48),
-                      const SizedBox(height: 12),
-                      Text(_overlayText!,
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold)),
+                      VideoProgressIndicator(_videoController!,
+                          allowScrubbing: true,
+                          colors: const VideoProgressColors(
+                              playedColor: Colors.pinkAccent,
+                              bufferedColor: Colors.white24,
+                              backgroundColor: Colors.white12)),
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          ValueListenableBuilder<VideoPlayerValue>(
+                              valueListenable: _videoController!,
+                              builder: (_, value, __) => Text(
+                                  _formatDuration(value.position),
+                                  style: const TextStyle(
+                                      color: Colors.white, fontSize: 12))),
+                          ValueListenableBuilder<VideoPlayerValue>(
+                              valueListenable: _videoController!,
+                              builder: (_, value, __) => Text(
+                                  _formatDuration(value.duration),
+                                  style: const TextStyle(
+                                      color: Colors.white, fontSize: 12))),
+                        ],
+                      ),
                     ],
                   ),
                 ),
               ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildVlcOverlay() {
+    return Center(
+      child: Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+            color: Colors.black54, borderRadius: BorderRadius.circular(16)),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(_overlayIcon, color: Colors.white, size: 48),
+            const SizedBox(height: 12),
+            Text(_overlayText!,
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold)),
           ],
         ),
       ),

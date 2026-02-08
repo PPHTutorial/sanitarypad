@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -458,15 +459,15 @@ class _PregnancyTrackingScreenState
                         );
                       }
                     } catch (e) {
-                      if (!mounted) return;
-
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content:
-                              Text('❌ Error saving kicks: ${e.toString()}'),
-                          duration: const Duration(seconds: 3),
-                        ),
-                      );
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content:
+                                Text('❌ Error saving kicks: ${e.toString()}'),
+                            duration: const Duration(seconds: 3),
+                          ),
+                        );
+                      }
                     }
                   },
                   child: const Text('Save kicks'),
@@ -1334,7 +1335,7 @@ class _PregnancyTrackingScreenState
 
 // --- Pregnancy Tabs ---
 
-class OverviewTab extends StatelessWidget {
+class OverviewTab extends StatefulWidget {
   const OverviewTab({
     super.key,
     required this.pregnancy,
@@ -1357,57 +1358,92 @@ class OverviewTab extends StatelessWidget {
   final bool isReadOnly;
 
   @override
+  State<OverviewTab> createState() => _OverviewTabState();
+}
+
+class _OverviewTabState extends State<OverviewTab> {
+  late int _selectedWeek;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedWeek = widget.pregnancy.currentWeek;
+  }
+
+  int _getTrimesterForWeek(int week) {
+    if (week < 13) return 1;
+    if (week < 27) return 2;
+    return 3;
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final currentMilestone = PregnancyService().getCurrentMilestone(pregnancy);
-    final dueDays = pregnancy.dueDate?.difference(DateTime.now()).inDays;
+    final milestones = PregnancyMilestone.getMilestones();
+    final currentMilestone = milestones.firstWhere(
+      (m) => m.week == _selectedWeek,
+      orElse: () => milestones.firstWhere(
+        (m) => m.week == widget.pregnancy.currentWeek,
+        orElse: () => milestones.last,
+      ),
+    );
+    final dueDays = widget.pregnancy.dueDate?.difference(DateTime.now()).inDays;
 
     return SingleChildScrollView(
       padding: ResponsiveConfig.padding(all: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          ProgressCard(pregnancy: pregnancy, daysUntilDue: dueDays),
+          ProgressCard(
+            pregnancy: widget.pregnancy,
+            daysUntilDue: dueDays,
+            selectedWeek: _selectedWeek,
+            onWeekSelected: (week) => setState(() => _selectedWeek = week),
+          ),
           ResponsiveConfig.heightBox(16),
-          if (currentMilestone != null)
-            MilestoneCard(milestone: currentMilestone),
+          PregnancyProgressionSection(
+            currentWeek: _selectedWeek,
+            trimester: _getTrimesterForWeek(_selectedWeek),
+          ),
+          ResponsiveConfig.heightBox(16),
+          MilestoneCard(milestone: currentMilestone),
           ResponsiveConfig.heightBox(16),
           StreamBuilder<List<KickEntry>>(
-            stream: kickStream,
+            stream: widget.kickStream,
             builder: (context, snapshot) {
               return KickSummaryCard(
                 entries: snapshot.data ?? [],
-                onSchedule: onScheduleKickReminder,
-                isReadOnly: isReadOnly,
+                onSchedule: widget.onScheduleKickReminder,
+                isReadOnly: widget.isReadOnly,
               );
             },
           ),
           ResponsiveConfig.heightBox(16),
           StreamBuilder<List<PregnancyAppointment>>(
-            stream: appointmentStream,
+            stream: widget.appointmentStream,
             builder: (context, snapshot) {
               return UpcomingAppointmentsCard(
                 appointments: snapshot.data ?? [],
-                onAddAppointment: onAddAppointment,
-                isReadOnly: isReadOnly,
+                onAddAppointment: widget.onAddAppointment,
+                isReadOnly: widget.isReadOnly,
               );
             },
           ),
           ResponsiveConfig.heightBox(16),
           StreamBuilder<List<PregnancyMedication>>(
-            stream: medicationStream,
+            stream: widget.medicationStream,
             builder: (context, snapshot) {
               return MedicationReminderCard(
                 medications: snapshot.data ?? [],
-                onAddMedication: onAddMedication,
-                isReadOnly: isReadOnly,
+                onAddMedication: widget.onAddMedication,
+                isReadOnly: widget.isReadOnly,
               );
             },
           ),
           ResponsiveConfig.heightBox(16),
           const DailyTipsCard(),
           ResponsiveConfig.heightBox(16),
-          if (!isReadOnly) ...[
-            PartnerModeCard(pregnancy: pregnancy),
+          if (!widget.isReadOnly) ...[
+            PartnerModeCard(pregnancy: widget.pregnancy),
             ResponsiveConfig.heightBox(16),
           ],
           ResponsiveConfig.heightBox(16),
@@ -1423,85 +1459,220 @@ class OverviewTab extends StatelessWidget {
 }
 
 class ProgressCard extends StatelessWidget {
-  const ProgressCard(
-      {super.key, required this.pregnancy, required this.daysUntilDue});
+  const ProgressCard({
+    super.key,
+    required this.pregnancy,
+    required this.daysUntilDue,
+    required this.selectedWeek,
+    required this.onWeekSelected,
+  });
 
   final Pregnancy pregnancy;
   final int? daysUntilDue;
+  final int selectedWeek;
+  final ValueChanged<int> onWeekSelected;
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Card(
+      elevation: 0,
+      color: colorScheme.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(24),
+      ),
       child: Padding(
-        padding: ResponsiveConfig.padding(all: 16),
+        padding: ResponsiveConfig.padding(all: 20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  'Week ${pregnancy.currentWeek} · Day ${pregnancy.currentDay}',
-                  style: ResponsiveConfig.textStyle(
-                    size: 18,
-                    weight: FontWeight.bold,
-                  ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Week $selectedWeek',
+                      style: ResponsiveConfig.textStyle(
+                        size: 24,
+                        weight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      'Day ${pregnancy.currentDay} of journey',
+                      style: ResponsiveConfig.textStyle(
+                        size: 14,
+                        color: AppTheme.mediumGray,
+                      ),
+                    ),
+                  ],
                 ),
-                Chip(
-                  label: Text('Trimester ${pregnancy.trimester}'),
-                  backgroundColor: AppTheme.primaryPink.withOpacity(0.15),
+                Container(
+                  padding:
+                      ResponsiveConfig.padding(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryPink.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    'Trimester ${_getTrimester(selectedWeek)}',
+                    style: ResponsiveConfig.textStyle(
+                      size: 12,
+                      weight: FontWeight.bold,
+                      color: AppTheme.primaryPink,
+                    ),
+                  ),
                 ),
               ],
             ),
-            ResponsiveConfig.heightBox(12),
+            ResponsiveConfig.heightBox(20),
             LinearProgressIndicator(
               value: pregnancy.progressPercentage / 100,
               backgroundColor: AppTheme.palePink,
               valueColor: const AlwaysStoppedAnimation<Color>(
                 AppTheme.primaryPink,
               ),
-              minHeight: 10,
+              minHeight: 8,
+              borderRadius: BorderRadius.circular(10),
             ),
-            ResponsiveConfig.heightBox(12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('Due date'),
-                    Text(
-                      pregnancy.dueDate != null
-                          ? DateFormat('EEE, MMM d').format(pregnancy.dueDate!)
-                          : 'Not set',
-                      style: ResponsiveConfig.textStyle(
-                        size: 16,
-                        weight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-                if (daysUntilDue != null && daysUntilDue! >= 0)
-                  Container(
-                    padding:
-                        ResponsiveConfig.padding(horizontal: 12, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: AppTheme.primaryPink,
-                      borderRadius: ResponsiveConfig.borderRadius(12),
-                    ),
-                    child: Text(
-                      '$daysUntilDue days to go',
-                      style: ResponsiveConfig.textStyle(
-                        size: 14,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-              ],
+            ResponsiveConfig.heightBox(20),
+            _PregnancyTimeline(
+              selectedWeek: selectedWeek,
+              currentWeek: pregnancy.currentWeek,
+              onWeekSelected: onWeekSelected,
             ),
           ],
         ),
       ),
+    );
+  }
+
+  int _getTrimester(int week) {
+    if (week < 13) return 1;
+    if (week < 27) return 2;
+    return 3;
+  }
+}
+
+class _PregnancyTimeline extends StatefulWidget {
+  const _PregnancyTimeline({
+    required this.selectedWeek,
+    required this.currentWeek,
+    required this.onWeekSelected,
+  });
+
+  final int selectedWeek;
+  final int currentWeek;
+  final ValueChanged<int> onWeekSelected;
+
+  @override
+  State<_PregnancyTimeline> createState() => _PregnancyTimelineState();
+}
+
+class _PregnancyTimelineState extends State<_PregnancyTimeline> {
+  late ScrollController _scrollController;
+
+  @override
+  void initState() {
+    super.initState();
+    // Start at current week
+    _scrollController = ScrollController(
+      initialScrollOffset: (widget.selectedWeek - 1) * 60.0,
+    );
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Pregnancy Timeline',
+          style: ResponsiveConfig.textStyle(
+            size: 14,
+            weight: FontWeight.bold,
+            color: AppTheme.mediumGray,
+          ),
+        ),
+        ResponsiveConfig.heightBox(12),
+        SizedBox(
+          height: 70,
+          child: ListView.builder(
+            controller: _scrollController,
+            scrollDirection: Axis.horizontal,
+            itemCount: 41,
+            itemBuilder: (context, index) {
+              final week = index + 1;
+              final isSelected = week == widget.selectedWeek;
+              final isCurrent = week == widget.currentWeek;
+
+              return GestureDetector(
+                onTap: () => widget.onWeekSelected(week),
+                child: Container(
+                  width: 55,
+                  margin: const EdgeInsets.only(right: 10),
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? AppTheme.primaryPink
+                        : colorScheme.secondaryContainer,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: isSelected
+                          ? AppTheme.primaryPink
+                          : isCurrent
+                              ? AppTheme.primaryPink.withOpacity(0.5)
+                              : colorScheme.surface,
+                      width: 2,
+                    ),
+                    boxShadow: isSelected
+                        ? [
+                            BoxShadow(
+                              color: AppTheme.primaryPink.withOpacity(0.3),
+                              blurRadius: 8,
+                              offset: const Offset(0, 4),
+                            )
+                          ]
+                        : null,
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        'W$week',
+                        style: ResponsiveConfig.textStyle(
+                          size: 12,
+                          weight:
+                              isSelected ? FontWeight.bold : FontWeight.normal,
+                          color:
+                              isSelected ? Colors.white : AppTheme.mediumGray,
+                        ),
+                      ),
+                      if (isCurrent && !isSelected)
+                        Container(
+                          width: 6,
+                          height: 6,
+                          margin: const EdgeInsets.only(top: 4),
+                          decoration: const BoxDecoration(
+                            color: AppTheme.primaryPink,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 }
@@ -1511,10 +1682,19 @@ class MilestoneCard extends StatelessWidget {
 
   final PregnancyMilestone milestone;
 
+  void _showDetails(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _MilestoneDetailsSheet(milestone: milestone),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Card(
-      color: AppTheme.lightPink,
+      color: AppTheme.primaryPink,
       child: Padding(
         padding: ResponsiveConfig.padding(all: 16),
         child: Column(
@@ -1525,19 +1705,184 @@ class MilestoneCard extends StatelessWidget {
               style: ResponsiveConfig.textStyle(
                 size: 18,
                 weight: FontWeight.bold,
+                color: Colors.white,
               ),
             ),
             ResponsiveConfig.heightBox(8),
             Text(
               milestone.description,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
               style: ResponsiveConfig.textStyle(
                 size: 14,
-                color: AppTheme.mediumGray,
+                color: Colors.white.withOpacity(0.9),
+              ),
+            ),
+            ResponsiveConfig.heightBox(8),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: () => _showDetails(context),
+                style: TextButton.styleFrom(
+                  backgroundColor: Colors.white.withOpacity(0.2),
+                  padding: ResponsiveConfig.padding(horizontal: 16),
+                  shape: const RoundedRectangleBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(20)),
+                  ),
+                ),
+                child: Text(
+                  'Read more',
+                  style: ResponsiveConfig.textStyle(
+                    size: 12,
+                    weight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+}
+
+class _MilestoneDetailsSheet extends StatelessWidget {
+  const _MilestoneDetailsSheet({required this.milestone});
+
+  final PregnancyMilestone milestone;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Container(
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+      ),
+      padding: ResponsiveConfig.padding(all: 24),
+      child: DraggableScrollableSheet(
+        initialChildSize: 0.7,
+        minChildSize: 0.5,
+        maxChildSize: 0.9,
+        expand: false,
+        builder: (context, scrollController) => ListView(
+          controller: scrollController,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppTheme.softGray,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            ResponsiveConfig.heightBox(24),
+            Text(
+              'Week ${milestone.week}',
+              style: ResponsiveConfig.textStyle(
+                size: 14,
+                weight: FontWeight.bold,
+                color: AppTheme.primaryPink,
+              ),
+            ),
+            Text(
+              milestone.title,
+              style: ResponsiveConfig.textStyle(
+                size: 24,
+                weight: FontWeight.bold,
+              ),
+            ),
+            ResponsiveConfig.heightBox(16),
+            if (milestone.content != null) ...[
+              Text(
+                milestone.content!,
+                style: ResponsiveConfig.textStyle(
+                  size: 16,
+                  height: 1.5,
+                ),
+              ),
+              ResponsiveConfig.heightBox(24),
+            ],
+            _buildSection('Precautions', milestone.precautions,
+                Icons.warning_amber_rounded),
+            _buildSection('What to Expect', milestone.expectations,
+                Icons.visibility_outlined),
+            _buildSection('Remedies', milestone.remedies,
+                Icons.health_and_safety_outlined),
+            if (milestone.notes != null) ...[
+              ResponsiveConfig.heightBox(16),
+              Container(
+                padding: ResponsiveConfig.padding(all: 16),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryPink,
+                  borderRadius: ResponsiveConfig.borderRadius(16),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.note_alt_outlined,
+                        size: 20, color: Colors.white),
+                    ResponsiveConfig.widthBox(12),
+                    Expanded(
+                      child: Text(
+                        milestone.notes!,
+                        style: ResponsiveConfig.textStyle(
+                          size: 14,
+                          color: Colors.white,
+                        ).copyWith(fontStyle: FontStyle.italic),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            ResponsiveConfig.heightBox(40),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSection(String title, List<String> items, IconData icon) {
+    if (items.isEmpty) return const SizedBox.shrink();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(icon, size: 20, color: AppTheme.primaryPink),
+            ResponsiveConfig.widthBox(8),
+            Text(
+              title,
+              style: ResponsiveConfig.textStyle(
+                size: 18,
+                weight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+        ResponsiveConfig.heightBox(12),
+        ...items.map((item) => Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('• ',
+                      style: TextStyle(fontWeight: FontWeight.bold)),
+                  Expanded(
+                    child: Text(
+                      item,
+                      style: ResponsiveConfig.textStyle(size: 15),
+                    ),
+                  ),
+                ],
+              ),
+            )),
+        ResponsiveConfig.heightBox(24),
+      ],
     );
   }
 }
@@ -3298,5 +3643,227 @@ class CommunityCard extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class PregnancyProgressionSection extends StatelessWidget {
+  final int currentWeek;
+  final int trimester;
+
+  const PregnancyProgressionSection(
+      {super.key, required this.currentWeek, required this.trimester});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Center(
+          child: _WeeklyDevelopmentCard(
+            week: currentWeek,
+            trimester: trimester,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _WeeklyDevelopmentCard extends StatefulWidget {
+  final int week;
+  final int trimester;
+
+  const _WeeklyDevelopmentCard({
+    required this.week,
+    required this.trimester,
+  });
+
+  @override
+  State<_WeeklyDevelopmentCard> createState() => _WeeklyDevelopmentCardState();
+}
+
+class _WeeklyDevelopmentCardState extends State<_WeeklyDevelopmentCard>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 1.05).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Map<String, String> trimester = {};
+
+  @override
+  Widget build(BuildContext context) {
+    String week = widget.week.toString();
+
+    if (widget.week < 5) {
+      week = '4';
+    }
+    if (widget.week == 10) {
+      week = '11';
+    }
+    if (widget.week == 36) {
+      week = '35';
+    }
+    if (widget.week == 41) {
+      week = '40';
+    }
+    final imageUrl =
+        //'https://assets.nhs.uk/campaigns-cms-prod/images/banner-WBW-week-28.width-1440.jpg')""
+        'https://assets.nhs.uk/campaigns-cms-prod/images/banner-WBW-week-$week.width-1440.jpg';
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        ShaderMask(
+          shaderCallback: (rect) {
+            return RadialGradient(
+              colors: [
+                Colors.black,
+                Colors.black.withOpacity(0.8),
+                Colors.transparent,
+              ],
+              stops: const [0.6, 0.8, 1.0],
+              center: Alignment.center,
+            ).createShader(rect);
+          },
+          blendMode: BlendMode.dstIn,
+          child: CachedNetworkImage(
+            imageUrl: imageUrl,
+            width: ResponsiveConfig.width(250),
+            height: ResponsiveConfig.height(250),
+            fit: BoxFit.cover,
+            placeholder: (context, url) =>
+                const Center(child: CircularProgressIndicator()),
+            errorWidget: (context, error, stackTrace) {
+              return Container(
+                color: AppTheme.softGray,
+                child: const Icon(Icons.image_not_supported),
+              );
+            },
+          ),
+        ),
+        ResponsiveConfig.heightBox(8),
+        Text(
+          _getWeeklyTitle(widget.week),
+          style: ResponsiveConfig.textStyle(
+            size: 16,
+            weight: FontWeight.bold,
+            color: AppTheme.primaryPink,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        ResponsiveConfig.heightBox(4),
+        Text(
+          'Trimester ${widget.trimester} • Week ${widget.week}',
+          style: ResponsiveConfig.textStyle(
+            size: 12,
+            color: AppTheme.mediumGray,
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _getWeeklyTitle(int week) {
+    switch (week) {
+      case 1:
+      case 2:
+      case 3:
+        return 'Conception and implantation';
+      case 4:
+        return 'Early development';
+      case 5:
+        return 'Heart begins to beat';
+      case 6:
+        return 'Facial features forming';
+      case 7:
+        return 'Tiny hands and feet';
+      case 8:
+        return 'Moving in the womb';
+      case 9:
+        return 'Eyelids and ears';
+      case 10:
+        return 'Vital organs formed';
+      case 11:
+        return 'Fingers and toes';
+      case 12:
+        return 'Reflexes develop';
+      case 13:
+        return 'Fingerprints forming';
+      case 14:
+        return 'Squinting and grimacing';
+      case 15:
+        return 'Sensing light';
+      case 16:
+        return 'Sucking thumb';
+      case 17:
+        return 'Strengthening bones';
+      case 18:
+        return 'Feeling movement';
+      case 19:
+        return 'Sensory development';
+      case 20:
+        return 'Halfway point';
+      case 21:
+        return 'Swallowing';
+      case 22:
+        return 'Sense of touch';
+      case 23:
+        return 'Hearing sounds';
+      case 24:
+        return 'Viability milestone';
+      case 25:
+        return 'Responding to touch';
+      case 26:
+        return 'Eyes opening';
+      case 27:
+        return 'Inhaling amniotic fluid';
+      case 28:
+        return 'Dreaming and blinking';
+      case 29:
+        return 'Rapid brain growth';
+      case 30:
+        return 'Practicing breathing';
+      case 31:
+        return 'Focusing eyes';
+      case 32:
+        return 'Developing skin layers';
+      case 33:
+        return 'Immune system kicks in';
+      case 34:
+        return 'Turning head down';
+      case 35:
+        return 'Full hearing power';
+      case 36:
+        return 'Gaining fat for warmth';
+      case 37:
+        return 'Early full term';
+      case 38:
+        return 'Developing lungs';
+      case 39:
+        return 'Full term journey';
+      case 40:
+        return 'Ready for the world';
+      case 41:
+        return 'Wait is almost over';
+      default:
+        return 'Growing strong';
+    }
   }
 }

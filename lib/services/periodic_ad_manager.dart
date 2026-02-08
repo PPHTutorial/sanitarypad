@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/constants/app_constants.dart';
 import '../core/providers/auth_provider.dart';
+import '../core/config/dev_config.dart';
 import 'ads_service.dart';
 
 final periodicAdManagerProvider = Provider<PeriodicAdManager>((ref) {
@@ -39,6 +40,7 @@ class PeriodicAdManager {
 
   void _startTimer() {
     if (_isActive) return;
+    if (!DevConfig.shouldShowAds) return;
 
     _isActive = true;
     debugPrint('PeriodicAdManager: Timer started (Eco Tier)');
@@ -60,6 +62,10 @@ class PeriodicAdManager {
   }
 
   Future<void> _showAd() async {
+    if (!DevConfig.shouldShowAds) {
+      _stopTimer();
+      return;
+    }
     // Only show if app is likely in foreground (can't easily check here without binding)
     // AdsService handles the "show if safe" logic generally?
     // Usually Interstitial ads require context or are shown on top.

@@ -1,5 +1,6 @@
 import 'package:flutter/services.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
+import '../config/dev_config.dart';
 import 'ad_service.dart';
 
 /// Service for managing Rewarded Ads
@@ -9,6 +10,7 @@ class RewardedAdService {
 
   /// Load a rewarded ad
   Future<void> loadAd() async {
+    if (!DevConfig.shouldShowAds) return;
     if (_isLoading || _rewardedAd != null) return;
 
     _isLoading = true;
@@ -66,6 +68,7 @@ class RewardedAdService {
   Future<bool> show({
     required Function(RewardItem) onUserEarnedReward,
   }) async {
+    if (!DevConfig.shouldShowAds) return false;
     if (_rewardedAd != null) {
       // Hide status bar before showing ad
       SystemChrome.setEnabledSystemUIMode(

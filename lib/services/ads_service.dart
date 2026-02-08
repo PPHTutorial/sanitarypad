@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
+import '../core/config/dev_config.dart';
 
 class AdsService {
   static final AdsService _instance = AdsService._();
@@ -89,6 +90,7 @@ class AdsService {
   // --- Ad Loading Helpers ---
 
   Future<void> showInterstitialAd() async {
+    if (!DevConfig.shouldShowAds) return;
     if (!_isInitialized) await initialize();
     InterstitialAd.load(
       adUnitId: interstitialAdUnitId,
@@ -155,6 +157,10 @@ class AdsService {
     VoidCallback? onAdDismissed,
     Function(LoadAdError)? onAdFailedToLoad,
   }) async {
+    if (!DevConfig.shouldShowAds) {
+      if (onAdDismissed != null) onAdDismissed();
+      return;
+    }
     if (!_isInitialized) await initialize();
 
     // If ad is available, show it
@@ -215,6 +221,7 @@ class AdsService {
 
   Future<void> showRewardedInterstitialAd(
       {required Function(RewardItem) onUserEarnedReward}) async {
+    if (!DevConfig.shouldShowAds) return;
     if (!_isInitialized) await initialize();
     RewardedInterstitialAd.load(
       adUnitId: rewardedInterstitialAdUnitId,
@@ -269,6 +276,7 @@ class AdsService {
   }
 
   void showAppOpenAdIfAvailable() {
+    if (!DevConfig.shouldShowAds) return;
     if (!_isInitialized) return;
     if (!_isAppOpenAdAvailable) {
       loadAppOpenAd();
@@ -348,6 +356,7 @@ class _BannerAdWidgetState extends State<BannerAdWidget> {
 
   @override
   Widget build(BuildContext context) {
+    if (!DevConfig.shouldShowAds) return const SizedBox.shrink();
     if (_isLoaded && _bannerAd != null) {
       return Center(
         child: SizedBox(
@@ -409,6 +418,7 @@ class _NativeAdWidgetState extends State<NativeAdWidget> {
 
   @override
   Widget build(BuildContext context) {
+    if (!DevConfig.shouldShowAds) return const SizedBox.shrink();
     if (_nativeAdIsLoaded && _nativeAd != null) {
       return Container(
         width: double.infinity,

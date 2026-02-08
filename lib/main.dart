@@ -15,6 +15,7 @@ import 'services/periodic_ad_manager.dart';
 
 import 'package:sanitarypad/services/config_service.dart';
 import 'package:sanitarypad/core/firebase/firebase_service.dart';
+import 'presentation/widgets/global_video_overlay.dart';
 
 void main() async {
   // 1. Ensure bindings are initialized immediately
@@ -25,6 +26,9 @@ void main() async {
 
   // Initialize ConfigService
   await ConfigService().initialize();
+
+  // Initialize AdsService
+  await AdsService().initialize();
 
   // 3. Run app immediately to show Splash Screen
   runApp(
@@ -132,7 +136,12 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
           return SplashBackgroundWrapper(
             child: DoubleBackToExit(
               message: 'Press back again to exit FemCare+',
-              child: child ?? const SizedBox(),
+              child: Stack(
+                children: [
+                  child ?? const SizedBox(),
+                  const GlobalVideoOverlay(),
+                ],
+              ),
             ),
           );
         },

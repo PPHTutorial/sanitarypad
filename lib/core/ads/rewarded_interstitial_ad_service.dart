@@ -1,5 +1,6 @@
 import 'package:flutter/services.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
+import '../config/dev_config.dart';
 import 'ad_service.dart';
 
 /// Service for managing Rewarded Interstitial Ads
@@ -9,6 +10,7 @@ class RewardedInterstitialAdService {
 
   /// Load a rewarded interstitial ad
   Future<void> loadAd() async {
+    if (!DevConfig.shouldShowAds) return;
     if (_isLoading || _rewardedInterstitialAd != null) return;
 
     _isLoading = true;
@@ -67,6 +69,7 @@ class RewardedInterstitialAdService {
   Future<bool> show({
     required Function(RewardItem) onUserEarnedReward,
   }) async {
+    if (!DevConfig.shouldShowAds) return false;
     if (_rewardedInterstitialAd != null) {
       // Hide status bar before showing ad
       SystemChrome.setEnabledSystemUIMode(

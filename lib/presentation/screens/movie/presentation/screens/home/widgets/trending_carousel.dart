@@ -213,6 +213,13 @@ class _TrendingCarouselState extends State<TrendingCarousel> {
                                 fontWeight: FontWeight.w600,
                                 color: Colors.white),
                           ),
+                          SizedBox(width: 4.w),
+                          Text(
+                            '(${movie.mediaType == "tv" ? "Series" : "Movie"})',
+                            style: AppTextStyles.caption.copyWith(
+                              color: Colors.white,
+                            ),
+                          ),
                           if (movie.releaseYear != null) ...[
                             SizedBox(width: 12.w),
                             Text(

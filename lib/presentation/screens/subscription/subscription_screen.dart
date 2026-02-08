@@ -134,8 +134,7 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
                     final planData = plans[planKey]!;
                     final isCurrent = user?.subscription.tier == planKey;
 
-                    print('user: ${user?.subscription.tier}' +
-                        ' isCurrent: $isCurrent' +
+                    print('user: ${user?.subscription.tier}' ' isCurrent: $isCurrent' +
                         ' planKey: $planKey');
 
                     return _buildTierCard(

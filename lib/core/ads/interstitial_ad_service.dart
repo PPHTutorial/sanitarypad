@@ -1,5 +1,6 @@
 import 'package:flutter/services.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
+import '../config/dev_config.dart';
 import 'ad_service.dart';
 
 /// Service for managing Interstitial Ads
@@ -9,6 +10,7 @@ class InterstitialAdService {
 
   /// Load an interstitial ad
   Future<void> loadAd() async {
+    if (!DevConfig.shouldShowAds) return;
     if (_isLoading || _interstitialAd != null) return;
 
     _isLoading = true;
@@ -63,6 +65,7 @@ class InterstitialAdService {
 
   /// Show the interstitial ad
   Future<void> show() async {
+    if (!DevConfig.shouldShowAds) return;
     if (_interstitialAd != null) {
       // Hide status bar before showing ad
       SystemChrome.setEnabledSystemUIMode(

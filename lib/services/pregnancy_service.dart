@@ -132,11 +132,10 @@ class PregnancyService {
 
   /// Get current milestone
   PregnancyMilestone? getCurrentMilestone(Pregnancy pregnancy) {
+    print('week: ${pregnancy.currentWeek}');
     final allMilestones = PregnancyMilestone.getMilestones();
     return allMilestones.firstWhere(
-      (milestone) =>
-          milestone.week <= pregnancy.currentWeek &&
-          (milestone.week + 4) > pregnancy.currentWeek,
+      (milestone) => milestone.week == pregnancy.currentWeek,
       orElse: () => allMilestones.last,
     );
   }

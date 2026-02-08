@@ -51,6 +51,10 @@ import '../../presentation/screens/skincare/skincare_routine_form_screen.dart';
 import '../../presentation/screens/skincare/dermatologist_search_screen.dart';
 import '../../data/models/skincare_model.dart';
 import '../../presentation/screens/alerts/red_flag_alerts_screen.dart';
+import '../../presentation/screens/nutrition/nutrition_tracking_screen.dart';
+import '../../presentation/screens/workout/workout_tracking_screen.dart';
+import '../../presentation/screens/workout/workout_challenges_screen.dart';
+import '../../presentation/screens/workout/workout_achievements_screen.dart';
 import '../../presentation/screens/reports/health_report_screen.dart';
 import '../../data/models/group_model.dart';
 import '../../presentation/screens/community/groups_list_screen.dart';
@@ -478,6 +482,42 @@ class AppRouter {
           builder: (context, state) => const DermatologistSearchScreen(),
         ),
 
+        // Nutrition & Workout Tracking - Protected routes
+        GoRoute(
+          path: '/nutrition-tracking',
+          name: 'nutrition-tracking',
+          builder: (context, state) => const NutritionTrackingScreen(),
+        ),
+        GoRoute(
+          path: '/workout-tracking',
+          name: 'workout-tracking',
+          builder: (context, state) => const WorkoutTrackingScreen(),
+        ),
+        GoRoute(
+          path: '/workout-challenges',
+          name: 'workout-challenges',
+          builder: (context, state) {
+            final userId = state.extra as String?;
+            if (userId == null) {
+              return const Scaffold(
+                  body: Center(child: Text('User ID required')));
+            }
+            return WorkoutChallengesScreen(userId: userId);
+          },
+        ),
+        GoRoute(
+          path: '/workout-achievements',
+          name: 'workout-achievements',
+          builder: (context, state) {
+            final userId = state.extra as String?;
+            if (userId == null) {
+              return const Scaffold(
+                  body: Center(child: Text('User ID required')));
+            }
+            return WorkoutAchievementsScreen(userId: userId);
+          },
+        ),
+
         // Community - Groups - Protected routes
         GoRoute(
           path: '/groups',
@@ -560,12 +600,16 @@ class AppRouter {
           name: 'movie-play',
           builder: (context, state) {
             final movie = state.extra as movie_model.Movie?;
+            final season = state.uri.queryParameters['season'];
+            final episode = state.uri.queryParameters['episode'];
+
             if (movie == null) {
               return const Scaffold(
                 body: Center(child: Text('Movie not found')),
               );
             }
-            return movie_player.MovieScreen(movie: movie);
+            return movie_player.MovieScreen(
+                movie: movie, season: season, episode: episode);
           },
         ),
         GoRoute(
@@ -574,6 +618,11 @@ class AppRouter {
           builder: (context, state) {
             final extra = state.extra as Map<String, dynamic>?;
             final url = extra?['url'] as String?;
+            final movie = extra?['movie'] as movie_model.Movie?;
+            final episodes =
+                (extra?['episodes'] as List?)?.cast<Map<String, dynamic>>();
+            final currentEpisode =
+                extra?['currentEpisode'] as Map<String, dynamic>?;
             final movieId = extra?['movieId'] as String?;
 
             if (url == null || movieId == null) {
@@ -584,6 +633,9 @@ class AppRouter {
             return video_player.CustomVideoPlayer(
               url: url,
               movieId: movieId,
+              sourceMovie: movie,
+              episodes: episodes,
+              currentEpisode: currentEpisode,
             );
           },
         ),

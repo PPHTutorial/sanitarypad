@@ -1,5 +1,6 @@
 import 'package:flutter/services.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
+import '../config/dev_config.dart';
 import 'ad_service.dart';
 
 /// Service for managing App Open Ads
@@ -10,6 +11,7 @@ class AppOpenAdService {
 
   /// Load an app open ad
   Future<void> loadAd() async {
+    if (!DevConfig.shouldShowAds) return;
     if (_isLoading || _appOpenAd != null) return;
 
     _isLoading = true;
@@ -66,6 +68,7 @@ class AppOpenAdService {
 
   /// Show the app open ad
   Future<void> show() async {
+    if (!DevConfig.shouldShowAds) return;
     if (_appOpenAd != null && !_isShowingAd) {
       _isShowingAd = true;
       // Hide status bar before showing ad

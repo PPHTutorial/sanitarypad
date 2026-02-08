@@ -37,39 +37,29 @@ class WellnessScreen extends ConsumerWidget {
             ),
           ],
           bottom: PreferredSize(
-            preferredSize: const Size.fromHeight(48),
-            child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                color: Theme.of(context).brightness == Brightness.dark
-                    ? Colors.white.withValues(alpha: 0.1)
-                    : Colors.white.withValues(alpha: 0.7),
-                borderRadius: BorderRadius.circular(12),
+            preferredSize: const Size.fromHeight(72),
+            child: TabBar(
+              dividerColor: AppTheme.darkGray.withOpacity(0.2),
+              labelStyle: ResponsiveConfig.textStyle(
+                size: 14,
+                weight: FontWeight.w600,
               ),
-              child: TabBar(
-                indicator: BoxDecoration(
-                  color: AppTheme.primaryPink,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                indicatorSize: TabBarIndicatorSize.tab,
-                dividerColor: Colors.transparent,
-                labelColor: Colors.white,
-                unselectedLabelColor: AppTheme.mediumGray,
-                labelStyle: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                ),
-                unselectedLabelStyle: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w400,
-                ),
-                tabs: const [
-                  Tab(text: 'All'),
-                  Tab(text: 'Tips'),
-                  Tab(text: 'Articles'),
-                  Tab(text: 'Meditation'),
-                ],
+              unselectedLabelStyle: ResponsiveConfig.textStyle(
+                size: 14,
+                weight: FontWeight.w500,
               ),
+              indicatorColor: AppTheme.primaryPink,
+              indicatorWeight: 3,
+              labelColor: AppTheme.primaryPink,
+              unselectedLabelColor: AppTheme.mediumGray,
+              tabs: const [
+                Tab(text: 'All', icon: Icon(Icons.grid_view_outlined)),
+                Tab(text: 'Tips', icon: Icon(Icons.lightbulb_outline)),
+                Tab(text: 'Articles', icon: Icon(Icons.description_outlined)),
+                Tab(
+                    text: 'Meditation',
+                    icon: Icon(Icons.self_improvement_outlined)),
+              ],
             ),
           ),
         ),

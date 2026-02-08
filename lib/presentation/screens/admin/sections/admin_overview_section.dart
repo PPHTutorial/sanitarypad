@@ -370,7 +370,7 @@ class _AdminOverviewSectionState extends ConsumerState<AdminOverviewSection> {
                   borderColor: borderColor,
                   child: BarChart(
                     BarChartData(
-                      gridData: FlGridData(show: false),
+                      gridData: const FlGridData(show: false),
                       titlesData: FlTitlesData(
                         show: true,
                         rightTitles: const AxisTitles(

@@ -112,7 +112,7 @@ class _AdminUsersSectionState extends ConsumerState<AdminUsersSection> {
       final snapshot = await FirebaseFirestore.instance
           .collection('users')
           .where('email', isGreaterThanOrEqualTo: query)
-          .where('email', isLessThan: query + 'z')
+          .where('email', isLessThan: '${query}z')
           .limit(_limit)
           .get();
 
@@ -368,12 +368,15 @@ class _UserListTile extends StatelessWidget {
   void _resetCredits(BuildContext context, UserModel user) async {
     Navigator.pop(context);
     double defaultCredits = AppConstants.creditsDefault;
-    if (user.subscription.tier == AppConstants.tierPremiumPro)
+    if (user.subscription.tier == AppConstants.tierPremiumPro) {
       defaultCredits = AppConstants.creditsPro;
-    if (user.subscription.tier == AppConstants.tierPremiumAdvance)
+    }
+    if (user.subscription.tier == AppConstants.tierPremiumAdvance) {
       defaultCredits = AppConstants.creditsAdv;
-    if (user.subscription.tier == AppConstants.tierPremiumPlus)
+    }
+    if (user.subscription.tier == AppConstants.tierPremiumPlus) {
       defaultCredits = AppConstants.creditsPlus;
+    }
 
     await FirebaseFirestore.instance
         .collection('users')

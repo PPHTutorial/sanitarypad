@@ -25,7 +25,11 @@ enum ActionType {
   createEvent(AppConstants.costCreateEvent),
   dermatologist(AppConstants.costDermatologist),
   export(AppConstants.costExport),
-  emergencyNumber(AppConstants.costEmergencyNumber);
+  emergencyNumber(AppConstants.costEmergencyNumber),
+  videoWatch(AppConstants.costVideoWatch),
+  nutritionSearch(AppConstants.costNutritionSearch),
+  workoutSearch(AppConstants.costWorkoutSearch),
+  logActivity(AppConstants.costLogActivity);
 
   final double cost;
   const ActionType(this.cost);
@@ -79,7 +83,8 @@ class CreditManager {
     } else {
       // Insufficient credits
       if (showDialog && context.mounted) {
-        _showInsufficientCreditsDialog(context, action);
+        final adProgress = (data['adProgress'] as num?)?.toInt() ?? 0;
+        _showInsufficientCreditsDialog(context, action, credits, adProgress);
       }
       return false;
     }
@@ -340,10 +345,14 @@ class CreditManager {
     }
   }
 
-  void _showInsufficientCreditsDialog(BuildContext context, ActionType action) {
+  void _showInsufficientCreditsDialog(BuildContext context, ActionType action,
+      double available, int adProgress) {
     showDialog(
       context: context,
       builder: (ctx) => OutOfCreditsDialog(
+        availableCredits: available,
+        requiredCredits: action.cost,
+        currentAdProgress: adProgress,
         onWatchAd: () => showAdForCredits(context),
         onUpgrade: () => context.push('/subscription'),
       ),

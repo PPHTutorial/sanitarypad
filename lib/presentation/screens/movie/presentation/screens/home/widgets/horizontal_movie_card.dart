@@ -52,7 +52,7 @@ class HorizontalMovieCard extends StatelessWidget {
               else
                 Container(
                   color: Theme.of(context).colorScheme.primary,
-                  child:  Center(
+                  child: Center(
                     child: Icon(
                       Icons.movie_outlined,
                       color: Theme.of(context).colorScheme.onPrimary,
@@ -138,6 +138,13 @@ class HorizontalMovieCard extends StatelessWidget {
                           SizedBox(width: 4.w),
                           Text(
                             movie.formattedRating,
+                            style: AppTextStyles.caption.copyWith(
+                              color: Colors.white,
+                            ),
+                          ),
+                          SizedBox(width: 4.w),
+                          Text(
+                            '(${movie.mediaType == "tv" ? "Series" : "Movie"})',
                             style: AppTextStyles.caption.copyWith(
                               color: Colors.white,
                             ),
