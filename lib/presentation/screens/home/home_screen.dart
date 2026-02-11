@@ -80,6 +80,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             //ResponsiveConfig.heightBox(16),
 
             // Cycle Status Card (only if cycle exists)
+
+            // Get Started Section (if no data)
+            if (activeCycle == null) _buildGetStartedSection(context),
             if (activeCycle != null) ...[
               _buildCycleStatusCard(context, ref, activeCycle),
               ResponsiveConfig.heightBox(16),
@@ -88,9 +91,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             // Quick Actions
             _buildQuickActions(context, ref),
             ResponsiveConfig.heightBox(16),
-
-            // Get Started Section (if no data)
-            if (activeCycle == null) _buildGetStartedSection(context),
           ],
         ),
       ),
@@ -305,7 +305,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 context,
                 icon: FontAwesomeIcons.heartCirclePlus,
                 label: 'Wellness',
-                onTap: () => context.go('/wellness-journal-list'),
+                onTap: () => context.go('/wellness'),
               ),
             ),
           ],
@@ -414,12 +414,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ),
             ),
             ResponsiveConfig.heightBox(16),
-            ElevatedButton.icon(
-              onPressed: () => context.go('/log-period'),
-              icon: const FaIcon(FontAwesomeIcons.plus),
-              label: const Text('Log Your First Period'),
-              style: ElevatedButton.styleFrom(
-                padding: ResponsiveConfig.padding(vertical: 16, horizontal: 24),
+            Center(
+              child: ElevatedButton.icon(
+                onPressed: () => context.go('/log-period'),
+                icon: const FaIcon(FontAwesomeIcons.plus),
+                label: const Text('Log Your First Period'),
+                style: ElevatedButton.styleFrom(
+                  padding:
+                      ResponsiveConfig.padding(vertical: 16, horizontal: 24),
+                ),
               ),
             ),
           ],

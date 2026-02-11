@@ -10,42 +10,84 @@ import '../../../core/providers/auth_provider.dart';
 import '../../../core/widgets/femcare_bottom_nav.dart';
 import 'package:sanitarypad/presentation/widgets/ads/eco_ad_wrapper.dart';
 
-/// Wellness screen with content library
-class WellnessScreen extends ConsumerWidget {
+import '../../../services/wellness_service.dart';
+import '../../../data/models/wellness_model.dart';
+import 'package:intl/intl.dart';
+
+/// Wellness screen with content library and journal tabs
+class WellnessScreen extends ConsumerStatefulWidget {
   const WellnessScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<WellnessScreen> createState() => _WellnessScreenState();
+}
+
+class _WellnessScreenState extends ConsumerState<WellnessScreen>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(() {
+      setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final userAsync = ref.watch(currentUserStreamProvider);
     final user = userAsync.value;
     final isPremium = user?.subscription.isActive ?? false;
     final contentService = WellnessContentService();
+    final wellnessService = WellnessService();
 
-    return DefaultTabController(
-      length: 4,
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        if (context.canPop()) {
+          context.pop();
+        } else {
+          context.go('/home');
+        }
+      },
       child: Scaffold(
-        backgroundColor: Colors.transparent, // Use theme background
         appBar: AppBar(
-          title: const Text('Wellness'),
+          title: const Text('Wellness Hub'),
           actions: [
+            if (_tabController.index == 1)
+              IconButton(
+                icon:
+                    const FaIcon(FontAwesomeIcons.wandMagicSparkles, size: 20),
+                onPressed: () =>
+                    context.push('/wellness-content-form', extra: true),
+                tooltip: 'AI Auto Write',
+              ),
             IconButton(
               icon: const FaIcon(FontAwesomeIcons.plus),
-              onPressed: () {
-                context.push('/wellness-content-form');
-              },
-              tooltip: 'Add Content',
+              onPressed: () => _showAddOptions(context),
+              tooltip: 'Add Entry',
             ),
           ],
           bottom: PreferredSize(
-            preferredSize: const Size.fromHeight(72),
+            preferredSize: const Size.fromHeight(60),
             child: TabBar(
-              dividerColor: AppTheme.darkGray.withOpacity(0.2),
+              controller: _tabController,
+              dividerColor: Colors.transparent,
               labelStyle: ResponsiveConfig.textStyle(
-                size: 14,
-                weight: FontWeight.w600,
+                size: 16,
+                weight: FontWeight.bold,
               ),
               unselectedLabelStyle: ResponsiveConfig.textStyle(
-                size: 14,
+                size: 16,
                 weight: FontWeight.w500,
               ),
               indicatorColor: AppTheme.primaryPink,
@@ -53,12 +95,8 @@ class WellnessScreen extends ConsumerWidget {
               labelColor: AppTheme.primaryPink,
               unselectedLabelColor: AppTheme.mediumGray,
               tabs: const [
-                Tab(text: 'All', icon: Icon(Icons.grid_view_outlined)),
-                Tab(text: 'Tips', icon: Icon(Icons.lightbulb_outline)),
-                Tab(text: 'Articles', icon: Icon(Icons.description_outlined)),
-                Tab(
-                    text: 'Meditation',
-                    icon: Icon(Icons.self_improvement_outlined)),
+                Tab(text: 'Journal'),
+                Tab(text: 'Articles'),
               ],
             ),
           ),
@@ -69,30 +107,12 @@ class WellnessScreen extends ConsumerWidget {
             const EcoAdWrapper(adType: AdType.banner),
             Expanded(
               child: TabBarView(
+                controller: _tabController,
                 children: [
-                  _buildContentList(
-                      context, ref, contentService, null, isPremium),
-                  _buildContentList(
-                    context,
-                    ref,
-                    contentService,
-                    AppConstants.contentTypeTip,
-                    isPremium,
-                  ),
-                  _buildContentList(
-                    context,
-                    ref,
-                    contentService,
-                    AppConstants.contentTypeArticle,
-                    isPremium,
-                  ),
-                  _buildContentList(
-                    context,
-                    ref,
-                    contentService,
-                    AppConstants.contentTypeMeditation,
-                    isPremium,
-                  ),
+                  _buildJournalList(
+                      context, ref, wellnessService, user?.userId),
+                  _ArticlesTabView(
+                      contentService: contentService, isPremium: isPremium),
                 ],
               ),
             ),
@@ -102,49 +122,61 @@ class WellnessScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildContentList(
-    BuildContext context,
-    WidgetRef ref,
-    WellnessContentService service,
-    String? type,
-    bool isPremium,
-  ) {
-    final stream = type != null
-        ? service.getContentByType(type, isPremium: isPremium ? null : false)
-        : service.getAllContent(isPremium: isPremium ? null : false);
+  void _showAddOptions(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.edit_note, color: AppTheme.primaryPink),
+              title: const Text('New Journal Entry'),
+              onTap: () {
+                Navigator.pop(context);
+                context.push('/wellness-journal');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.post_add, color: AppTheme.primaryPink),
+              title: const Text('Add Wellness Content'),
+              onTap: () {
+                Navigator.pop(context);
+                context.push('/wellness-content-form');
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
-    return StreamBuilder<List<WellnessContent>>(
-      stream: stream,
+  Widget _buildJournalList(BuildContext context, WidgetRef ref,
+      WellnessService service, String? userId) {
+    if (userId == null) return const Center(child: CircularProgressIndicator());
+
+    return StreamBuilder<List<WellnessModel>>(
+      stream: service.watchWellnessEntries(userId, limit: 50),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
 
-        if (snapshot.hasError) {
-          return Center(
-            child: Text('Error: ${snapshot.error}'),
-          );
-        }
+        final entries = snapshot.data ?? [];
 
-        final contents = snapshot.data ?? [];
-
-        if (contents.isEmpty) {
+        if (entries.isEmpty) {
           return Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                FaIcon(
-                  FontAwesomeIcons.newspaper,
-                  size: ResponsiveConfig.iconSize(64),
-                  color: AppTheme.mediumGray,
-                ),
+                FaIcon(FontAwesomeIcons.bookOpen,
+                    size: 64, color: AppTheme.mediumGray),
                 ResponsiveConfig.heightBox(16),
-                Text(
-                  'No content available',
-                  style: ResponsiveConfig.textStyle(
-                    size: 16,
-                    color: AppTheme.mediumGray,
-                  ),
+                const Text('No entries yet. Start journaling!'),
+                ResponsiveConfig.heightBox(16),
+                ElevatedButton(
+                  onPressed: () => context.push('/wellness-journal'),
+                  child: const Text('Add First Entry'),
                 ),
               ],
             ),
@@ -153,145 +185,95 @@ class WellnessScreen extends ConsumerWidget {
 
         return ListView.builder(
           padding: ResponsiveConfig.padding(all: 16),
-          itemCount: contents.length,
+          itemCount: entries.length,
           itemBuilder: (context, index) {
-            final content = contents[index];
-            return _buildContentCard(context, ref, content, isPremium);
+            final entry = entries[index];
+            return _buildJournalCard(context, entry);
           },
         );
       },
     );
   }
 
-  Widget _buildContentCard(
-    BuildContext context,
-    WidgetRef ref,
-    WellnessContent content,
-    bool isPremium,
-  ) {
-    // Show premium badge if content is premium and user is not premium
-    final showPremiumBadge = content.isPremium && !isPremium;
-
-    return Card(
-      margin: ResponsiveConfig.margin(bottom: 12),
+  Widget _buildJournalCard(BuildContext context, WellnessModel entry) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: ResponsiveConfig.borderRadius(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+        border: Border.all(
+          color: AppTheme.primaryPink.withOpacity(0.1),
+          width: 1,
+        ),
+      ),
       child: InkWell(
-        onTap: () {
-          if (content.isPremium && !isPremium) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('This content requires a premium subscription'),
-              ),
-            );
-            return;
-          }
-          context.push('/wellness-content/${content.id}');
-        },
+        onTap: () => context.push('/wellness-journal', extra: entry),
+        borderRadius: ResponsiveConfig.borderRadius(16),
         child: Padding(
           padding: ResponsiveConfig.padding(all: 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          content.title,
-                          style: ResponsiveConfig.textStyle(
-                            size: 18,
-                            weight: FontWeight.bold,
-                          ),
-                        ),
-                        if (content.category != null) ...[
-                          ResponsiveConfig.heightBox(4),
-                          Text(
-                            content.category!,
-                            style: ResponsiveConfig.textStyle(
-                              size: 12,
-                              color: AppTheme.primaryPink,
-                            ),
-                          ),
-                        ],
-                      ],
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppTheme.lightPink,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      DateFormat('MMM dd, yyyy').format(entry.date),
+                      style: ResponsiveConfig.textStyle(
+                        size: 12,
+                        weight: FontWeight.w600,
+                        color: AppTheme.primaryPink,
+                      ),
                     ),
                   ),
-                  if (showPremiumBadge) ...[
-                    Container(
-                      padding: ResponsiveConfig.padding(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppTheme.primaryPink,
-                        borderRadius: ResponsiveConfig.borderRadius(4),
-                      ),
-                      child: Text(
-                        'Premium',
-                        style: ResponsiveConfig.textStyle(
-                          size: 10,
-                          weight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                    ResponsiveConfig.widthBox(8),
-                  ],
-                  if (content.userId ==
-                      ref.read(authServiceProvider).currentUser?.uid) ...[
-                    IconButton(
-                      icon:
-                          const FaIcon(FontAwesomeIcons.penToSquare, size: 20),
-                      visualDensity: VisualDensity.compact,
-                      onPressed: () {
-                        context.push('/wellness-content-form', extra: content);
-                      },
-                      tooltip: 'Edit',
-                    ),
-                    IconButton(
-                      icon: const FaIcon(FontAwesomeIcons.trashCan,
-                          size: 20, color: AppTheme.errorRed),
-                      visualDensity: VisualDensity.compact,
-                      onPressed: () =>
-                          _showDeleteConfirmation(context, ref, content),
-                      tooltip: 'Delete',
-                    ),
-                  ],
+                  Text(
+                    entry.mood.emoji,
+                    style: const TextStyle(fontSize: 22),
+                  ),
                 ],
               ),
               ResponsiveConfig.heightBox(12),
               Text(
-                content.content.length > 150
-                    ? '${content.content.substring(0, 150)}...'
-                    : content.content,
+                entry.journal ?? 'No description',
                 style: ResponsiveConfig.textStyle(
-                  size: 14,
-                  color: AppTheme.mediumGray,
+                  size: 15,
+                  weight: FontWeight.w500,
                 ),
-                maxLines: 3,
+                maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
-              if (content.readTime != null) ...[
-                ResponsiveConfig.heightBox(8),
-                Row(
-                  children: [
-                    FaIcon(
-                      FontAwesomeIcons.clock,
-                      size: ResponsiveConfig.iconSize(14),
+              ResponsiveConfig.heightBox(8),
+              Row(
+                children: [
+                  const Icon(Icons.access_time,
+                      size: 14, color: AppTheme.mediumGray),
+                  const SizedBox(width: 4),
+                  Text(
+                    DateFormat('hh:mm a').format(entry.date),
+                    style: ResponsiveConfig.textStyle(
+                      size: 12,
                       color: AppTheme.mediumGray,
                     ),
-                    ResponsiveConfig.widthBox(4),
-                    Text(
-                      '${content.readTime} min read',
-                      style: ResponsiveConfig.textStyle(
-                        size: 12,
-                        color: AppTheme.mediumGray,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+                  ),
+                  const Spacer(),
+                  const Icon(Icons.chevron_right,
+                      size: 18, color: AppTheme.mediumGray),
+                ],
+              ),
             ],
           ),
         ),
@@ -339,6 +321,326 @@ class WellnessScreen extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _ContentCard extends ConsumerWidget {
+  final WellnessContent content;
+  final bool isPremium;
+  final Function(WellnessContent) onDelete;
+
+  const _ContentCard({
+    required this.content,
+    required this.isPremium,
+    required this.onDelete,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Show premium badge if content is premium and user is not premium
+    final showPremiumBadge = content.isPremium && !isPremium;
+
+    return Card(
+      margin: ResponsiveConfig.margin(bottom: 12),
+      child: InkWell(
+        onTap: () {
+          if (content.isPremium && !isPremium) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('This content requires a premium subscription'),
+              ),
+            );
+            return;
+          }
+          context.push('/wellness-content/${content.id}');
+        },
+        child: Padding(
+          padding: ResponsiveConfig.padding(all: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          content.title,
+                          style: ResponsiveConfig.textStyle(
+                            size: 18,
+                            weight: FontWeight.bold,
+                          ),
+                        ),
+                        Row(
+                          children: [
+                            if (content.category != null)
+                              Text(
+                                content.category!,
+                                style: ResponsiveConfig.textStyle(
+                                  size: 12,
+                                  color: AppTheme.primaryPink,
+                                ),
+                              ),
+                            if (content.isPaid) ...[
+                              if (content.category != null)
+                                Text(' • ',
+                                    style: TextStyle(
+                                        color: AppTheme.mediumGray,
+                                        fontSize: 12)),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.amber.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  'PAID',
+                                  style: ResponsiveConfig.textStyle(
+                                    size: 10,
+                                    weight: FontWeight.bold,
+                                    color: Colors.amber[800],
+                                  ),
+                                ),
+                              ),
+                            ],
+                            if (content.isAIGenerated) ...[
+                              Text(' • ',
+                                  style: TextStyle(
+                                      color: AppTheme.mediumGray,
+                                      fontSize: 12)),
+                              const FaIcon(FontAwesomeIcons.wandMagicSparkles,
+                                  size: 10, color: AppTheme.mediumGray),
+                            ],
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (showPremiumBadge) ...[
+                    Container(
+                      padding: ResponsiveConfig.padding(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryPink,
+                        borderRadius: ResponsiveConfig.borderRadius(4),
+                      ),
+                      child: Text(
+                        'Premium',
+                        style: ResponsiveConfig.textStyle(
+                          size: 10,
+                          weight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                    ResponsiveConfig.widthBox(8),
+                  ],
+                  if (content.userId ==
+                      ref.read(authServiceProvider).currentUser?.uid) ...[
+                    IconButton(
+                      icon:
+                          const FaIcon(FontAwesomeIcons.penToSquare, size: 20),
+                      visualDensity: VisualDensity.compact,
+                      onPressed: () {
+                        context.push('/wellness-content-form', extra: content);
+                      },
+                      tooltip: 'Edit',
+                    ),
+                    IconButton(
+                      icon: const FaIcon(FontAwesomeIcons.trashCan,
+                          size: 20, color: AppTheme.errorRed),
+                      visualDensity: VisualDensity.compact,
+                      onPressed: () => onDelete(content),
+                      tooltip: 'Delete',
+                    ),
+                  ],
+                ],
+              ),
+              ResponsiveConfig.heightBox(12),
+              Text(
+                content.content.length > 150
+                    ? '${content.content.substring(0, 150)}...'
+                    : content.content,
+                style: ResponsiveConfig.textStyle(
+                  size: 14,
+                  color: AppTheme.mediumGray,
+                ),
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+              ),
+              if (content.readTime != null) ...[
+                ResponsiveConfig.heightBox(8),
+                Row(
+                  children: [
+                    FaIcon(
+                      FontAwesomeIcons.clock,
+                      size: ResponsiveConfig.iconSize(14),
+                      color: AppTheme.mediumGray,
+                    ),
+                    ResponsiveConfig.widthBox(4),
+                    Text(
+                      '${content.readTime} min read',
+                      style: ResponsiveConfig.textStyle(
+                        size: 12,
+                        color: AppTheme.mediumGray,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Helper widget for the Articles tab with filters
+class _ArticlesTabView extends StatefulWidget {
+  final WellnessContentService contentService;
+  final bool isPremium;
+
+  const _ArticlesTabView(
+      {required this.contentService, required this.isPremium});
+
+  @override
+  State<_ArticlesTabView> createState() => _ArticlesTabViewState();
+}
+
+class _ArticlesTabViewState extends State<_ArticlesTabView> {
+  String? _selectedType;
+
+  @override
+  Widget build(BuildContext context) {
+    final filters = [
+      {'label': 'All', 'value': null},
+      {'label': 'Tips', 'value': AppConstants.contentTypeTip},
+      {'label': 'Articles', 'value': AppConstants.contentTypeArticle},
+      {'label': 'Meditation', 'value': AppConstants.contentTypeMeditation},
+    ];
+
+    return Column(
+      children: [
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Row(
+            children: filters.map((filter) {
+              final isSelected = _selectedType == filter['value'];
+              return Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: ChoiceChip(
+                  label: Text(filter['label']!),
+                  selected: isSelected,
+                  onSelected: (selected) {
+                    setState(() {
+                      _selectedType = filter['value'] as String?;
+                    });
+                  },
+                  selectedColor: AppTheme.primaryPink.withOpacity(0.2),
+                  labelStyle: TextStyle(
+                    color:
+                        isSelected ? AppTheme.primaryPink : AppTheme.darkGray,
+                    fontWeight:
+                        isSelected ? FontWeight.bold : FontWeight.normal,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                    side: BorderSide(
+                      color: isSelected
+                          ? AppTheme.primaryPink
+                          : AppTheme.mediumGray.withOpacity(0.3),
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+        Expanded(
+          child: _WellnessScreenContentList(
+            type: _selectedType,
+            contentService: widget.contentService,
+            isPremium: widget.isPremium,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Internal widget to build the content list
+class _WellnessScreenContentList extends ConsumerWidget {
+  final String? type;
+  final WellnessContentService contentService;
+  final bool isPremium;
+
+  const _WellnessScreenContentList({
+    this.type,
+    required this.contentService,
+    required this.isPremium,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final stream = type != null
+        ? contentService.getContentByType(type!,
+            isPremium: isPremium ? null : false)
+        : contentService.getAllContent(isPremium: isPremium ? null : false);
+
+    return StreamBuilder<List<WellnessContent>>(
+      stream: stream,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (snapshot.hasError) {
+          return Center(child: Text('Error: ${snapshot.error}'));
+        }
+
+        final contents = snapshot.data ?? [];
+
+        if (contents.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                FaIcon(FontAwesomeIcons.newspaper,
+                    size: 64, color: AppTheme.mediumGray),
+                const SizedBox(height: 16),
+                const Text('No content available'),
+              ],
+            ),
+          );
+        }
+
+        return ListView.builder(
+          padding: ResponsiveConfig.padding(all: 16),
+          itemCount: contents.length,
+          itemBuilder: (context, index) {
+            final content = contents[index];
+            return _ContentCard(
+              content: content,
+              isPremium: isPremium,
+              onDelete: (content) {
+                // Accessing private method from _WellnessScreenState is not directly possible here
+                // We'll use a hack or just move the delete confirmation logic if needed,
+                // but let's see if we can just pass the confirmation logic.
+                final state =
+                    context.findAncestorStateOfType<_WellnessScreenState>();
+                state?._showDeleteConfirmation(context, ref, content);
+              },
+            );
+          },
+        );
+      },
     );
   }
 }

@@ -114,6 +114,8 @@ class OutOfCreditsDialog extends StatelessWidget {
   final double availableCredits;
   final double requiredCredits;
   final int currentAdProgress;
+  final String? title;
+  final String? message;
 
   const OutOfCreditsDialog({
     super.key,
@@ -123,6 +125,8 @@ class OutOfCreditsDialog extends StatelessWidget {
     this.availableCredits = 0,
     this.requiredCredits = 0,
     this.currentAdProgress = 0,
+    this.title,
+    this.message,
   });
 
   @override
@@ -141,9 +145,9 @@ class OutOfCreditsDialog extends StatelessWidget {
               size: 48,
             ),
             const SizedBox(height: 16),
-            const Text(
-              'Out of Credits',
-              style: TextStyle(
+            Text(
+              title ?? 'Out of Credits',
+              style: const TextStyle(
                 color: Colors.white,
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
@@ -151,7 +155,8 @@ class OutOfCreditsDialog extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Text(
-              'No problem! You can watch a few ads to square up the credits needed. You can upgrade to a higher tier to get more credits.',
+              message ??
+                  'No problem! You can watch a few ads to square up the credits needed. You can upgrade to a higher tier to get more credits.',
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: Colors.white.withOpacity(0.7),

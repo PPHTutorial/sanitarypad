@@ -20,9 +20,9 @@ import '../../presentation/screens/profile/settings/cycle_settings_screen.dart';
 import '../../presentation/screens/profile/settings/privacy_settings_screen.dart';
 import '../../presentation/screens/cycle/log_period_screen.dart';
 import '../../presentation/screens/cycle/cycles_list_screen.dart';
+import '../../presentation/screens/cycle/cycles_main_screen.dart';
 import '../../presentation/screens/pads/pad_management_screen.dart';
 import '../../presentation/screens/wellness/wellness_journal_screen.dart';
-import '../../presentation/screens/wellness/wellness_journal_list_screen.dart';
 import '../../data/models/wellness_model.dart';
 import '../../presentation/screens/profile/settings/pin_setup_screen.dart';
 import '../../presentation/screens/profile/settings/biometric_setup_screen.dart';
@@ -39,7 +39,10 @@ import '../../presentation/screens/settings/notification_settings_screen.dart';
 import '../../presentation/screens/reminders/reminders_list_screen.dart';
 import '../../presentation/screens/pregnancy/pregnancy_tracking_screen.dart';
 import '../../presentation/screens/pregnancy/pregnancy_form_screen.dart';
+import '../../presentation/screens/pregnancy/childbirth_form_screen.dart';
+import '../../presentation/screens/baby/baby_dashboard_screen.dart';
 import '../../presentation/screens/pregnancy/partner_dashboard_screen.dart';
+import '../../presentation/screens/pregnancy/pregnancy_history_screen.dart';
 import '../../data/models/pregnancy_model.dart';
 import '../../presentation/screens/fertility/fertility_tracking_screen.dart';
 import '../../presentation/screens/fertility/fertility_entry_form_screen.dart';
@@ -49,6 +52,8 @@ import '../../presentation/screens/skincare/skincare_product_management_screen.d
 import '../../presentation/screens/skincare/skincare_product_form_screen.dart';
 import '../../presentation/screens/skincare/skincare_routine_form_screen.dart';
 import '../../presentation/screens/skincare/dermatologist_search_screen.dart';
+import '../../presentation/screens/skincare/skin_scanner_screen.dart';
+import '../../presentation/screens/skincare/skin_analysis_report_screen.dart';
 import '../../data/models/skincare_model.dart';
 import '../../presentation/screens/alerts/red_flag_alerts_screen.dart';
 import '../../presentation/screens/nutrition/nutrition_tracking_screen.dart';
@@ -241,6 +246,11 @@ class AppRouter {
           builder: (context, state) => const InsightsScreen(),
         ),
         GoRoute(
+          path: '/cycles-main',
+          name: 'cycles-main',
+          builder: (context, state) => const CyclesMainScreen(),
+        ),
+        GoRoute(
           path: '/wellness',
           name: 'wellness',
           builder: (context, state) => const WellnessScreen(),
@@ -318,11 +328,6 @@ class AppRouter {
             return WellnessJournalScreen(entry: entry);
           },
         ),
-        GoRoute(
-          path: '/wellness-journal-list',
-          name: 'wellness-journal-list',
-          builder: (context, state) => const WellnessJournalListScreen(),
-        ),
 
         // Settings - Protected routes
         GoRoute(
@@ -361,8 +366,20 @@ class AppRouter {
           path: '/wellness-content-form',
           name: 'wellness-content-form',
           builder: (context, state) {
-            final content = state.extra as WellnessContent?;
-            return WellnessContentFormScreen(content: content);
+            final extra = state.extra;
+            WellnessContent? content;
+            bool isAutoGenerate = false;
+
+            if (extra is WellnessContent) {
+              content = extra;
+            } else if (extra is bool) {
+              isAutoGenerate = extra;
+            }
+
+            return WellnessContentFormScreen(
+              content: content,
+              isAutoGenerate: isAutoGenerate,
+            );
           },
         ),
 
@@ -429,6 +446,35 @@ class AppRouter {
             return PartnerDashboardScreen(pregnancyId: id);
           },
         ),
+        GoRoute(
+          path: '/childbirth-form',
+          name: 'childbirth-form',
+          builder: (context, state) {
+            final pregnancy = state.extra as Pregnancy;
+            return ChildbirthFormScreen(pregnancy: pregnancy);
+          },
+        ),
+        GoRoute(
+          path: '/baby-dashboard/:id',
+          name: 'baby-dashboard',
+          builder: (context, state) {
+            final id = state.pathParameters['id']!;
+            return BabyDashboardScreen(babyId: id);
+          },
+        ),
+        GoRoute(
+          path: '/pregnancy-history',
+          name: 'pregnancy-history',
+          builder: (context, state) => const PregnancyHistoryScreen(),
+        ),
+        GoRoute(
+          path: '/pregnancy/details/:id',
+          name: 'pregnancy-details',
+          builder: (context, state) {
+            final id = state.pathParameters['id']!;
+            return PregnancyTrackingScreen(pregnancyId: id);
+          },
+        ),
 
         // Fertility Tracking - Protected routes
         GoRoute(
@@ -480,6 +526,19 @@ class AppRouter {
           path: '/dermatologist-search',
           name: 'dermatologist-search',
           builder: (context, state) => const DermatologistSearchScreen(),
+        ),
+        GoRoute(
+          path: '/skin-scanner',
+          name: 'skin-scanner',
+          builder: (context, state) => const SkinScannerScreen(),
+        ),
+        GoRoute(
+          path: '/skin-analysis-report',
+          name: 'skin-analysis-report',
+          builder: (context, state) {
+            final imagePath = state.extra as String;
+            return SkinAnalysisReportScreen(imagePath: imagePath);
+          },
         ),
 
         // Nutrition & Workout Tracking - Protected routes

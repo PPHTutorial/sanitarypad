@@ -280,7 +280,7 @@ class _PadManagementScreenState extends ConsumerState<PadManagementScreen> {
                   weight: FontWeight.w600,
                 ),
               ),
-              ResponsiveConfig.heightBox(16),
+              ResponsiveConfig.heightBox(26),
               // Date and Time
               Row(
                 children: [
@@ -315,7 +315,7 @@ class _PadManagementScreenState extends ConsumerState<PadManagementScreen> {
                   ),
                 ],
               ),
-              ResponsiveConfig.heightBox(16),
+              ResponsiveConfig.heightBox(24),
               // Pad Type
               Text(
                 'Pad Type',
@@ -326,7 +326,7 @@ class _PadManagementScreenState extends ConsumerState<PadManagementScreen> {
               ),
               ResponsiveConfig.heightBox(8),
               _buildPadTypeSelector(),
-              ResponsiveConfig.heightBox(16),
+              ResponsiveConfig.heightBox(24),
               // Flow Intensity
               Text(
                 'Flow Intensity',
@@ -337,7 +337,7 @@ class _PadManagementScreenState extends ConsumerState<PadManagementScreen> {
               ),
               ResponsiveConfig.heightBox(8),
               _buildFlowIntensitySelector(),
-              ResponsiveConfig.heightBox(16),
+              ResponsiveConfig.heightBox(24),
               // Notes
               TextFormField(
                 controller: _notesController,
@@ -347,7 +347,7 @@ class _PadManagementScreenState extends ConsumerState<PadManagementScreen> {
                 ),
                 maxLines: 2,
               ),
-              ResponsiveConfig.heightBox(16),
+              ResponsiveConfig.heightBox(24),
               // Save Button
               ElevatedButton(
                 onPressed: _isLoading ? null : _logPadChange,
@@ -367,23 +367,32 @@ class _PadManagementScreenState extends ConsumerState<PadManagementScreen> {
   }
 
   Widget _buildPadTypeSelector() {
-    return Row(
+    return Column(
       children: [
-        Expanded(
-          child: _buildPadTypeOption('Light', AppConstants.padTypeLight),
+        Row(
+          children: [
+            Expanded(
+              child: _buildPadTypeOption('Light', AppConstants.padTypeLight),
+            ),
+            ResponsiveConfig.widthBox(8),
+            Expanded(
+              child:
+                  _buildPadTypeOption('Regular', AppConstants.padTypeRegular),
+            ),
+          ],
         ),
-        ResponsiveConfig.widthBox(8),
-        Expanded(
-          child: _buildPadTypeOption('Regular', AppConstants.padTypeRegular),
-        ),
-        ResponsiveConfig.widthBox(8),
-        Expanded(
-          child: _buildPadTypeOption('Super', AppConstants.padTypeSuper),
-        ),
-        ResponsiveConfig.widthBox(8),
-        Expanded(
-          child:
-              _buildPadTypeOption('Overnight', AppConstants.padTypeOvernight),
+        ResponsiveConfig.heightBox(8),
+        Row(
+          children: [
+            Expanded(
+              child: _buildPadTypeOption('Super', AppConstants.padTypeSuper),
+            ),
+            ResponsiveConfig.widthBox(8),
+            Expanded(
+              child: _buildPadTypeOption(
+                  'Overnight', AppConstants.padTypeOvernight),
+            ),
+          ],
         ),
       ],
     );
@@ -396,10 +405,14 @@ class _PadManagementScreenState extends ConsumerState<PadManagementScreen> {
       child: Container(
         padding: ResponsiveConfig.padding(all: 12),
         decoration: BoxDecoration(
-          color: isSelected ? AppTheme.lightPink : AppTheme.palePink,
+          color: isSelected
+              ? AppTheme.lightPink.withOpacity(0.6)
+              : Theme.of(context).cardColor,
           borderRadius: ResponsiveConfig.borderRadius(8),
           border: Border.all(
-            color: isSelected ? AppTheme.primaryPink : Colors.transparent,
+            color: isSelected
+                ? AppTheme.primaryPink
+                : Theme.of(context).dividerColor.withOpacity(0.2),
             width: 2,
           ),
         ),
@@ -441,10 +454,14 @@ class _PadManagementScreenState extends ConsumerState<PadManagementScreen> {
       child: Container(
         padding: ResponsiveConfig.padding(all: 12),
         decoration: BoxDecoration(
-          color: isSelected ? AppTheme.lightPink : AppTheme.palePink,
+          color: isSelected
+              ? AppTheme.lightPink.withOpacity(0.6)
+              : AppTheme.palePink.withOpacity(0.2),
           borderRadius: ResponsiveConfig.borderRadius(8),
           border: Border.all(
-            color: isSelected ? AppTheme.primaryPink : Colors.transparent,
+            color: isSelected
+                ? AppTheme.primaryPink
+                : Theme.of(context).dividerColor.withOpacity(0.2),
             width: 2,
           ),
         ),
@@ -550,6 +567,7 @@ class _PadManagementScreenState extends ConsumerState<PadManagementScreen> {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              ResponsiveConfig.heightBox(26),
               DropdownButtonFormField<String>(
                 value: selectedType,
                 decoration: const InputDecoration(labelText: 'Pad Type'),

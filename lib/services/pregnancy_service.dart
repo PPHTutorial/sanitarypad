@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/constants/app_constants.dart';
 import '../data/models/pregnancy_model.dart';
@@ -112,6 +113,15 @@ class PregnancyService {
     } catch (e) {
       return null;
     }
+  }
+
+  /// Watch pregnancy by ID
+  Stream<Pregnancy?> watchPregnancyById(String pregnancyId) {
+    return _firestore
+        .collection(AppConstants.collectionPregnancies)
+        .doc(pregnancyId)
+        .snapshots()
+        .map((doc) => doc.exists ? Pregnancy.fromFirestore(doc) : null);
   }
 
   /// Get upcoming milestones
@@ -334,3 +344,5 @@ class PregnancyService {
         .delete();
   }
 }
+
+final pregnancyServiceProvider = Provider((ref) => PregnancyService());

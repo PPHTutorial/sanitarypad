@@ -14,6 +14,7 @@ enum ActionType {
   pregnancy(AppConstants.costPregnancy),
   fertility(AppConstants.costFertility),
   skincare(AppConstants.costSkincare),
+  skincareAnalysis(AppConstants.costSkincareAnalysis),
   wellness(AppConstants.costWellness),
   logPeriod(AppConstants.costLogPeriod),
   padChange(AppConstants.costPadChange),
@@ -29,7 +30,8 @@ enum ActionType {
   videoWatch(AppConstants.costVideoWatch),
   nutritionSearch(AppConstants.costNutritionSearch),
   workoutSearch(AppConstants.costWorkoutSearch),
-  logActivity(AppConstants.costLogActivity);
+  logActivity(AppConstants.costLogActivity),
+  aiGeneration(AppConstants.costAIGeneration);
 
   final double cost;
   const ActionType(this.cost);
@@ -347,12 +349,23 @@ class CreditManager {
 
   void _showInsufficientCreditsDialog(BuildContext context, ActionType action,
       double available, int adProgress) {
+    String? title;
+    String? message;
+
+    if (action == ActionType.videoWatch) {
+      title = 'Unlock Video';
+      message =
+          'Streaming this video requires ${action.cost} credits. You can watch a few short ads to earn credits or upgrade for unlimited access.';
+    }
+
     showDialog(
       context: context,
       builder: (ctx) => OutOfCreditsDialog(
         availableCredits: available,
         requiredCredits: action.cost,
         currentAdProgress: adProgress,
+        title: title,
+        message: message,
         onWatchAd: () => showAdForCredits(context),
         onUpgrade: () => context.push('/subscription'),
       ),

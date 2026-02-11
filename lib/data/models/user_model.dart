@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:equatable/equatable.dart';
+import 'package:sanitarypad/core/constants/app_constants.dart';
 
 /// User model
 class UserModel extends Equatable {
@@ -331,7 +332,7 @@ class UserSubscription extends Equatable {
     this.endDate,
     this.paymentMethod,
     this.transactionId,
-    this.dailyCreditsRemaining = 3.0,
+    this.dailyCreditsRemaining = AppConstants.creditsDefault,
     this.adCreditsEarnedToday = 0.0,
     this.totalActionsToday = 0,
     this.lastResetDate,

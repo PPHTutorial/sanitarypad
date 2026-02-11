@@ -124,7 +124,12 @@ class _WallpaperDetailScreenState extends State<WallpaperDetailScreen> {
 
   Widget _buildBottomSheet() {
     return Container(
-      padding: EdgeInsets.all(AppDimensions.space16),
+      padding: EdgeInsets.fromLTRB(
+        AppDimensions.space16,
+        AppDimensions.space16,
+        AppDimensions.space16,
+        AppDimensions.space16 + MediaQuery.of(context).padding.bottom,
+      ),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,

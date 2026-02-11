@@ -5,6 +5,8 @@ import 'package:logger/logger.dart';
 import 'package:sanitarypad/core/providers/auth_provider.dart';
 import 'package:sanitarypad/services/ai_service.dart';
 import '../core/constants/app_constants.dart';
+import 'dart:io';
+import 'package:sanitarypad/services/storage_service.dart';
 import '../data/models/skincare_model.dart';
 
 /// Skincare service
@@ -301,6 +303,12 @@ class SkincareEnhancedService {
   Future<void> logSkinJournal(SkinJournalEntry entry) async {
     await _firestore
         .collection(AppConstants.collectionSkinJournalEntries)
+        .add(entry.toFirestore());
+  }
+
+  Future<void> logSkinAnalysis(SkinAnalysisEntry entry) async {
+    await _firestore
+        .collection(AppConstants.collectionSkinAnalysis)
         .add(entry.toFirestore());
   }
 
@@ -632,5 +640,107 @@ extension SkincareEntryExtension on SkincareEntry {
       createdAt: createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
+  }
+}
+
+// ===== Skincare Analysis Service =====
+
+class SkincareAnalysisService {
+  final FirebaseFirestore _firestore;
+  final StorageService _storageService;
+  final AIService _aiService;
+
+  SkincareAnalysisService(
+      this._firestore, this._storageService, this._aiService);
+
+  /// Analyze skin condition from image and notes
+  Future<SkinAnalysisEntry> analyzeSkinCondition({
+    required String userId,
+    required File imageFile,
+    String? notes,
+  }) async {
+    try {
+      // 1. Upload Image
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final imagePath = 'skincare_analysis/$userId/$timestamp.jpg';
+
+      final uploadResult = await _storageService.uploadFile(
+        file: imageFile,
+        path: imagePath,
+      );
+      final imageUrl = uploadResult.downloadUrl;
+
+      // 2. Call AI Service (Specialized gpt-4o analysis)
+      final analysisData = await _aiService.analyzeSkinImage(
+        imageUrl: imageUrl,
+      );
+
+      // 3. Create Entry
+      final entry = SkinAnalysisEntry(
+        userId: userId,
+        date: DateTime.now(),
+        imageUrl: imageUrl,
+        imagePath: imagePath,
+        identifiedConcerns:
+            List<String>.from(analysisData['identifiedConcerns'] ?? []),
+        recommendedRemedies:
+            List<String>.from(analysisData['recommendedRemedies'] ?? []),
+        recommendedProducts:
+            List<String>.from(analysisData['recommendedProducts'] ?? []),
+        precautions: List<String>.from(analysisData['precautions'] ?? []),
+        routineRecommendations:
+            List<String>.from(analysisData['routineRecommendations'] ?? []),
+        criteriaScores: (analysisData['criteriaScores'] as Map?)?.map(
+          (key, value) => MapEntry(key.toString(), (value as num).toDouble()),
+        ),
+        regionData:
+            (analysisData['regionData'] as Map?)?.cast<String, dynamic>(),
+        overallScore: analysisData['overallScore']?.toString(),
+        notes: analysisData['notes']?.toString() ?? notes,
+        rawAnalysis: analysisData,
+        createdAt: DateTime.now(),
+      );
+
+      // 5. Save to Firestore
+      await _firestore
+          .collection(AppConstants.collectionSkinAnalysis)
+          .add(entry.toFirestore());
+
+      return entry;
+    } catch (e) {
+      Logger().e("Error analyzing skin condition: $e");
+      rethrow;
+    }
+  }
+
+  /// Get analysis history
+  Stream<List<SkinAnalysisEntry>> getAnalysisHistory(String userId) {
+    return _firestore
+        .collection(AppConstants.collectionSkinAnalysis)
+        .where('userId', isEqualTo: userId)
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+            .map((doc) => SkinAnalysisEntry.fromFirestore(doc))
+            .toList());
+  }
+
+  /// Delete analysis entry
+  Future<void> deleteAnalysisEntry(String entryId, String? imagePath) async {
+    try {
+      // Delete from Firestore
+      await _firestore
+          .collection(AppConstants.collectionSkinAnalysis)
+          .doc(entryId)
+          .delete();
+
+      // Delete image from Storage if path exists
+      if (imagePath != null) {
+        await _storageService.deleteFile(imagePath);
+      }
+    } catch (e) {
+      Logger().e("Error deleting analysis entry: $e");
+      rethrow;
+    }
   }
 }

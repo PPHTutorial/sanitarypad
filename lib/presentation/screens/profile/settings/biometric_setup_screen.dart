@@ -40,7 +40,7 @@ class _BiometricSetupScreenState extends ConsumerState<BiometricSetupScreen> {
     try {
       final securityService = ref.read(securityServiceProvider);
       final user = ref.read(currentUserStreamProvider).value;
-      if (user == null || !user.subscription.isActive) {
+      if (user == null || (!user.subscription.isActive && !user.isAdmin)) {
         throw Exception('Premium required for Biometric lock');
       }
 
@@ -57,6 +57,7 @@ class _BiometricSetupScreenState extends ConsumerState<BiometricSetupScreen> {
           await ref.read(authServiceProvider).updateUserData(updatedUser);
 
           setState(() => _isEnabled = true);
+          ref.invalidate(securityServiceProvider);
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('Biometric lock enabled')),
@@ -79,6 +80,7 @@ class _BiometricSetupScreenState extends ConsumerState<BiometricSetupScreen> {
         await ref.read(authServiceProvider).updateUserData(updatedUser);
 
         setState(() => _isEnabled = false);
+        ref.invalidate(securityServiceProvider);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Biometric lock disabled')),

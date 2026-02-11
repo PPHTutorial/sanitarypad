@@ -880,3 +880,107 @@ extension SkinGoalExtension on SkinGoal {
     );
   }
 }
+
+/// Skin analysis result from AI
+class SkinAnalysisEntry extends Equatable {
+  final String? id;
+  final String userId;
+  final DateTime date;
+  final String imageUrl;
+  final String? imagePath; // Storage path
+  final List<String> identifiedConcerns;
+  final List<String> recommendedRemedies;
+  final List<String> recommendedProducts;
+  final List<String> precautions;
+  final List<String> routineRecommendations;
+  final Map<String, double>? criteriaScores; // detailed category scores
+  final Map<String, dynamic>? regionData; // coordinates for masking
+  final String? overallScore;
+  final String? notes;
+  final Map<String, dynamic>? rawAnalysis;
+  final DateTime createdAt;
+
+  const SkinAnalysisEntry({
+    this.id,
+    required this.userId,
+    required this.date,
+    required this.imageUrl,
+    this.imagePath,
+    this.identifiedConcerns = const [],
+    this.recommendedRemedies = const [],
+    this.recommendedProducts = const [],
+    this.precautions = const [],
+    this.routineRecommendations = const [],
+    this.criteriaScores,
+    this.regionData,
+    this.overallScore,
+    this.notes,
+    this.rawAnalysis,
+    required this.createdAt,
+  });
+
+  factory SkinAnalysisEntry.fromFirestore(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>;
+    return SkinAnalysisEntry(
+      id: doc.id,
+      userId: data['userId'] as String,
+      date: (data['date'] as Timestamp).toDate(),
+      imageUrl: data['imageUrl'] as String,
+      imagePath: data['imagePath'] as String?,
+      identifiedConcerns: List<String>.from(data['identifiedConcerns'] ?? []),
+      recommendedRemedies: List<String>.from(data['recommendedRemedies'] ?? []),
+      recommendedProducts: List<String>.from(data['recommendedProducts'] ?? []),
+      precautions: List<String>.from(data['precautions'] ?? []),
+      routineRecommendations:
+          List<String>.from(data['routineRecommendations'] ?? []),
+      criteriaScores: (data['criteriaScores'] as Map<String, dynamic>?)?.map(
+        (key, value) => MapEntry(key, (value as num).toDouble()),
+      ),
+      regionData: data['regionData'] as Map<String, dynamic>?,
+      overallScore: data['overallScore'] as String?,
+      notes: data['notes'] as String?,
+      rawAnalysis: data['rawAnalysis'] as Map<String, dynamic>?,
+      createdAt: (data['createdAt'] as Timestamp).toDate(),
+    );
+  }
+
+  Map<String, dynamic> toFirestore() {
+    return {
+      'userId': userId,
+      'date': Timestamp.fromDate(date),
+      'imageUrl': imageUrl,
+      'imagePath': imagePath,
+      'identifiedConcerns': identifiedConcerns,
+      'recommendedRemedies': recommendedRemedies,
+      'recommendedProducts': recommendedProducts,
+      'precautions': precautions,
+      'routineRecommendations': routineRecommendations,
+      'criteriaScores': criteriaScores,
+      'regionData': regionData,
+      'overallScore': overallScore,
+      'notes': notes,
+      'rawAnalysis': rawAnalysis,
+      'createdAt': Timestamp.fromDate(createdAt),
+    };
+  }
+
+  @override
+  List<Object?> get props => [
+        id,
+        userId,
+        date,
+        imageUrl,
+        imagePath,
+        identifiedConcerns,
+        recommendedRemedies,
+        recommendedProducts,
+        precautions,
+        routineRecommendations,
+        criteriaScores,
+        regionData,
+        overallScore,
+        notes,
+        rawAnalysis,
+        createdAt,
+      ];
+}

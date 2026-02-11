@@ -12,6 +12,9 @@ class WellnessContent {
   final String? imageUrl;
   final List<String>? tags;
   final bool isPremium;
+  final bool isPaid;
+  final bool isAIGenerated;
+  final double? price;
   final int? readTime; // in minutes
   final DateTime createdAt;
   final DateTime? updatedAt;
@@ -26,6 +29,9 @@ class WellnessContent {
     this.imageUrl,
     this.tags,
     this.isPremium = false,
+    this.isPaid = false,
+    this.isAIGenerated = false,
+    this.price,
     this.readTime,
     required this.createdAt,
     this.updatedAt,
@@ -41,6 +47,9 @@ class WellnessContent {
       'imageUrl': imageUrl,
       'tags': tags,
       'isPremium': isPremium,
+      'isPaid': isPaid,
+      'isAIGenerated': isAIGenerated,
+      'price': price,
       'readTime': readTime,
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': updatedAt != null ? Timestamp.fromDate(updatedAt!) : null,
@@ -58,6 +67,9 @@ class WellnessContent {
       imageUrl: map['imageUrl'] as String?,
       tags: (map['tags'] as List<dynamic>?)?.map((e) => e as String).toList(),
       isPremium: map['isPremium'] as bool? ?? false,
+      isPaid: map['isPaid'] as bool? ?? false,
+      isAIGenerated: map['isAIGenerated'] as bool? ?? false,
+      price: (map['price'] as num?)?.toDouble(),
       readTime: map['readTime'] as int?,
       createdAt: (map['createdAt'] as Timestamp).toDate(),
       updatedAt: map['updatedAt'] != null

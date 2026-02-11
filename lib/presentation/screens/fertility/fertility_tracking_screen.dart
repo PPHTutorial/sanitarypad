@@ -374,6 +374,9 @@ class _FertilityTrackingScreenState
                             shape: BoxShape.circle,
                           ),
                         ),
+                        headerStyle: const HeaderStyle(
+                          formatButtonVisible: false,
+                        ),
                       ),
                     ),
                     _buildCalendarEventsList(
@@ -505,7 +508,7 @@ class _FertilityTrackingScreenState
         prediction.predictedOvulation.difference(DateTime.now()).inDays;
 
     return Card(
-      color: isInWindow ? AppTheme.lightPink.withOpacity(0.5) : null,
+      color: isInWindow ? AppTheme.darkGray.withOpacity(0.5) : null,
       child: Padding(
         padding: ResponsiveConfig.padding(all: 16),
         child: Column(
@@ -633,7 +636,8 @@ class _FertilityTrackingScreenState
                 ResponsiveConfig.heightBox(12),
                 LinearProgressIndicator(
                   value: probability,
-                  minHeight: 10,
+                  minHeight: 5,
+                  borderRadius: BorderRadius.circular(10),
                   backgroundColor: AppTheme.palePink,
                   valueColor:
                       const AlwaysStoppedAnimation<Color>(AppTheme.primaryPink),
@@ -826,6 +830,7 @@ class _FertilityTrackingScreenState
     FertilityPrediction? prediction,
   ) {
     return Card(
+      color: AppTheme.primaryPink,
       child: Padding(
         padding: ResponsiveConfig.padding(all: 16),
         child: Column(
@@ -842,7 +847,10 @@ class _FertilityTrackingScreenState
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.notifications_active_outlined),
+                  icon: const Icon(
+                    Icons.notifications_active_outlined,
+                    color: Colors.white,
+                  ),
                   tooltip: 'Schedule Period Reminder',
                   onPressed: prediction == null
                       ? null
@@ -855,7 +863,7 @@ class _FertilityTrackingScreenState
               'Get alerted before your next predicted period and ovulation windows. This helps you plan supplements, medications, and rest.',
               style: ResponsiveConfig.textStyle(
                 size: 14,
-                color: AppTheme.mediumGray,
+                color: Colors.white,
               ),
             ),
             if (prediction == null)
@@ -1928,174 +1936,193 @@ class _FertilityTrackingScreenState
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (context) {
-        return Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom,
-            left: 16,
-            right: 16,
-            top: 24,
-          ),
-          child: SingleChildScrollView(
-            child: Form(
-              key: formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+                left: 16,
+                right: 16,
+                top: 24,
+              ),
+              child: SingleChildScrollView(
+                child: Form(
+                  key: formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        existingEntry != null
-                            ? 'Edit Fertility Entry'
-                            : 'New Fertility Entry',
-                        style: ResponsiveConfig.textStyle(
-                          size: 18,
-                          weight: FontWeight.bold,
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            existingEntry != null
+                                ? 'Edit Fertility Entry'
+                                : 'New Fertility Entry',
+                            style: ResponsiveConfig.textStyle(
+                              size: 18,
+                              weight: FontWeight.bold,
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close),
+                            onPressed: () => Navigator.of(context).pop(),
+                          ),
+                        ],
+                      ),
+                      ResponsiveConfig.heightBox(16),
+                      TextFormField(
+                        controller: dateController,
+                        readOnly: true,
+                        decoration: const InputDecoration(
+                          labelText: 'Date',
+                          prefixIcon: Icon(Icons.calendar_today),
+                        ),
+                        onTap: () async {
+                          final pickedDate = await showDatePicker(
+                            context: context,
+                            initialDate: selectedDate,
+                            firstDate: DateTime.now()
+                                .subtract(const Duration(days: 365)),
+                            lastDate:
+                                DateTime.now().add(const Duration(days: 365)),
+                          );
+                          if (pickedDate != null) {
+                            selectedDate = pickedDate;
+                            dateController.text =
+                                DateFormat('yyyy-MM-dd').format(pickedDate);
+                            setSheetState(() {});
+                          }
+                        },
+                      ),
+                      ResponsiveConfig.heightBox(16),
+                      TextFormField(
+                        controller: bbtController,
+                        keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true),
+                        decoration: const InputDecoration(
+                          labelText: 'Basal Body Temperature (°C)',
+                          prefixIcon: Icon(Icons.thermostat),
                         ),
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.close),
-                        onPressed: () => Navigator.of(context).pop(),
+                      ResponsiveConfig.heightBox(16),
+                      DropdownButtonFormField<String>(
+                        value: cervicalMucus,
+                        decoration: const InputDecoration(
+                          labelText: 'Cervical Mucus',
+                          prefixIcon: Icon(Icons.water_drop),
+                        ),
+                        items: const [
+                          DropdownMenuItem(value: 'dry', child: Text('Dry')),
+                          DropdownMenuItem(
+                              value: 'sticky', child: Text('Sticky')),
+                          DropdownMenuItem(
+                              value: 'creamy', child: Text('Creamy')),
+                          DropdownMenuItem(
+                              value: 'watery', child: Text('Watery')),
+                          DropdownMenuItem(
+                              value: 'egg-white', child: Text('Egg-white')),
+                        ],
+                        onChanged: (value) =>
+                            setSheetState(() => cervicalMucus = value),
                       ),
-                    ],
-                  ),
-                  ResponsiveConfig.heightBox(16),
-                  TextFormField(
-                    controller: dateController,
-                    readOnly: true,
-                    decoration: const InputDecoration(
-                      labelText: 'Date',
-                      prefixIcon: Icon(Icons.calendar_today),
-                    ),
-                    onTap: () async {
-                      final pickedDate = await showDatePicker(
-                        context: context,
-                        initialDate: selectedDate,
-                        firstDate:
-                            DateTime.now().subtract(const Duration(days: 365)),
-                        lastDate: DateTime.now().add(const Duration(days: 365)),
-                      );
-                      if (pickedDate != null) {
-                        selectedDate = pickedDate;
-                        dateController.text =
-                            DateFormat('yyyy-MM-dd').format(pickedDate);
-                      }
-                    },
-                  ),
-                  ResponsiveConfig.heightBox(16),
-                  TextFormField(
-                    controller: bbtController,
-                    keyboardType:
-                        const TextInputType.numberWithOptions(decimal: true),
-                    decoration: const InputDecoration(
-                      labelText: 'Basal Body Temperature (°C)',
-                      prefixIcon: Icon(Icons.thermostat),
-                    ),
-                  ),
-                  ResponsiveConfig.heightBox(16),
-                  DropdownButtonFormField<String>(
-                    value: cervicalMucus,
-                    decoration: const InputDecoration(
-                      labelText: 'Cervical Mucus',
-                      prefixIcon: Icon(Icons.water_drop),
-                    ),
-                    items: const [
-                      DropdownMenuItem(value: 'dry', child: Text('Dry')),
-                      DropdownMenuItem(value: 'sticky', child: Text('Sticky')),
-                      DropdownMenuItem(value: 'creamy', child: Text('Creamy')),
-                      DropdownMenuItem(value: 'watery', child: Text('Watery')),
-                      DropdownMenuItem(
-                          value: 'egg-white', child: Text('Egg-white')),
-                    ],
-                    onChanged: (value) => cervicalMucus = value,
-                  ),
-                  ResponsiveConfig.heightBox(16),
-                  DropdownButtonFormField<String>(
-                    value: cervicalPosition,
-                    decoration: const InputDecoration(
-                      labelText: 'Cervical Position',
-                      prefixIcon: Icon(Icons.location_on_outlined),
-                    ),
-                    items: const [
-                      DropdownMenuItem(value: 'low', child: Text('Low')),
-                      DropdownMenuItem(value: 'medium', child: Text('Medium')),
-                      DropdownMenuItem(value: 'high', child: Text('High')),
-                    ],
-                    onChanged: (value) => cervicalPosition = value,
-                  ),
-                  ResponsiveConfig.heightBox(16),
-                  SwitchListTile(
-                    title: const Text('LH Test Positive'),
-                    value: lhPositive ?? false,
-                    onChanged: (value) => setState(() => lhPositive = value),
-                  ),
-                  SwitchListTile(
-                    title: const Text('Intercourse today'),
-                    value: intercourse ?? false,
-                    onChanged: (value) => setState(() => intercourse = value),
-                  ),
-                  ResponsiveConfig.heightBox(16),
-                  TextFormField(
-                    controller: notesController,
-                    maxLines: 3,
-                    decoration: const InputDecoration(
-                      labelText: 'Notes',
-                      prefixIcon: Icon(Icons.note_alt_outlined),
-                    ),
-                  ),
-                  ResponsiveConfig.heightBox(24),
-                  ElevatedButton(
-                    onPressed: () async {
-                      if (!formKey.currentState!.validate()) return;
+                      ResponsiveConfig.heightBox(16),
+                      DropdownButtonFormField<String>(
+                        value: cervicalPosition,
+                        decoration: const InputDecoration(
+                          labelText: 'Cervical Position',
+                          prefixIcon: Icon(Icons.location_on_outlined),
+                        ),
+                        items: const [
+                          DropdownMenuItem(value: 'low', child: Text('Low')),
+                          DropdownMenuItem(
+                              value: 'medium', child: Text('Medium')),
+                          DropdownMenuItem(value: 'high', child: Text('High')),
+                        ],
+                        onChanged: (value) =>
+                            setSheetState(() => cervicalPosition = value),
+                      ),
+                      ResponsiveConfig.heightBox(16),
+                      SwitchListTile(
+                        title: const Text('LH Test Positive'),
+                        value: lhPositive ?? false,
+                        onChanged: (value) =>
+                            setSheetState(() => lhPositive = value),
+                      ),
+                      SwitchListTile(
+                        title: const Text('Intercourse today'),
+                        value: intercourse ?? false,
+                        onChanged: (value) =>
+                            setSheetState(() => intercourse = value),
+                      ),
+                      ResponsiveConfig.heightBox(16),
+                      TextFormField(
+                        controller: notesController,
+                        maxLines: 3,
+                        decoration: const InputDecoration(
+                          labelText: 'Notes',
+                          prefixIcon: Icon(Icons.note_alt_outlined),
+                        ),
+                      ),
+                      ResponsiveConfig.heightBox(24),
+                      ElevatedButton(
+                        onPressed: () async {
+                          if (!formKey.currentState!.validate()) return;
 
-                      // Credit Check
-                      final hasCredit = await ref
-                          .read(creditManagerProvider)
-                          .requestCredit(context, ActionType.fertility);
-                      if (!hasCredit) return;
+                          // Credit Check
+                          final hasCredit = await ref
+                              .read(creditManagerProvider)
+                              .requestCredit(context, ActionType.fertility);
+                          if (!hasCredit) return;
 
-                      final entry = FertilityEntry(
-                        id: existingEntry?.id,
-                        userId: userId,
-                        date: selectedDate,
-                        basalBodyTemperature:
-                            double.tryParse(bbtController.text.trim()),
-                        cervicalMucus: cervicalMucus,
-                        cervicalPosition: cervicalPosition,
-                        lhTestPositive: lhPositive,
-                        intercourse: intercourse,
-                        notes: notesController.text.trim().isEmpty
-                            ? null
-                            : notesController.text.trim(),
-                        createdAt: existingEntry?.createdAt ?? DateTime.now(),
-                        updatedAt: DateTime.now(),
-                      );
-
-                      try {
-                        if (existingEntry != null && existingEntry.id != null) {
-                          await _fertilityService.updateFertilityEntry(entry);
-                        } else {
-                          await _fertilityService.createFertilityEntry(entry);
-                        }
-                        await ref
-                            .read(creditManagerProvider)
-                            .consumeCredits(ActionType.fertility);
-                        if (context.mounted) Navigator.of(context).pop();
-                      } catch (e) {
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Error: ${e.toString()}')),
+                          final entry = FertilityEntry(
+                            id: existingEntry?.id,
+                            userId: userId,
+                            date: selectedDate,
+                            basalBodyTemperature:
+                                double.tryParse(bbtController.text.trim()),
+                            cervicalMucus: cervicalMucus,
+                            cervicalPosition: cervicalPosition,
+                            lhTestPositive: lhPositive,
+                            intercourse: intercourse,
+                            notes: notesController.text.trim().isEmpty
+                                ? null
+                                : notesController.text.trim(),
+                            createdAt:
+                                existingEntry?.createdAt ?? DateTime.now(),
+                            updatedAt: DateTime.now(),
                           );
-                        }
-                      }
-                    },
-                    child: Text(existingEntry != null ? 'Update' : 'Save'),
+
+                          try {
+                            if (existingEntry != null &&
+                                existingEntry.id != null) {
+                              await _fertilityService
+                                  .updateFertilityEntry(entry);
+                            } else {
+                              await _fertilityService
+                                  .createFertilityEntry(entry);
+                            }
+                            await ref
+                                .read(creditManagerProvider)
+                                .consumeCredits(ActionType.fertility);
+                            if (context.mounted) Navigator.of(context).pop();
+                          } catch (e) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                    content: Text('Error: ${e.toString()}')),
+                              );
+                            }
+                          }
+                        },
+                        child: Text(existingEntry != null ? 'Update' : 'Save'),
+                      ),
+                      ResponsiveConfig.heightBox(16),
+                    ],
                   ),
-                  ResponsiveConfig.heightBox(16),
-                ],
+                ),
               ),
-            ),
-          ),
+            );
+          },
         );
       },
     );
@@ -2112,72 +2139,74 @@ class _FertilityTrackingScreenState
     await showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: const Text('Schedule Ovulation Test'),
-          content: Form(
-            key: formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.calendar_today),
-                  title:
-                      Text(DateFormat('EEE, MMM d, y').format(scheduledDate)),
-                  subtitle: const Text('Tap to change date'),
-                  onTap: () async {
-                    final picked = await showDatePicker(
-                      context: context,
-                      initialDate: scheduledDate,
-                      firstDate:
-                          DateTime.now().subtract(const Duration(days: 1)),
-                      lastDate: DateTime.now().add(const Duration(days: 120)),
-                    );
-                    if (picked != null) {
-                      setState(() => scheduledDate = picked);
-                    }
-                  },
-                ),
-                ResponsiveConfig.heightBox(16),
-                TextFormField(
-                  controller: notesController,
-                  decoration: const InputDecoration(
-                    labelText: 'Notes (optional)',
+        return StatefulBuilder(
+          builder: (context, setDialogState) => AlertDialog(
+            title: const Text('Schedule Ovulation Test'),
+            content: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.calendar_today),
+                    title:
+                        Text(DateFormat('EEE, MMM d, y').format(scheduledDate)),
+                    subtitle: const Text('Tap to change date'),
+                    onTap: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: scheduledDate,
+                        firstDate:
+                            DateTime.now().subtract(const Duration(days: 1)),
+                        lastDate: DateTime.now().add(const Duration(days: 120)),
+                      );
+                      if (picked != null) {
+                        setDialogState(() => scheduledDate = picked);
+                      }
+                    },
                   ),
-                ),
-              ],
+                  ResponsiveConfig.heightBox(16),
+                  TextFormField(
+                    controller: notesController,
+                    decoration: const InputDecoration(
+                      labelText: 'Notes (optional)',
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                // Credit Check
-                final hasCredit = await ref
-                    .read(creditManagerProvider)
-                    .requestCredit(context, ActionType.fertility);
-                if (!hasCredit) return;
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  // Credit Check
+                  final hasCredit = await ref
+                      .read(creditManagerProvider)
+                      .requestCredit(context, ActionType.fertility);
+                  if (!hasCredit) return;
 
-                final reminder = OvulationTestReminder(
-                  userId: userId,
-                  scheduledDate: scheduledDate,
-                  notes: notesController.text.trim().isEmpty
-                      ? null
-                      : notesController.text.trim(),
-                  createdAt: DateTime.now(),
-                );
-                await _fertilityService.scheduleOvulationTest(reminder);
-                await ref
-                    .read(creditManagerProvider)
-                    .consumeCredits(ActionType.fertility);
-                if (context.mounted) Navigator.of(context).pop();
-              },
-              child: const Text('Schedule'),
-            ),
-          ],
+                  final reminder = OvulationTestReminder(
+                    userId: userId,
+                    scheduledDate: scheduledDate,
+                    notes: notesController.text.trim().isEmpty
+                        ? null
+                        : notesController.text.trim(),
+                    createdAt: DateTime.now(),
+                  );
+                  await _fertilityService.scheduleOvulationTest(reminder);
+                  await ref
+                      .read(creditManagerProvider)
+                      .consumeCredits(ActionType.fertility);
+                  if (context.mounted) Navigator.of(context).pop();
+                },
+                child: const Text('Schedule'),
+              ),
+            ],
+          ),
         );
       },
     );
@@ -2221,98 +2250,102 @@ class _FertilityTrackingScreenState
     await showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: const Text('Log Hormone Levels'),
-          content: Form(
-            key: formKey,
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextFormField(
-                    controller: estrogenController,
-                    keyboardType:
-                        const TextInputType.numberWithOptions(decimal: true),
-                    decoration:
-                        const InputDecoration(labelText: 'Estrogen (relative)'),
-                  ),
-                  ResponsiveConfig.heightBox(16),
-                  TextFormField(
-                    controller: progesteroneController,
-                    keyboardType:
-                        const TextInputType.numberWithOptions(decimal: true),
-                    decoration: const InputDecoration(
-                        labelText: 'Progesterone (relative)'),
-                  ),
-                  ResponsiveConfig.heightBox(16),
-                  TextFormField(
-                    controller: lhController,
-                    keyboardType:
-                        const TextInputType.numberWithOptions(decimal: true),
-                    decoration:
-                        const InputDecoration(labelText: 'LH (relative)'),
-                  ),
-                  ResponsiveConfig.heightBox(16),
-                  TextFormField(
-                    controller: fshController,
-                    keyboardType:
-                        const TextInputType.numberWithOptions(decimal: true),
-                    decoration:
-                        const InputDecoration(labelText: 'FSH (relative)'),
-                  ),
-                  ResponsiveConfig.heightBox(16),
-                  DropdownButtonFormField<String>(
-                    value: phase,
-                    decoration: const InputDecoration(labelText: 'Cycle Phase'),
-                    items: const [
-                      DropdownMenuItem(
-                          value: 'menstrual', child: Text('Menstrual')),
-                      DropdownMenuItem(
-                          value: 'follicular', child: Text('Follicular')),
-                      DropdownMenuItem(
-                          value: 'ovulation', child: Text('Ovulation')),
-                      DropdownMenuItem(value: 'luteal', child: Text('Luteal')),
-                    ],
-                    onChanged: (value) => phase = value,
-                  ),
-                ],
+        return StatefulBuilder(
+          builder: (context, setDialogState) => AlertDialog(
+            title: const Text('Log Hormone Levels'),
+            content: Form(
+              key: formKey,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextFormField(
+                      controller: estrogenController,
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
+                      decoration: const InputDecoration(
+                          labelText: 'Estrogen (relative)'),
+                    ),
+                    ResponsiveConfig.heightBox(16),
+                    TextFormField(
+                      controller: progesteroneController,
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
+                      decoration: const InputDecoration(
+                          labelText: 'Progesterone (relative)'),
+                    ),
+                    ResponsiveConfig.heightBox(16),
+                    TextFormField(
+                      controller: lhController,
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
+                      decoration:
+                          const InputDecoration(labelText: 'LH (relative)'),
+                    ),
+                    ResponsiveConfig.heightBox(16),
+                    TextFormField(
+                      controller: fshController,
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
+                      decoration:
+                          const InputDecoration(labelText: 'FSH (relative)'),
+                    ),
+                    ResponsiveConfig.heightBox(16),
+                    DropdownButtonFormField<String>(
+                      value: phase,
+                      decoration:
+                          const InputDecoration(labelText: 'Cycle Phase'),
+                      items: const [
+                        DropdownMenuItem(
+                            value: 'menstrual', child: Text('Menstrual')),
+                        DropdownMenuItem(
+                            value: 'follicular', child: Text('Follicular')),
+                        DropdownMenuItem(
+                            value: 'ovulation', child: Text('Ovulation')),
+                        DropdownMenuItem(
+                            value: 'luteal', child: Text('Luteal')),
+                      ],
+                      onChanged: (value) => setDialogState(() => phase = value),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                // Credit Check
-                final hasCredit = await ref
-                    .read(creditManagerProvider)
-                    .requestCredit(context, ActionType.fertility);
-                if (!hasCredit) return;
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  // Credit Check
+                  final hasCredit = await ref
+                      .read(creditManagerProvider)
+                      .requestCredit(context, ActionType.fertility);
+                  if (!hasCredit) return;
 
-                await _fertilityService.logHormoneCycle(
-                  HormoneCycle(
-                    userId: userId,
-                    date: DateTime.now(),
-                    estrogenLevel: double.tryParse(estrogenController.text),
-                    progesteroneLevel:
-                        double.tryParse(progesteroneController.text),
-                    lhLevel: double.tryParse(lhController.text),
-                    fshLevel: double.tryParse(fshController.text),
-                    cyclePhase: phase,
-                    createdAt: DateTime.now(),
-                  ),
-                );
-                await ref
-                    .read(creditManagerProvider)
-                    .consumeCredits(ActionType.fertility);
-                if (context.mounted) Navigator.of(context).pop();
-              },
-              child: const Text('Save'),
-            ),
-          ],
+                  await _fertilityService.logHormoneCycle(
+                    HormoneCycle(
+                      userId: userId,
+                      date: DateTime.now(),
+                      estrogenLevel: double.tryParse(estrogenController.text),
+                      progesteroneLevel:
+                          double.tryParse(progesteroneController.text),
+                      lhLevel: double.tryParse(lhController.text),
+                      fshLevel: double.tryParse(fshController.text),
+                      cyclePhase: phase,
+                      createdAt: DateTime.now(),
+                    ),
+                  );
+                  await ref
+                      .read(creditManagerProvider)
+                      .consumeCredits(ActionType.fertility);
+                  if (context.mounted) Navigator.of(context).pop();
+                },
+                child: const Text('Save'),
+              ),
+            ],
+          ),
         );
       },
     );
@@ -2415,92 +2448,94 @@ class _FertilityTrackingScreenState
     await showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: const Text('Log Mood & Energy'),
-          content: Form(
-            key: formKey,
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  DropdownButtonFormField<String>(
-                    value: mood,
-                    decoration: const InputDecoration(labelText: 'Mood'),
-                    items: const [
-                      DropdownMenuItem(value: 'happy', child: Text('Happy')),
-                      DropdownMenuItem(value: 'calm', child: Text('Calm')),
-                      DropdownMenuItem(
-                          value: 'anxious', child: Text('Anxious')),
-                      DropdownMenuItem(value: 'sad', child: Text('Sad')),
-                      DropdownMenuItem(
-                          value: 'irritable', child: Text('Irritable')),
-                    ],
-                    onChanged: (value) => mood = value,
-                  ),
-                  TextFormField(
-                    controller: energyController,
-                    keyboardType: TextInputType.number,
-                    decoration:
-                        const InputDecoration(labelText: 'Energy level (1-10)'),
-                  ),
-                  ResponsiveConfig.heightBox(16),
-                  TextFormField(
-                    controller: stressController,
-                    keyboardType: TextInputType.number,
-                    decoration:
-                        const InputDecoration(labelText: 'Stress level (1-10)'),
-                  ),
-                  ResponsiveConfig.heightBox(16),
-                  TextFormField(
-                    controller: libidoController,
-                    keyboardType: TextInputType.number,
-                    decoration:
-                        const InputDecoration(labelText: 'Libido level (1-10)'),
-                  ),
-                  ResponsiveConfig.heightBox(16),
-                  TextFormField(
-                    controller: notesController,
-                    decoration: const InputDecoration(labelText: 'Notes'),
-                  ),
-                ],
+        return StatefulBuilder(
+          builder: (context, setDialogState) => AlertDialog(
+            title: const Text('Log Mood & Energy'),
+            content: Form(
+              key: formKey,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    DropdownButtonFormField<String>(
+                      value: mood,
+                      decoration: const InputDecoration(labelText: 'Mood'),
+                      items: const [
+                        DropdownMenuItem(value: 'happy', child: Text('Happy')),
+                        DropdownMenuItem(value: 'calm', child: Text('Calm')),
+                        DropdownMenuItem(
+                            value: 'anxious', child: Text('Anxious')),
+                        DropdownMenuItem(value: 'sad', child: Text('Sad')),
+                        DropdownMenuItem(
+                            value: 'irritable', child: Text('Irritable')),
+                      ],
+                      onChanged: (value) => setDialogState(() => mood = value),
+                    ),
+                    TextFormField(
+                      controller: energyController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                          labelText: 'Energy level (1-10)'),
+                    ),
+                    ResponsiveConfig.heightBox(16),
+                    TextFormField(
+                      controller: stressController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                          labelText: 'Stress level (1-10)'),
+                    ),
+                    ResponsiveConfig.heightBox(16),
+                    TextFormField(
+                      controller: libidoController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                          labelText: 'Libido level (1-10)'),
+                    ),
+                    ResponsiveConfig.heightBox(16),
+                    TextFormField(
+                      controller: notesController,
+                      decoration: const InputDecoration(labelText: 'Notes'),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                // Credit Check
-                final hasCredit = await ref
-                    .read(creditManagerProvider)
-                    .requestCredit(context, ActionType.fertility);
-                if (!hasCredit) return;
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  // Credit Check
+                  final hasCredit = await ref
+                      .read(creditManagerProvider)
+                      .requestCredit(context, ActionType.fertility);
+                  if (!hasCredit) return;
 
-                await _fertilityService.logMoodEnergy(
-                  MoodEnergyEntry(
-                    userId: userId,
-                    date: DateTime.now(),
-                    mood: mood,
-                    energyLevel: int.tryParse(energyController.text),
-                    stressLevel: int.tryParse(stressController.text),
-                    libidoLevel: int.tryParse(libidoController.text),
-                    notes: notesController.text.trim().isEmpty
-                        ? null
-                        : notesController.text.trim(),
-                    createdAt: DateTime.now(),
-                  ),
-                );
-                await ref
-                    .read(creditManagerProvider)
-                    .consumeCredits(ActionType.fertility);
-                if (context.mounted) Navigator.of(context).pop();
-              },
-              child: const Text('Save'),
-            ),
-          ],
+                  await _fertilityService.logMoodEnergy(
+                    MoodEnergyEntry(
+                      userId: userId,
+                      date: DateTime.now(),
+                      mood: mood,
+                      energyLevel: int.tryParse(energyController.text),
+                      stressLevel: int.tryParse(stressController.text),
+                      libidoLevel: int.tryParse(libidoController.text),
+                      notes: notesController.text.trim().isEmpty
+                          ? null
+                          : notesController.text.trim(),
+                      createdAt: DateTime.now(),
+                    ),
+                  );
+                  await ref
+                      .read(creditManagerProvider)
+                      .consumeCredits(ActionType.fertility);
+                  if (context.mounted) Navigator.of(context).pop();
+                },
+                child: const Text('Save'),
+              ),
+            ],
+          ),
         );
       },
     );
@@ -2613,56 +2648,59 @@ class _FertilityTrackingScreenState
     await showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: const Text('Log Intercourse Activity'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              SwitchListTile(
-                title: const Text('Protection used'),
-                value: usedProtection,
-                onChanged: (value) => setState(() => usedProtection = value),
+        return StatefulBuilder(
+          builder: (context, setDialogState) => AlertDialog(
+            title: const Text('Log Intercourse Activity'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SwitchListTile(
+                  title: const Text('Protection used'),
+                  value: usedProtection,
+                  onChanged: (value) =>
+                      setDialogState(() => usedProtection = value),
+                ),
+                ResponsiveConfig.heightBox(16),
+                TextField(
+                  controller: notesController,
+                  decoration:
+                      const InputDecoration(labelText: 'Notes (optional)'),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Cancel'),
               ),
-              ResponsiveConfig.heightBox(16),
-              TextField(
-                controller: notesController,
-                decoration:
-                    const InputDecoration(labelText: 'Notes (optional)'),
+              ElevatedButton(
+                onPressed: () async {
+                  // Credit Check
+                  final hasCredit = await ref
+                      .read(creditManagerProvider)
+                      .requestCredit(context, ActionType.fertility);
+                  if (!hasCredit) return;
+
+                  await _fertilityService.logIntercourse(
+                    IntercourseEntry(
+                      userId: userId,
+                      date: DateTime.now(),
+                      usedProtection: usedProtection,
+                      notes: notesController.text.trim().isEmpty
+                          ? null
+                          : notesController.text.trim(),
+                      createdAt: DateTime.now(),
+                    ),
+                  );
+                  await ref
+                      .read(creditManagerProvider)
+                      .consumeCredits(ActionType.fertility);
+                  if (context.mounted) Navigator.of(context).pop();
+                },
+                child: const Text('Save'),
               ),
             ],
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                // Credit Check
-                final hasCredit = await ref
-                    .read(creditManagerProvider)
-                    .requestCredit(context, ActionType.fertility);
-                if (!hasCredit) return;
-
-                await _fertilityService.logIntercourse(
-                  IntercourseEntry(
-                    userId: userId,
-                    date: DateTime.now(),
-                    usedProtection: usedProtection,
-                    notes: notesController.text.trim().isEmpty
-                        ? null
-                        : notesController.text.trim(),
-                    createdAt: DateTime.now(),
-                  ),
-                );
-                await ref
-                    .read(creditManagerProvider)
-                    .consumeCredits(ActionType.fertility);
-                if (context.mounted) Navigator.of(context).pop();
-              },
-              child: const Text('Save'),
-            ),
-          ],
         );
       },
     );
@@ -2678,77 +2716,82 @@ class _FertilityTrackingScreenState
     await showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: const Text('Log Pregnancy Test'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              DropdownButtonFormField<String>(
-                value: result,
-                decoration: const InputDecoration(labelText: 'Result'),
-                items: const [
-                  DropdownMenuItem(value: 'positive', child: Text('Positive')),
-                  DropdownMenuItem(value: 'negative', child: Text('Negative')),
-                  DropdownMenuItem(value: 'invalid', child: Text('Invalid')),
-                ],
-                onChanged: (value) => result = value ?? 'negative',
+        return StatefulBuilder(
+          builder: (context, setDialogState) => AlertDialog(
+            title: const Text('Log Pregnancy Test'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                DropdownButtonFormField<String>(
+                  value: result,
+                  decoration: const InputDecoration(labelText: 'Result'),
+                  items: const [
+                    DropdownMenuItem(
+                        value: 'positive', child: Text('Positive')),
+                    DropdownMenuItem(
+                        value: 'negative', child: Text('Negative')),
+                    DropdownMenuItem(value: 'invalid', child: Text('Invalid')),
+                  ],
+                  onChanged: (value) =>
+                      setDialogState(() => result = value ?? 'negative'),
+                ),
+                ResponsiveConfig.heightBox(16),
+                TextField(
+                  controller: brandController,
+                  decoration: const InputDecoration(labelText: 'Test brand'),
+                ),
+                ResponsiveConfig.heightBox(16),
+                TextField(
+                  controller: dpoController,
+                  keyboardType: TextInputType.number,
+                  decoration:
+                      const InputDecoration(labelText: 'Days past ovulation'),
+                ),
+                ResponsiveConfig.heightBox(16),
+                TextField(
+                  controller: notesController,
+                  decoration:
+                      const InputDecoration(labelText: 'Notes (optional)'),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Cancel'),
               ),
-              ResponsiveConfig.heightBox(16),
-              TextField(
-                controller: brandController,
-                decoration: const InputDecoration(labelText: 'Test brand'),
-              ),
-              ResponsiveConfig.heightBox(16),
-              TextField(
-                controller: dpoController,
-                keyboardType: TextInputType.number,
-                decoration:
-                    const InputDecoration(labelText: 'Days past ovulation'),
-              ),
-              ResponsiveConfig.heightBox(16),
-              TextField(
-                controller: notesController,
-                decoration:
-                    const InputDecoration(labelText: 'Notes (optional)'),
+              ElevatedButton(
+                onPressed: () async {
+                  // Credit Check
+                  final hasCredit = await ref
+                      .read(creditManagerProvider)
+                      .requestCredit(context, ActionType.fertility);
+                  if (!hasCredit) return;
+
+                  await _fertilityService.logPregnancyTest(
+                    PregnancyTestEntry(
+                      userId: userId,
+                      date: DateTime.now(),
+                      result: result,
+                      testBrand: brandController.text.trim().isEmpty
+                          ? null
+                          : brandController.text.trim(),
+                      daysPastOvulation: int.tryParse(dpoController.text),
+                      notes: notesController.text.trim().isEmpty
+                          ? null
+                          : notesController.text.trim(),
+                      createdAt: DateTime.now(),
+                    ),
+                  );
+                  await ref
+                      .read(creditManagerProvider)
+                      .consumeCredits(ActionType.fertility);
+                  if (context.mounted) Navigator.of(context).pop();
+                },
+                child: const Text('Save'),
               ),
             ],
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                // Credit Check
-                final hasCredit = await ref
-                    .read(creditManagerProvider)
-                    .requestCredit(context, ActionType.fertility);
-                if (!hasCredit) return;
-
-                await _fertilityService.logPregnancyTest(
-                  PregnancyTestEntry(
-                    userId: userId,
-                    date: DateTime.now(),
-                    result: result,
-                    testBrand: brandController.text.trim().isEmpty
-                        ? null
-                        : brandController.text.trim(),
-                    daysPastOvulation: int.tryParse(dpoController.text),
-                    notes: notesController.text.trim().isEmpty
-                        ? null
-                        : notesController.text.trim(),
-                    createdAt: DateTime.now(),
-                  ),
-                );
-                await ref
-                    .read(creditManagerProvider)
-                    .consumeCredits(ActionType.fertility);
-                if (context.mounted) Navigator.of(context).pop();
-              },
-              child: const Text('Save'),
-            ),
-          ],
         );
       },
     );

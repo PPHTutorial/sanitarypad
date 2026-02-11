@@ -211,7 +211,7 @@ class _DermatologistSearchScreenState
             ),
             const SizedBox(height: 16),
             Text(
-              'This feature requires 1 credit or watching 3 ads to access nearby dermatologists.',
+              'This feature requires credit or watching ads multiple times to access nearby dermatologists.',
               textAlign: TextAlign.center,
               style: ResponsiveConfig.textStyle(
                 size: 16,
@@ -234,7 +234,7 @@ class _DermatologistSearchScreenState
                         child: ElevatedButton.icon(
                           onPressed: _unlockWithAds,
                           icon: const Icon(Icons.play_circle_outline),
-                          label: const Text('Watch 3 Ads to Unlock'),
+                          label: const Text('Watch Ads to Unlock'),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: colorScheme.primary,
                             padding: const EdgeInsets.symmetric(vertical: 16),

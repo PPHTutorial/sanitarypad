@@ -29,13 +29,21 @@ class SecuritySettingsScreen extends ConsumerWidget {
                 _buildSectionTitle(context, 'App Protection'),
                 ResponsiveConfig.heightBox(12),
                 _buildSecurityCard(context, [
-                  _buildSecurityTile(
-                    context,
-                    icon: FontAwesomeIcons.key,
-                    title: 'PIN Lock',
-                    subtitle: 'Secure app access with a 4-digit PIN',
-                    isPremium: isPremium,
-                    onTap: () => context.push('/pin-setup'),
+                  FutureBuilder<bool>(
+                    future: ref.watch(securityServiceProvider).hasPin(),
+                    builder: (context, snapshot) {
+                      final hasPin = snapshot.data ?? false;
+                      return _buildSecurityTile(
+                        context,
+                        icon: FontAwesomeIcons.key,
+                        title: 'PIN Lock',
+                        subtitle: hasPin
+                            ? 'PIN is set. Tap to change.'
+                            : 'Secure app access with a 4-digit PIN',
+                        isPremium: isPremium,
+                        onTap: () => context.push('/pin-setup'),
+                      );
+                    },
                   ),
                   const Divider(),
                   _buildBiometricTile(context, ref, isPremium),
@@ -109,6 +117,8 @@ class SecuritySettingsScreen extends ConsumerWidget {
   Widget _buildBiometricTile(
       BuildContext context, WidgetRef ref, bool isPremium) {
     final securityService = ref.watch(securityServiceProvider);
+    final user = ref.read(currentUserStreamProvider).value;
+    final effectivePremium = isPremium || (user?.isAdmin ?? false);
 
     return FutureBuilder<bool>(
       future: securityService.isBiometricAvailable(),
@@ -122,60 +132,63 @@ class SecuritySettingsScreen extends ConsumerWidget {
             final enabled = snapshot.data ?? false;
             return ListTile(
               leading: FaIcon(FontAwesomeIcons.fingerprint,
-                  color: isPremium
+                  color: effectivePremium
                       ? Theme.of(context).colorScheme.primary
                       : Colors.grey,
                   size: 20),
               title: const Text('Biometric Lock'),
               subtitle: const Text('Use Fingerprint/FaceID to unlock'),
-              trailing: isPremium
+              trailing: effectivePremium
                   ? Switch(
                       value: enabled,
                       onChanged: (val) async {
-                        if (val) {
-                          final authenticated =
-                              await securityService.authenticateBiometric();
-                          if (authenticated) {
-                            await securityService.setBiometricEnabled(true);
+                        try {
+                          if (val) {
+                            final authenticated =
+                                await securityService.authenticateBiometric();
+                            if (authenticated) {
+                              await securityService.setBiometricEnabled(true);
+
+                              // Update Firestore
+                              if (user != null) {
+                                final updatedUser = user.copyWith(
+                                  settings: user.settings
+                                      .copyWith(biometricLock: true),
+                                );
+                                await ref
+                                    .read(authServiceProvider)
+                                    .updateUserData(updatedUser);
+                              }
+                              ref.invalidate(securityServiceProvider);
+                            }
+                          } else {
+                            await securityService.setBiometricEnabled(false);
 
                             // Update Firestore
-                            final user =
-                                ref.read(currentUserStreamProvider).value;
                             if (user != null) {
                               final updatedUser = user.copyWith(
-                                settings:
-                                    user.settings.copyWith(biometricLock: true),
+                                settings: user.settings
+                                    .copyWith(biometricLock: false),
                               );
                               await ref
                                   .read(authServiceProvider)
                                   .updateUserData(updatedUser);
                             }
-
                             ref.invalidate(securityServiceProvider);
                           }
-                        } else {
-                          await securityService.setBiometricEnabled(false);
-
-                          // Update Firestore
-                          final user =
-                              ref.read(currentUserStreamProvider).value;
-                          if (user != null) {
-                            final updatedUser = user.copyWith(
-                              settings:
-                                  user.settings.copyWith(biometricLock: false),
+                        } catch (e) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Error: ${e.toString()}')),
                             );
-                            await ref
-                                .read(authServiceProvider)
-                                .updateUserData(updatedUser);
                           }
-
-                          ref.invalidate(securityServiceProvider);
                         }
                       },
                     )
                   : const FaIcon(FontAwesomeIcons.lock,
                       size: 14, color: Colors.amber),
-              onTap: isPremium ? null : () => _showPremiumDialog(context),
+              onTap:
+                  effectivePremium ? null : () => _showPremiumDialog(context),
             );
           },
         );
@@ -186,6 +199,8 @@ class SecuritySettingsScreen extends ConsumerWidget {
   Widget _buildAnonymousModeTile(
       BuildContext context, WidgetRef ref, bool isPremium) {
     final securityService = ref.watch(securityServiceProvider);
+    final user = ref.read(currentUserStreamProvider).value;
+    final effectivePremium = isPremium || (user?.isAdmin ?? false);
 
     return FutureBuilder<bool>(
       future: securityService.isAnonymousModeEnabled(),
@@ -193,13 +208,13 @@ class SecuritySettingsScreen extends ConsumerWidget {
         final enabled = snapshot.data ?? false;
         return ListTile(
           leading: FaIcon(FontAwesomeIcons.eyeSlash,
-              color: isPremium
+              color: effectivePremium
                   ? Theme.of(context).colorScheme.primary
                   : Colors.grey,
               size: 20),
           title: const Text('Anonymous Mode'),
           subtitle: const Text('Hide your identity in community features'),
-          trailing: isPremium
+          trailing: effectivePremium
               ? Switch(
                   value: enabled,
                   onChanged: (val) async {
@@ -207,7 +222,6 @@ class SecuritySettingsScreen extends ConsumerWidget {
                     await securityService.setAnonymousMode(val);
 
                     // Update in Firestore
-                    final user = ref.read(currentUserStreamProvider).value;
                     if (user != null) {
                       final updatedUser = user.copyWith(
                         settings: user.settings.copyWith(anonymousMode: val),
@@ -222,7 +236,7 @@ class SecuritySettingsScreen extends ConsumerWidget {
                 )
               : const FaIcon(FontAwesomeIcons.lock,
                   size: 14, color: Colors.amber),
-          onTap: isPremium ? null : () => _showPremiumDialog(context),
+          onTap: effectivePremium ? null : () => _showPremiumDialog(context),
         );
       },
     );

@@ -62,6 +62,7 @@ class _WellnessJournalScreenState extends ConsumerState<WellnessJournalScreen> {
   final _imagePicker = ImagePicker();
   final _storageService = StorageService();
   List<String> _photoUrls = [];
+  final List<File> _pendingImages = [];
 
   bool _isLoading = false;
 
@@ -135,33 +136,15 @@ class _WellnessJournalScreenState extends ConsumerState<WellnessJournalScreen> {
     try {
       final image = await _imagePicker.pickImage(
         source: ImageSource.gallery,
-        imageQuality: 80,
+        imageQuality: 90, // High quality
+        maxWidth: 1920, // Scaled down resolution
+        maxHeight: 1920,
       );
 
       if (image != null) {
-        setState(() => _isLoading = true);
-        try {
-          final user = ref.read(currentUserStreamProvider).value;
-          if (user != null) {
-            final file = File(image.path);
-            final uploadResult = await _storageService.uploadFile(
-              file: file,
-              path:
-                  'wellness/${user.userId}/${DateTime.now().millisecondsSinceEpoch}.jpg',
-            );
-            setState(() {
-              _photoUrls.add(uploadResult.downloadUrl);
-              _isLoading = false;
-            });
-          }
-        } catch (e) {
-          setState(() => _isLoading = false);
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Error uploading image: ${e.toString()}')),
-            );
-          }
-        }
+        setState(() {
+          _pendingImages.add(File(image.path));
+        });
       }
     } catch (e) {
       if (mounted) {
@@ -202,6 +185,7 @@ class _WellnessJournalScreenState extends ConsumerState<WellnessJournalScreen> {
         _exerciseIntensity = null;
         _journalController.clear();
         _photoUrls = [];
+        _pendingImages.clear();
       });
       // Check if entry exists for new date
       await _checkExistingEntry();
@@ -220,6 +204,21 @@ class _WellnessJournalScreenState extends ConsumerState<WellnessJournalScreen> {
     setState(() => _isLoading = true);
 
     try {
+      // 1. Upload Pending Images
+      if (_pendingImages.isNotEmpty) {
+        final user = ref.read(currentUserStreamProvider).value;
+        if (user != null) {
+          for (final file in _pendingImages) {
+            final uploadResult = await _storageService.uploadFile(
+              file: file,
+              path:
+                  'wellness/${user.userId}/${DateTime.now().millisecondsSinceEpoch}_${_pendingImages.indexOf(file)}.jpg',
+            );
+            _photoUrls.add(uploadResult.downloadUrl);
+          }
+          _pendingImages.clear(); // Clear pending after upload
+        }
+      }
       final hydration = WellnessHydration(
         waterGlasses: _waterGlasses,
         goal: _hydrationGoal,
@@ -421,11 +420,12 @@ class _WellnessJournalScreenState extends ConsumerState<WellnessJournalScreen> {
   }
 
   Widget _buildMoodSection() {
-    final moods = ['😊', '😢', '😡', '😴', '😌', '😰', '😍', '😔'];
+    final moods = ['😊', '😢', '😡', '😴', '😌', '😰', '😍', '😔', '🤢', '🥳'];
 
     return Card(
+      margin: EdgeInsets.zero,
       child: Padding(
-        padding: ResponsiveConfig.padding(all: 16),
+        padding: ResponsiveConfig.padding(all: 24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -436,39 +436,42 @@ class _WellnessJournalScreenState extends ConsumerState<WellnessJournalScreen> {
                 weight: FontWeight.w600,
               ),
             ),
-            ResponsiveConfig.heightBox(12),
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: moods.map((emoji) {
-                final isSelected = _moodEmoji == emoji;
-                return InkWell(
-                  onTap: () => setState(() => _moodEmoji = emoji),
-                  child: Container(
-                    width: 50,
-                    height: 50,
-                    decoration: BoxDecoration(
-                      color:
-                          isSelected ? AppTheme.lightPink : AppTheme.palePink,
-                      borderRadius: ResponsiveConfig.borderRadius(25),
-                      border: Border.all(
+            ResponsiveConfig.heightBox(24),
+            Center(
+              child: Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                children: moods.map((emoji) {
+                  final isSelected = _moodEmoji == emoji;
+                  return InkWell(
+                    onTap: () => setState(() => _moodEmoji = emoji),
+                    child: Container(
+                      width: 50,
+                      height: 50,
+                      decoration: BoxDecoration(
                         color: isSelected
-                            ? AppTheme.primaryPink
-                            : Colors.transparent,
-                        width: 2,
+                            ? AppTheme.darkGray.withValues(alpha: 0.9)
+                            : AppTheme.darkGray,
+                        borderRadius: ResponsiveConfig.borderRadius(25),
+                        border: Border.all(
+                          color: isSelected
+                              ? AppTheme.primaryPink
+                              : Colors.transparent,
+                          width: 2,
+                        ),
+                      ),
+                      child: Center(
+                        child: Text(
+                          emoji,
+                          style: const TextStyle(fontSize: 24),
+                        ),
                       ),
                     ),
-                    child: Center(
-                      child: Text(
-                        emoji,
-                        style: const TextStyle(fontSize: 24),
-                      ),
-                    ),
-                  ),
-                );
-              }).toList(),
+                  );
+                }).toList(),
+              ),
             ),
-            ResponsiveConfig.heightBox(16),
+            ResponsiveConfig.heightBox(24),
             Text(
               'Energy Level',
               style: ResponsiveConfig.textStyle(
@@ -476,7 +479,7 @@ class _WellnessJournalScreenState extends ConsumerState<WellnessJournalScreen> {
                 weight: FontWeight.w500,
               ),
             ),
-            ResponsiveConfig.heightBox(8),
+            ResponsiveConfig.heightBox(16),
             Row(
               children: List.generate(5, (index) {
                 final level = index + 1;
@@ -490,7 +493,7 @@ class _WellnessJournalScreenState extends ConsumerState<WellnessJournalScreen> {
                       decoration: BoxDecoration(
                         color: isSelected
                             ? AppTheme.primaryPink
-                            : AppTheme.palePink,
+                            : AppTheme.darkGray,
                         borderRadius: ResponsiveConfig.borderRadius(8),
                       ),
                       child: Center(
@@ -509,7 +512,7 @@ class _WellnessJournalScreenState extends ConsumerState<WellnessJournalScreen> {
                 );
               }),
             ),
-            ResponsiveConfig.heightBox(12),
+            ResponsiveConfig.heightBox(24),
             TextFormField(
               controller: _moodDescriptionController,
               decoration: const InputDecoration(
@@ -518,7 +521,7 @@ class _WellnessJournalScreenState extends ConsumerState<WellnessJournalScreen> {
               ),
               maxLines: 2,
             ),
-            ResponsiveConfig.heightBox(16),
+            ResponsiveConfig.heightBox(24),
 
             // Enhanced Mood Tracking
             Text(
@@ -528,10 +531,14 @@ class _WellnessJournalScreenState extends ConsumerState<WellnessJournalScreen> {
                 weight: FontWeight.w500,
               ),
             ),
-            ResponsiveConfig.heightBox(8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
+            ResponsiveConfig.heightBox(24),
+            GridView.count(
+              crossAxisCount: 3,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              childAspectRatio: 2.5,
+              mainAxisSpacing: 8,
+              crossAxisSpacing: 8,
               children: [
                 'happy',
                 'sad',
@@ -542,25 +549,70 @@ class _WellnessJournalScreenState extends ConsumerState<WellnessJournalScreen> {
                 'tired',
                 'focused',
                 'irritable',
-                'peaceful'
+                'peaceful',
+                'stressed',
+                'lonely',
+                'motivated',
+                'bored',
+                'frustrated',
+                'grateful',
+                'overwhelmed',
+                'content',
               ].map((emotion) {
                 final isSelected = _selectedEmotions.contains(emotion);
-                return FilterChip(
-                  label: Text(emotion),
-                  selected: isSelected,
-                  onSelected: (selected) {
+                return InkWell(
+                  onTap: () {
                     setState(() {
-                      if (selected) {
-                        _selectedEmotions.add(emotion);
-                      } else {
+                      if (isSelected) {
                         _selectedEmotions.remove(emotion);
+                      } else {
+                        _selectedEmotions.add(emotion);
                       }
                     });
                   },
+                  borderRadius: BorderRadius.circular(50),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? AppTheme.primaryPink
+                          : AppTheme.darkGray.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(50),
+                      border: Border.all(
+                        color: isSelected
+                            ? AppTheme.primaryPink
+                            : AppTheme.darkGray.withOpacity(0.3),
+                      ),
+                    ),
+                    alignment: Alignment.center,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        if (isSelected) ...[
+                          const Icon(
+                            Icons.check,
+                            size: 14,
+                            color: Colors.white,
+                          ),
+                          const SizedBox(width: 4),
+                        ],
+                        Text(
+                          emotion,
+                          style: ResponsiveConfig.textStyle(
+                            size: 12,
+                            color:
+                                isSelected ? Colors.white : AppTheme.mediumGray,
+                            weight: isSelected
+                                ? FontWeight.bold
+                                : FontWeight.normal,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 );
               }).toList(),
             ),
-            ResponsiveConfig.heightBox(16),
+            ResponsiveConfig.heightBox(24),
 
             // Mental Health Levels
             Text(
@@ -570,7 +622,7 @@ class _WellnessJournalScreenState extends ConsumerState<WellnessJournalScreen> {
                 weight: FontWeight.w500,
               ),
             ),
-            ResponsiveConfig.heightBox(8),
+            ResponsiveConfig.heightBox(16),
             Row(
               children: [
                 Expanded(
@@ -579,7 +631,7 @@ class _WellnessJournalScreenState extends ConsumerState<WellnessJournalScreen> {
                     children: [
                       Text(
                         'Stress Level',
-                        style: ResponsiveConfig.textStyle(size: 12),
+                        style: ResponsiveConfig.textStyle(size: 16),
                       ),
                       if (_stressLevel != null)
                         Text(
@@ -587,6 +639,7 @@ class _WellnessJournalScreenState extends ConsumerState<WellnessJournalScreen> {
                           style: ResponsiveConfig.textStyle(
                             size: 14,
                             weight: FontWeight.bold,
+                            color: AppTheme.primaryPink,
                           ),
                         ),
                       Slider(
@@ -611,7 +664,7 @@ class _WellnessJournalScreenState extends ConsumerState<WellnessJournalScreen> {
                     children: [
                       Text(
                         'Anxiety Level',
-                        style: ResponsiveConfig.textStyle(size: 12),
+                        style: ResponsiveConfig.textStyle(size: 16),
                       ),
                       if (_anxietyLevel != null)
                         Text(
@@ -619,6 +672,7 @@ class _WellnessJournalScreenState extends ConsumerState<WellnessJournalScreen> {
                           style: ResponsiveConfig.textStyle(
                             size: 14,
                             weight: FontWeight.bold,
+                            color: AppTheme.primaryPink,
                           ),
                         ),
                       Slider(
@@ -643,7 +697,7 @@ class _WellnessJournalScreenState extends ConsumerState<WellnessJournalScreen> {
                     children: [
                       Text(
                         'Depression Level',
-                        style: ResponsiveConfig.textStyle(size: 12),
+                        style: ResponsiveConfig.textStyle(size: 16),
                       ),
                       if (_depressionLevel != null)
                         Text(
@@ -651,6 +705,7 @@ class _WellnessJournalScreenState extends ConsumerState<WellnessJournalScreen> {
                           style: ResponsiveConfig.textStyle(
                             size: 14,
                             weight: FontWeight.bold,
+                            color: AppTheme.primaryPink,
                           ),
                         ),
                       Slider(
@@ -693,6 +748,7 @@ class _WellnessJournalScreenState extends ConsumerState<WellnessJournalScreen> {
 
   Widget _buildPhotoDiarySection() {
     return Card(
+      margin: EdgeInsets.zero,
       child: Padding(
         padding: ResponsiveConfig.padding(all: 16),
         child: Column(
@@ -725,11 +781,50 @@ class _WellnessJournalScreenState extends ConsumerState<WellnessJournalScreen> {
                       Positioned(
                         top: 0,
                         right: 0,
-                        child: IconButton(
-                          icon: const Icon(Icons.close, size: 16),
-                          onPressed: () {
+                        child: GestureDetector(
+                          onTap: () {
                             setState(() => _photoUrls.remove(url));
                           },
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.5),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.close,
+                                size: 16, color: Colors.white),
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                }),
+                ..._pendingImages.map((file) {
+                  return Stack(
+                    children: [
+                      ClipRRect(
+                        borderRadius: ResponsiveConfig.borderRadius(8),
+                        child: Image.file(
+                          file,
+                          width: 80,
+                          height: 80,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                      Positioned(
+                        top: 0,
+                        right: 0,
+                        child: GestureDetector(
+                          onTap: () {
+                            setState(() => _pendingImages.remove(file));
+                          },
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.5),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.close,
+                                size: 16, color: Colors.white),
+                          ),
                         ),
                       ),
                     ],
@@ -760,6 +855,7 @@ class _WellnessJournalScreenState extends ConsumerState<WellnessJournalScreen> {
 
   Widget _buildHydrationSection() {
     return Card(
+      margin: EdgeInsets.zero,
       child: Padding(
         padding: ResponsiveConfig.padding(all: 16),
         child: Column(
@@ -805,6 +901,7 @@ class _WellnessJournalScreenState extends ConsumerState<WellnessJournalScreen> {
 
   Widget _buildSleepSection() {
     return Card(
+      margin: EdgeInsets.zero,
       child: Padding(
         padding: ResponsiveConfig.padding(all: 16),
         child: Column(
@@ -855,7 +952,7 @@ class _WellnessJournalScreenState extends ConsumerState<WellnessJournalScreen> {
                       decoration: BoxDecoration(
                         color: isSelected
                             ? AppTheme.primaryPink
-                            : AppTheme.palePink,
+                            : AppTheme.darkGray,
                         borderRadius: ResponsiveConfig.borderRadius(8),
                       ),
                       child: Center(
@@ -879,6 +976,7 @@ class _WellnessJournalScreenState extends ConsumerState<WellnessJournalScreen> {
 
   Widget _buildAppetiteSection() {
     return Card(
+      margin: EdgeInsets.zero,
       child: Padding(
         padding: ResponsiveConfig.padding(all: 16),
         child: Column(
@@ -920,7 +1018,9 @@ class _WellnessJournalScreenState extends ConsumerState<WellnessJournalScreen> {
       child: Container(
         padding: ResponsiveConfig.padding(all: 12),
         decoration: BoxDecoration(
-          color: isSelected ? AppTheme.lightPink : AppTheme.palePink,
+          color: isSelected
+              ? AppTheme.darkGray.withOpacity(0.1)
+              : AppTheme.darkGray,
           borderRadius: ResponsiveConfig.borderRadius(8),
           border: Border.all(
             color: isSelected ? AppTheme.primaryPink : Colors.transparent,
@@ -942,6 +1042,7 @@ class _WellnessJournalScreenState extends ConsumerState<WellnessJournalScreen> {
 
   Widget _buildExerciseSection() {
     return Card(
+      margin: EdgeInsets.zero,
       child: Padding(
         padding: ResponsiveConfig.padding(all: 16),
         child: Column(

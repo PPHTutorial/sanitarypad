@@ -56,4 +56,23 @@ class AIService {
   Future<bool> testApiKey() async {
     return true;
   }
+
+  /// Analyze skin image using specialized Cloud Function
+  Future<Map<String, dynamic>> analyzeSkinImage({
+    required String imageUrl,
+  }) async {
+    try {
+      final callable = _functions.httpsCallable('analyzeSkinImage');
+      final response = await callable.call({'imageUrl': imageUrl});
+      return Map<String, dynamic>.from(response.data as Map);
+    } on FirebaseFunctionsException catch (e) {
+      await FirebaseService.recordError(e, null,
+          reason: 'AI_Service_SkinAnalysis');
+      throw Exception(e.message ?? 'Skin analysis failed');
+    } catch (e) {
+      await FirebaseService.recordError(e, null,
+          reason: 'AI_Service_SkinAnalysis_General');
+      throw Exception('Failed to communicate with skin analysis service: $e');
+    }
+  }
 }

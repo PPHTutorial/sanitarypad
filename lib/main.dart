@@ -13,24 +13,14 @@ import 'services/security_service.dart';
 import 'core/providers/notification_provider.dart';
 import 'services/periodic_ad_manager.dart';
 
-import 'package:sanitarypad/services/config_service.dart';
-import 'package:sanitarypad/core/firebase/firebase_service.dart';
 import 'presentation/widgets/global_video_overlay.dart';
 
 void main() async {
   // 1. Ensure bindings are initialized immediately
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 2. Initialize Firebase (Critical for providers)
-  await FirebaseService.initialize();
-
-  // Initialize ConfigService
-  await ConfigService().initialize();
-
-  // Initialize AdsService
-  await AdsService().initialize();
-
-  // 3. Run app immediately to show Splash Screen
+  // 2. Run app immediately to show Splash Screen
+  // Initialization moved to CustomSplashScreen to prevent blank screen delay
   runApp(
     const ProviderScope(
       child: MyApp(),
@@ -68,6 +58,11 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     // Pre-load ads
     AdsService().loadRewardedAd();
+
+    // Check for lock screen on app startup
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkAndShowLockScreen();
+    });
   }
 
   @override

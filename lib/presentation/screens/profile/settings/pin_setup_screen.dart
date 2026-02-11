@@ -20,6 +20,7 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
   final _pinController = TextEditingController();
   final _confirmPinController = TextEditingController();
   String _currentStep = 'enter'; // 'enter', 'confirm'
+  String _firstPin = '';
 
   @override
   void dispose() {
@@ -29,15 +30,19 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
   }
 
   Future<void> _handlePINEntry() async {
-    if (_pinController.text.length != AppConstants.pinLength) {
+    final pin = _currentStep == 'enter'
+        ? _pinController.text
+        : _confirmPinController.text;
+
+    if (pin.length != AppConstants.pinLength) {
       return;
     }
 
     if (_currentStep == 'enter') {
+      _firstPin = _pinController.text;
       setState(() => _currentStep = 'confirm');
-      _pinController.clear();
     } else {
-      if (_pinController.text != _confirmPinController.text) {
+      if (_firstPin != _confirmPinController.text) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('PINs do not match. Please try again.')),
         );
@@ -45,6 +50,7 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
           _currentStep = 'enter';
           _pinController.clear();
           _confirmPinController.clear();
+          _firstPin = '';
         });
         return;
       }
@@ -52,7 +58,7 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
       try {
         final securityService = ref.read(securityServiceProvider);
         final user = ref.read(currentUserStreamProvider).value;
-        if (user == null || !user.subscription.isActive) {
+        if (user == null || (!user.subscription.isActive && !user.isAdmin)) {
           throw Exception('Premium required for PIN lock');
         }
 
@@ -66,6 +72,7 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
         await ref.read(authServiceProvider).updateUserData(updatedUser);
 
         if (mounted) {
+          ref.invalidate(securityServiceProvider);
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('PIN set successfully')),
           );

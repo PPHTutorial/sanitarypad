@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:sanitarypad/models/workout_models.dart';
 import 'package:sanitarypad/services/workout_service.dart';
-import 'package:sanitarypad/core/theme/app_theme.dart';
 
 class WorkoutChallengesScreen extends ConsumerWidget {
   final String userId;

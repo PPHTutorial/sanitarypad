@@ -4,9 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:intl/intl.dart';
 import 'package:sanitarypad/core/theme/app_theme.dart';
-import 'package:sanitarypad/core/providers/auth_provider.dart';
 import 'package:sanitarypad/models/nutrition_models.dart';
 import 'package:sanitarypad/services/nutrition_service.dart';
 import 'package:sanitarypad/services/video_feed_service.dart';
@@ -76,10 +74,12 @@ class _EmptyMealsState extends StatelessWidget {
           const Text('No meals logged today',
               style: TextStyle(fontSize: 18, color: Colors.grey)),
           const SizedBox(height: 24),
-          ElevatedButton.icon(
-            onPressed: onAddMeal,
-            icon: const Icon(Icons.add),
-            label: const Text('Log Your First Meal'),
+          Center(
+            child: ElevatedButton.icon(
+              onPressed: onAddMeal,
+              icon: const Icon(Icons.add),
+              label: const Text('Log Your First Meal'),
+            ),
           ),
         ],
       ),

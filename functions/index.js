@@ -49,6 +49,9 @@ const buildSystemPrompt = (category, context) => {
       IMPORTANT: You must return the analysis as a raw JSON object string (no markdown blocks) containing exactly these keys: "name", "scientificName", "category", "description", "benefits", "concerns", "comedogenicRating", "irritationRating", "goodFor" (array), "avoidWith" (array). If information is unknown, use an empty string or empty array.`;
 
 
+    case "wellness":
+      return `${basePrompt} You are an expert wellness content creator for the FemCare+ application. Your goal is to write highly relevant, compassionate, and evidence-based content specifically for women's health, menstrual wellness, pregnancy, and self-care. Do NOT create general content; instead, tailor every response to the unique context of female physiology and emotional health. Focus on the user's specific request while maintaining a supportive and professional tone. Always include a disclaimer to consult a healthcare professional.`;
+
     default:
       return `${basePrompt} Provide general wellness, pregnancy, skincare, fertility and health guidance.`;
   }
@@ -169,4 +172,120 @@ exports.syncSubscriptionToUser = functions.firestore
       console.error(`Error syncing subscription for user ${userId}:`, error);
     }
   });
+
+/**
+ * Cloud Function to generate specialized wellness content
+ */
+exports.generateWellnessContent = functions.https.onCall(async (data, context) => {
+  const userId = validateAuth(context);
+  const apiKey = process.env.OPENAI_API_KEY;
+
+  if (!apiKey) {
+    throw new functions.https.HttpsError("failed-precondition", "OpenAI API key not configured.");
+  }
+
+  const openai = new OpenAI({ apiKey: apiKey });
+  const { title, type, category, tags } = data;
+
+  if (!title || !type) {
+    throw new functions.https.HttpsError("invalid-argument", "The function must be called with 'title' and 'type' arguments.");
+  }
+
+  try {
+    const systemPrompt = buildSystemPrompt("wellness", { category });
+
+    // User message tailoring the request
+    const userMessage = `Generate a high-quality ${type} titled "${title}"${category ? ` in the category of ${category}` : ""}.${tags ? ` Include themes related to: ${tags.join(", ")}.` : ""} 
+    Focus on being compassionate, evidence-based, and specifically for women's health. 
+    Format the response as a JSON object with two keys: "content" (the full article/tip text) and "suggestedTags" (an array of strings). 
+    Do not return any other text, only the JSON object.`;
+
+    const completion = await openai.chat.completions.create({
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userMessage }
+      ],
+      model: defaultModel,
+      temperature: 0.7,
+      max_tokens: 1500,
+      response_format: { type: "json_object" }
+    });
+
+    const result = JSON.parse(completion.choices[0].message.content);
+
+    return {
+      content: result.content,
+      suggestedTags: result.suggestedTags,
+    };
+  } catch (error) {
+    console.error("OpenAI Error:", error);
+    throw new functions.https.HttpsError("internal", "Failed to generate wellness content.", error.message);
+  }
+});
+
+/**
+ * Cloud Function to analyze skin image using GPT-4o
+ */
+exports.analyzeSkinImage = functions.https.onCall(async (data, context) => {
+  const userId = validateAuth(context);
+  const apiKey = process.env.OPENAI_API_KEY;
+
+  if (!apiKey) {
+    throw new functions.https.HttpsError("failed-precondition", "OpenAI API key not configured.");
+  }
+
+  const { imageUrl } = data;
+  if (!imageUrl) {
+    throw new functions.https.HttpsError("invalid-argument", "The function must be called with an 'imageUrl' argument.");
+  }
+
+  const openai = new OpenAI({ apiKey: apiKey });
+
+  try {
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "system",
+          content: "You are a professional Dermatologist AI. Analyze the provided image and return a detailed report in JSON format."
+        },
+        {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text: `Analyze this facial skin image for 12 key criteria. For each criteria, provide a score (0-100, where 100 is perfect/no concern) and a normalized bounding box [x1, y1, x2, y2] (0-1.0) of the most affected region.
+              
+              Criteria: Wrinkles, Acne/Blemishes, Oiliness, Texture, Redness, Dark Spots, Dark Circles, Hydration, Elasticity, Pore Size, Sensitivity, Sun Damage.
+              
+              Return a JSON object with:
+              - "overallScore": A string describing general health (e.g., "Good", "Needs Care")
+              - "criteriaScores": { "Wrinkles": 85, ... }
+              - "regionData": { "Wrinkles": [0.2, 0.3, 0.4, 0.5], ... }
+              - "identifiedConcerns": ["Concern 1", ...]
+              - "recommendedRemedies": ["Remedy 1", ...]
+              - "recommendedProducts": ["Product Category 1", ...]
+              - "precautions": ["Precaution 1", ...]
+              - "routineRecommendations": ["Morning Step 1", ...]
+              - "notes": "General overview of the analysis."`
+            },
+            {
+              type: "image_url",
+              image_url: { url: imageUrl }
+            }
+          ]
+        }
+      ],
+      max_tokens: 1500,
+      response_format: { type: "json_object" }
+    });
+
+    const analysisResult = JSON.parse(response.choices[0].message.content);
+    return analysisResult;
+  } catch (error) {
+    console.error("GPT-4o Skin Analysis Error:", error);
+    throw new functions.https.HttpsError("internal", "Failed to analyze skin image.", error.message);
+  }
+});
+
 

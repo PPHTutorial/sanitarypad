@@ -2,7 +2,7 @@
 class AppConstants {
   // App Info
   static const String appName = 'FemCare+';
-  static const String appVersion = '1.0.0';
+  static const String appVersion = '';
   static const String packageName = 'com.codeink.stsl.sanitarypad';
 
   // Design Constants
@@ -48,6 +48,7 @@ class AppConstants {
   static const String collectionPadInventory = 'padInventory';
   static const String collectionReminders = 'reminders';
   static const String collectionWellnessContent = 'wellnessContent';
+  static const String collectionSkinAnalysis = 'skin_analysis';
   static const String collectionAnalytics = 'analytics';
   static const String collectionSubscriptions = 'subscriptions';
   static const String collectionSupportContacts = 'supportContacts';
@@ -89,6 +90,11 @@ class AppConstants {
   static const String collectionEventAttendees = 'eventAttendees';
   static const String collectionAIChatMessages = 'aiChatMessages';
   static const String collectionAIConversations = 'aiConversations';
+  static const String collectionBabies = 'babies';
+  static const String collectionBabyGrowth = 'babyGrowth';
+  static const String collectionBabyMilestones = 'babyMilestones';
+  static const String collectionBabyGallery = 'babyGallery';
+  static const String collectionMovieFavorites = 'movieFavorites';
 
   // Subscription Tiers
   static const String tierEconomy = 'economy';
@@ -147,6 +153,10 @@ class AppConstants {
   static const String contentTypeMeditation = 'meditation';
   static const String contentTypeAffirmation = 'affirmation';
   static const String contentTypeMythFact = 'myth_fact';
+  static const String contentTypeRecipe = 'recipe';
+  static const String contentTypeExercise = 'exercise';
+  static const String contentTypeProductReview = 'product_review';
+  static const String contentTypeNews = 'news';
 
   // Privacy
   static const int pinLength = 4;
@@ -156,6 +166,7 @@ class AppConstants {
   static const double costPregnancy = 2.0;
   static const double costFertility = 2.0;
   static const double costSkincare = 3.0;
+  static const double costSkincareAnalysis = 15.0;
   static const double costWellness = 2.0;
   static const double costLogPeriod = 2.0;
   static const double costPadChange = 2.0;
@@ -171,14 +182,15 @@ class AppConstants {
   static const double costNutritionSearch = 5.0;
   static const double costWorkoutSearch = 5.0;
   static const double costLogActivity = 2.0;
+  static const double costAIGeneration = 10.0;
 
   // Daily Credit Limits (per tier)
-  static const double creditsEco = 108.0;
-  static const double creditsPro = 360.0;
-  static const double creditsAdv = 720.0;
-  static const double creditsPlus = 1440.0;
+  static const double creditsEco = 50.0;
+  static const double creditsPro = 300.0;
+  static const double creditsAdv = 600.0;
+  static const double creditsPlus = 1200.0;
   static const double creditsYearly = 999990.0;
-  static const double creditsDefault = 108.0;
+  static const double creditsDefault = 50.0;
 
   // Subscription Pricing (Monthly)
   static const double priceEco = 0.0;

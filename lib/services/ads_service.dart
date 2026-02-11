@@ -158,6 +158,7 @@ class AdsService {
     Function(LoadAdError)? onAdFailedToLoad,
   }) async {
     if (!DevConfig.shouldShowAds) {
+      onUserEarnedReward(RewardItem(5, 'bonus')); // Trigger mock reward
       if (onAdDismissed != null) onAdDismissed();
       return;
     }
@@ -221,7 +222,10 @@ class AdsService {
 
   Future<void> showRewardedInterstitialAd(
       {required Function(RewardItem) onUserEarnedReward}) async {
-    if (!DevConfig.shouldShowAds) return;
+    if (!DevConfig.shouldShowAds) {
+      onUserEarnedReward(RewardItem(5, 'bonus'));
+      return;
+    }
     if (!_isInitialized) await initialize();
     RewardedInterstitialAd.load(
       adUnitId: rewardedInterstitialAdUnitId,

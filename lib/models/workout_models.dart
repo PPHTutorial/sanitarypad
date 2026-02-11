@@ -10,6 +10,7 @@ enum ExerciseCategory {
   hiit,
   pilates,
   sports,
+  skincare,
   other,
 }
 
@@ -30,6 +31,8 @@ extension ExerciseCategoryExtension on ExerciseCategory {
         return 'Pilates';
       case ExerciseCategory.sports:
         return 'Sports';
+      case ExerciseCategory.skincare:
+        return 'Skincare';
       case ExerciseCategory.other:
         return 'Other';
     }
@@ -51,6 +54,8 @@ extension ExerciseCategoryExtension on ExerciseCategory {
         return '🩰';
       case ExerciseCategory.sports:
         return '⚽';
+      case ExerciseCategory.skincare:
+        return '💆‍♀️';
       case ExerciseCategory.other:
         return '🏋️';
     }

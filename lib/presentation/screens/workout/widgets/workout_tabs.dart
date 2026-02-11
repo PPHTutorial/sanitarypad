@@ -857,7 +857,7 @@ class _ExerciseLogCard extends ConsumerWidget {
                         _StatChip(label: '${exercise.reps} reps'),
                       if (exercise.weight != null)
                         _StatChip(label: '${exercise.weight}kg'),
-                      _StatChip(label: '${exercise.duration!.inMinutes}min'),
+                      _StatChip(label: '${exercise.duration.inMinutes}min'),
                     ],
                   ),
                 ],

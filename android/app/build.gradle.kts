@@ -49,17 +49,36 @@ android {
     signingConfigs {
         create("release") {
             if (keystorePropertiesFile.exists()) {
-                keyAlias = keystoreProperties["keyAlias"] as String?
-                keyPassword = keystoreProperties["keyPassword"] as String?
-                storeFile = keystoreProperties["storeFile"]?.let { file(it) }
-                storePassword = keystoreProperties["storePassword"] as String?
+                val storeFilePath = keystoreProperties["storeFile"] as String?
+                if (storeFilePath != null && storeFilePath.isNotEmpty()) {
+                    // Handle both absolute and relative paths
+                    val keystoreFile = if (storeFilePath.startsWith("/") || storeFilePath.matches(Regex("^[A-Za-z]:.*"))) {
+                        file(storeFilePath)
+                    } else {
+                        rootProject.file(storeFilePath)
+                    }
+                    
+                    if (keystoreFile.exists()) {
+                        keyAlias = keystoreProperties["keyAlias"] as String?
+                        keyPassword = keystoreProperties["keyPassword"] as String?
+                        storeFile = keystoreFile
+                        storePassword = keystoreProperties["storePassword"] as String?
+                    } else {
+                        println("Warning: Keystore file not found at: ${keystoreFile.absolutePath}")
+                    }
+                }
             }
         }
     }
 
     buildTypes {
         release {
-            signingConfig = signingConfigs.getByName("release")
+            signingConfig = if (keystorePropertiesFile.exists() && 
+                                  signingConfigs.getByName("release").storeFile != null) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
             isMinifyEnabled = true
             isShrinkResources = false
             proguardFiles(

@@ -45,19 +45,25 @@ class EcoAdWrapper extends ConsumerWidget {
     }
 
     if (child == null) {
-      return Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [adWidget],
+      return SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [adWidget],
+        ),
       );
     }
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        if (showAbove) adWidget,
-        child!,
-        if (!showAbove) adWidget,
-      ],
+    return SafeArea(
+      top: false,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (showAbove) adWidget,
+          child!,
+          if (!showAbove) adWidget,
+        ],
+      ),
     );
   }
 }

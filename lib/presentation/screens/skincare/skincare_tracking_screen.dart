@@ -25,6 +25,10 @@ import '../../../services/skincare_export_service.dart';
 import '../../widgets/ads/eco_ad_wrapper.dart';
 import '../../../services/credit_manager.dart';
 
+import 'widgets/skin_analysis_dialog.dart';
+import 'widgets/skincare_videos_tab.dart';
+import 'widgets/ai_skin_widget.dart';
+
 class SkincareTrackingScreen extends ConsumerStatefulWidget {
   const SkincareTrackingScreen({super.key});
 
@@ -45,7 +49,7 @@ class _SkincareTrackingScreenState extends ConsumerState<SkincareTrackingScreen>
   void initState() {
     super.initState();
     _enhancedService = SkincareEnhancedService(FirebaseFirestore.instance);
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 5, vsync: this);
     _tabController.addListener(() {
       if (!mounted) return;
       setState(() {});
@@ -125,8 +129,7 @@ class _SkincareTrackingScreenState extends ConsumerState<SkincareTrackingScreen>
                 onOpenProductCategory: (view) =>
                     _openProductManager(context, view: view),
                 onLogHydration: () => context.push('/wellness-journal'),
-                onViewHydrationLogs: () =>
-                    context.push('/wellness-journal-list'),
+                onViewHydrationLogs: () => context.push('/wellness'),
                 onAnalyzeSkin: () =>
                     _showRewardedAnalysis(context, user.userId),
                 onExportJournal: (entries) =>
@@ -138,6 +141,7 @@ class _SkincareTrackingScreenState extends ConsumerState<SkincareTrackingScreen>
                 userId: user.userId,
                 journalStream: journalStream,
                 onLogJournal: () => _showJournalSheet(context, user.userId),
+                onAnalyzeSkin: () => _openSkinAnalysis(context, user.userId),
               ),
               _RoutineTab(
                 userId: user.userId,
@@ -168,6 +172,7 @@ class _SkincareTrackingScreenState extends ConsumerState<SkincareTrackingScreen>
                 ),
                 onIngredientSearch: () => _showIngredientSearchSheet(context),
               ),
+              SkincareVideosTab(userId: user.userId),
             ],
           ),
         ),
@@ -197,6 +202,7 @@ class _SkincareTrackingScreenState extends ConsumerState<SkincareTrackingScreen>
         Tab(text: 'Journal', icon: FaIcon(FontAwesomeIcons.bookOpen)),
         Tab(text: 'Routines', icon: FaIcon(FontAwesomeIcons.wandMagicSparkles)),
         Tab(text: 'Insights', icon: FaIcon(FontAwesomeIcons.chartLine)),
+        Tab(text: 'Videos', icon: FaIcon(FontAwesomeIcons.youtube)),
       ],
     );
   }
@@ -309,6 +315,17 @@ class _SkincareTrackingScreenState extends ConsumerState<SkincareTrackingScreen>
         const SnackBar(content: Text('Hydration reminder scheduled.')),
       );
     }
+  }
+
+  void _openSkinAnalysis(BuildContext context, String userId) {
+    showDialog(
+      context: context,
+      builder: (context) => SkinAnalysisDialog(userId: userId),
+    ).then((result) {
+      if (result == true && mounted) {
+        setState(() {}); // Refresh view if needed
+      }
+    });
   }
 
   void _openProductManager(BuildContext context,
@@ -542,7 +559,7 @@ class _SkincareTrackingScreenState extends ConsumerState<SkincareTrackingScreen>
                           DropdownMenuItem(
                               value: 'sensitive', child: Text('Sensitive/Red')),
                         ],
-                        onChanged: (value) => condition = value,
+                        onChanged: (value) => setState(() => condition = value),
                       ),
                       ResponsiveConfig.heightBox(16),
                       _SliderInput(
@@ -644,123 +661,129 @@ class _SkincareTrackingScreenState extends ConsumerState<SkincareTrackingScreen>
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (context) {
-        return Padding(
-            padding: EdgeInsets.only(
-              left: 16,
-              right: 16,
-              top: 24,
-              bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-            ),
-            child: SingleChildScrollView(
-              child: Form(
-                key: formKey,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Create routine template',
-                      style: ResponsiveConfig.textStyle(
-                        size: 18,
-                        weight: FontWeight.bold,
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 16,
+                right: 16,
+                top: 24,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+              ),
+              child: SingleChildScrollView(
+                child: Form(
+                  key: formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Create routine template',
+                        style: ResponsiveConfig.textStyle(
+                          size: 18,
+                          weight: FontWeight.bold,
+                        ),
                       ),
-                    ),
-                    ResponsiveConfig.heightBox(38),
-                    TextFormField(
-                      controller: nameController,
-                      decoration:
-                          const InputDecoration(labelText: 'Routine name'),
-                      validator: (value) =>
-                          value == null || value.trim().isEmpty
-                              ? 'Required'
-                              : null,
-                    ),
-                    ResponsiveConfig.heightBox(16),
-                    DropdownButtonFormField<String>(
-                      value: routineType,
-                      decoration:
-                          const InputDecoration(labelText: 'Routine time'),
-                      items: const [
-                        DropdownMenuItem(
-                            value: 'morning', child: Text('Morning')),
-                        DropdownMenuItem(
-                            value: 'evening', child: Text('Evening')),
-                        DropdownMenuItem(
-                            value: 'weekly', child: Text('Weekly treatment')),
-                      ],
-                      onChanged: (value) => routineType = value ?? 'morning',
-                    ),
-                    ResponsiveConfig.heightBox(16),
-                    TextFormField(
-                      controller: skinTypeController,
-                      decoration:
-                          const InputDecoration(labelText: 'Target skin type'),
-                    ),
-                    ResponsiveConfig.heightBox(16),
-                    TextField(
-                      controller: concernsController,
-                      decoration: const InputDecoration(
-                        labelText: 'Target concerns (comma separated)',
+                      ResponsiveConfig.heightBox(38),
+                      TextFormField(
+                        controller: nameController,
+                        decoration:
+                            const InputDecoration(labelText: 'Routine name'),
+                        validator: (value) =>
+                            value == null || value.trim().isEmpty
+                                ? 'Required'
+                                : null,
                       ),
-                    ),
-                    ResponsiveConfig.heightBox(16),
-                    TextField(
-                      controller: productsController,
-                      decoration: const InputDecoration(
-                        labelText: 'Product IDs or names (comma separated)',
+                      ResponsiveConfig.heightBox(16),
+                      DropdownButtonFormField<String>(
+                        value: routineType,
+                        decoration:
+                            const InputDecoration(labelText: 'Routine time'),
+                        items: const [
+                          DropdownMenuItem(
+                              value: 'morning', child: Text('Morning')),
+                          DropdownMenuItem(
+                              value: 'evening', child: Text('Evening')),
+                          DropdownMenuItem(
+                              value: 'weekly', child: Text('Weekly treatment')),
+                        ],
+                        onChanged: (value) =>
+                            setState(() => routineType = value ?? 'morning'),
                       ),
-                    ),
-                    ResponsiveConfig.heightBox(16),
-                    TextField(
-                      controller: notesController,
-                      decoration: const InputDecoration(labelText: 'Notes'),
-                      maxLines: 2,
-                    ),
-                    ResponsiveConfig.heightBox(20),
-                    ElevatedButton(
-                      onPressed: () async {
-                        if (!formKey.currentState!.validate()) return;
-                        final template = RoutineTemplate(
-                          userId: userId,
-                          name: nameController.text.trim(),
-                          skinType: skinTypeController.text.trim().isEmpty
-                              ? 'all'
-                              : skinTypeController.text.trim(),
-                          concerns: concernsController.text
-                              .split(',')
-                              .map((e) => e.trim())
-                              .where((e) => e.isNotEmpty)
-                              .toList(),
-                          routineType: routineType,
-                          productIds: productsController.text
-                              .split(',')
-                              .map((e) => e.trim())
-                              .where((e) => e.isNotEmpty)
-                              .toList(),
-                          notes: notesController.text.trim().isEmpty
-                              ? null
-                              : notesController.text.trim(),
-                          createdAt: DateTime.now(),
-                        );
+                      ResponsiveConfig.heightBox(16),
+                      TextFormField(
+                        controller: skinTypeController,
+                        decoration: const InputDecoration(
+                            labelText: 'Target skin type'),
+                      ),
+                      ResponsiveConfig.heightBox(16),
+                      TextField(
+                        controller: concernsController,
+                        decoration: const InputDecoration(
+                          labelText: 'Target concerns (comma separated)',
+                        ),
+                      ),
+                      ResponsiveConfig.heightBox(16),
+                      TextField(
+                        controller: productsController,
+                        decoration: const InputDecoration(
+                          labelText: 'Product IDs or names (comma separated)',
+                        ),
+                      ),
+                      ResponsiveConfig.heightBox(16),
+                      TextField(
+                        controller: notesController,
+                        decoration: const InputDecoration(labelText: 'Notes'),
+                        maxLines: 2,
+                      ),
+                      ResponsiveConfig.heightBox(20),
+                      ElevatedButton(
+                        onPressed: () async {
+                          if (!formKey.currentState!.validate()) return;
+                          final template = RoutineTemplate(
+                            userId: userId,
+                            name: nameController.text.trim(),
+                            skinType: skinTypeController.text.trim().isEmpty
+                                ? 'all'
+                                : skinTypeController.text.trim(),
+                            concerns: concernsController.text
+                                .split(',')
+                                .map((e) => e.trim())
+                                .where((e) => e.isNotEmpty)
+                                .toList(),
+                            routineType: routineType,
+                            productIds: productsController.text
+                                .split(',')
+                                .map((e) => e.trim())
+                                .where((e) => e.isNotEmpty)
+                                .toList(),
+                            notes: notesController.text.trim().isEmpty
+                                ? null
+                                : notesController.text.trim(),
+                            createdAt: DateTime.now(),
+                          );
 
-                        // Credit Check
-                        final hasCredit = await ref
-                            .read(creditManagerProvider)
-                            .requestCredit(context, ActionType.skincare);
-                        if (!hasCredit) return;
+                          // Credit Check
+                          final hasCredit = await ref
+                              .read(creditManagerProvider)
+                              .requestCredit(context, ActionType.skincare);
+                          if (!hasCredit) return;
 
-                        await _enhancedService.saveRoutineTemplate(template);
-                        await ref
-                            .read(creditManagerProvider)
-                            .consumeCredits(ActionType.skincare);
-                        if (mounted) Navigator.of(context).pop();
-                      },
-                      child: const Text('Save routine'),
-                    ),
-                  ],
+                          await _enhancedService.saveRoutineTemplate(template);
+                          await ref
+                              .read(creditManagerProvider)
+                              .consumeCredits(ActionType.skincare);
+                          if (mounted) Navigator.of(context).pop();
+                        },
+                        child: const Text('Save routine'),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ));
+            );
+          },
+        );
       },
     );
   }
@@ -1028,7 +1051,8 @@ class _SkincareTrackingScreenState extends ConsumerState<SkincareTrackingScreen>
                           DropdownMenuItem(
                               value: 'blackhead', child: Text('Blackhead')),
                         ],
-                        onChanged: (value) => type = value ?? 'papule',
+                        onChanged: (value) =>
+                            setState(() => type = value ?? 'papule'),
                       ),
                       ResponsiveConfig.heightBox(16),
                       TextFormField(
@@ -1369,6 +1393,10 @@ class _OverviewTab extends StatelessWidget {
             },
           ),
           ResponsiveConfig.heightBox(16),
+          AISkinWidget(
+            onTap: () => context.push('/skin-scanner'),
+          ),
+          ResponsiveConfig.heightBox(16),
           StreamBuilder<List<WellnessModel>>(
             stream: hydrationStream,
             builder: (context, hydrationSnapshot) {
@@ -1456,7 +1484,7 @@ class _OverviewTab extends StatelessWidget {
             },
           ),
           ResponsiveConfig.heightBox(16),
-          const _BeautyTipsCard(),
+          const BeautyTipsCard(),
           ResponsiveConfig.heightBox(16),
           _buildExportCard(context),
           const _CommunityCard(),
@@ -1472,7 +1500,7 @@ class _OverviewTab extends StatelessWidget {
         final entries = snapshot.data ?? [];
         return Card(
           child: Padding(
-            padding: ResponsiveConfig.padding(all: 16),
+            padding: ResponsiveConfig.padding(all: 24),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -1490,7 +1518,7 @@ class _OverviewTab extends StatelessWidget {
                     ),
                   ],
                 ),
-                ResponsiveConfig.heightBox(8),
+                ResponsiveConfig.heightBox(16),
                 Text(
                   'Share your skincare history with a dermatologist or keep it for your records.',
                   style: ResponsiveConfig.textStyle(
@@ -1498,12 +1526,14 @@ class _OverviewTab extends StatelessWidget {
                     color: AppTheme.mediumGray,
                   ),
                 ),
-                ResponsiveConfig.heightBox(12),
-                ElevatedButton.icon(
-                  onPressed:
-                      entries.isEmpty ? null : () => onExportJournal(entries),
-                  icon: const Icon(Icons.download),
-                  label: const Text('Export History as PDF'),
+                ResponsiveConfig.heightBox(16),
+                Center(
+                  child: ElevatedButton.icon(
+                    onPressed:
+                        entries.isEmpty ? null : () => onExportJournal(entries),
+                    icon: const Icon(Icons.download),
+                    label: const Text('Export History as PDF'),
+                  ),
                 ),
               ],
             ),
@@ -1521,95 +1551,148 @@ class _JournalTab extends StatelessWidget {
     required this.userId,
     required this.journalStream,
     required this.onLogJournal,
+    required this.onAnalyzeSkin,
   });
 
   final String userId;
   final Stream<List<SkinJournalEntry>> journalStream;
   final VoidCallback onLogJournal;
+  final VoidCallback onAnalyzeSkin;
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<List<SkinJournalEntry>>(
-      stream: journalStream,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
+    return Column(
+      children: [
+        _buildAIAnalysisCard(context),
+        Expanded(
+          child: StreamBuilder<List<SkinJournalEntry>>(
+            stream: journalStream,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
 
-        final entries = snapshot.data ?? [];
-        if (entries.isEmpty) {
-          return _EmptyState(
-            icon: FontAwesomeIcons.bookOpen,
-            title: 'No journal entries yet',
-            message:
-                'Log how your skin feels, hydration, sleep, and notes to begin.',
-            actionLabel: 'Log journal',
-            onAction: onLogJournal,
-          );
-        }
+              final entries = snapshot.data ?? [];
+              if (entries.isEmpty) {
+                return _EmptyState(
+                  icon: FontAwesomeIcons.bookOpen,
+                  title: 'No journal entries yet',
+                  message:
+                      'Log how your skin feels, hydration, sleep, and notes to begin.',
+                  actionLabel: 'Log journal',
+                  onAction: onLogJournal,
+                );
+              }
 
-        return ListView.builder(
-          padding: ResponsiveConfig.padding(all: 16),
-          itemCount: entries.length,
-          itemBuilder: (context, index) {
-            final entry = entries[index];
-            return Card(
-              margin: ResponsiveConfig.margin(bottom: 12),
-              child: Padding(
+              return ListView.builder(
                 padding: ResponsiveConfig.padding(all: 16),
+                itemCount: entries.length,
+                itemBuilder: (context, index) {
+                  final entry = entries[index];
+                  return Card(
+                    margin: ResponsiveConfig.margin(bottom: 12),
+                    child: Padding(
+                      padding: ResponsiveConfig.padding(all: 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                DateFormat('EEEE, MMM d, y').format(entry.date),
+                                style: ResponsiveConfig.textStyle(
+                                  size: 16,
+                                  weight: FontWeight.bold,
+                                ),
+                              ),
+                              if (entry.skinCondition != null)
+                                Chip(
+                                  label: Text(
+                                    entry.skinCondition!,
+                                    style: ResponsiveConfig.textStyle(
+                                      size: 12,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  backgroundColor: AppTheme.primaryPink,
+                                ),
+                            ],
+                          ),
+                          ResponsiveConfig.heightBox(8),
+                          Text(
+                            'Hydration: ${entry.hydrationLevel ?? '-'} • Oiliness: ${entry.oilinessLevel ?? '-'}',
+                          ),
+                          if (entry.sleepHours != null)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 6),
+                              child: Text(
+                                  'Sleep: ${entry.sleepHours} h • Stress: ${entry.stressLevel ?? 'N/A'}'),
+                            ),
+                          if (entry.concerns.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 6),
+                              child: Text(
+                                  'Concerns: ${entry.concerns.join(', ')}'),
+                            ),
+                          if (entry.notes != null &&
+                              entry.notes!.trim().isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 6),
+                              child: Text(entry.notes!),
+                            ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAIAnalysisCard(BuildContext context) {
+    return Card(
+      margin: ResponsiveConfig.margin(all: 16),
+      child: InkWell(
+        onTap: onAnalyzeSkin,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: ResponsiveConfig.padding(all: 16),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryPink.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const FaIcon(FontAwesomeIcons.wandMagicSparkles,
+                    color: AppTheme.primaryPink),
+              ),
+              ResponsiveConfig.widthBox(16),
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          DateFormat('EEEE, MMM d, y').format(entry.date),
-                          style: ResponsiveConfig.textStyle(
-                            size: 16,
-                            weight: FontWeight.bold,
-                          ),
-                        ),
-                        if (entry.skinCondition != null)
-                          Chip(
-                            label: Text(
-                              entry.skinCondition!,
-                              style: ResponsiveConfig.textStyle(
-                                size: 12,
-                                color: Colors.white,
-                              ),
-                            ),
-                            backgroundColor: AppTheme.primaryPink,
-                          ),
-                      ],
-                    ),
-                    ResponsiveConfig.heightBox(8),
-                    Text(
-                      'Hydration: ${entry.hydrationLevel ?? '-'} • Oiliness: ${entry.oilinessLevel ?? '-'}',
-                    ),
-                    if (entry.sleepHours != null)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 6),
-                        child: Text(
-                            'Sleep: ${entry.sleepHours} h • Stress: ${entry.stressLevel ?? 'N/A'}'),
-                      ),
-                    if (entry.concerns.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 6),
-                        child: Text('Concerns: ${entry.concerns.join(', ')}'),
-                      ),
-                    if (entry.notes != null && entry.notes!.trim().isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 6),
-                        child: Text(entry.notes!),
-                      ),
+                    Text('FemCare+ Skin Analysis',
+                        style: ResponsiveConfig.textStyle(
+                            size: 16, weight: FontWeight.bold)),
+                    Text('Get personalized advice & routine tips',
+                        style: ResponsiveConfig.textStyle(
+                            size: 13, color: AppTheme.mediumGray)),
                   ],
                 ),
               ),
-            );
-          },
-        );
-      },
+              const Icon(Icons.arrow_forward_ios,
+                  size: 16, color: AppTheme.mediumGray),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -1783,7 +1866,7 @@ class _InsightsTab extends StatelessWidget {
                           const _FindDermatologistCard(),
                           ResponsiveConfig.heightBox(16),
                           const _ARPreviewCard(),
-                          ResponsiveConfig.heightBox(16),
+                          ResponsiveConfig.heightBox(24),
                           const _CommunityCard(),
                           ResponsiveConfig.heightBox(16),
                           if (uvEntries.isNotEmpty)
@@ -1862,7 +1945,7 @@ class _SkinTypeCard extends StatelessWidget {
     if (skinType == null) {
       return Card(
         child: Padding(
-          padding: ResponsiveConfig.padding(all: 16),
+          padding: ResponsiveConfig.padding(all: 24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1888,10 +1971,12 @@ class _SkinTypeCard extends StatelessWidget {
                   color: AppTheme.mediumGray,
                 ),
               ),
-              ResponsiveConfig.heightBox(12),
-              ElevatedButton(
-                onPressed: onAnalyze,
-                child: const Text('Analyze skin now'),
+              ResponsiveConfig.heightBox(24),
+              Center(
+                child: ElevatedButton(
+                  onPressed: onAnalyze,
+                  child: const Text('Analyze skin now'),
+                ),
               ),
             ],
           ),
@@ -1900,8 +1985,9 @@ class _SkinTypeCard extends StatelessWidget {
     }
 
     return Card(
+      margin: EdgeInsets.zero,
       child: Padding(
-        padding: ResponsiveConfig.padding(all: 16),
+        padding: ResponsiveConfig.padding(all: 24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -1927,36 +2013,60 @@ class _SkinTypeCard extends StatelessWidget {
                 ),
               ],
             ),
-            ResponsiveConfig.heightBox(12),
+            ResponsiveConfig.heightBox(24),
             _TypeScoreBar(label: 'Dry', value: skinType!.typeScores['dry']),
+            ResponsiveConfig.heightBox(12),
             _TypeScoreBar(label: 'Oily', value: skinType!.typeScores['oily']),
+            ResponsiveConfig.heightBox(12),
             _TypeScoreBar(
                 label: 'Combination',
                 value: skinType!.typeScores['combination']),
+            ResponsiveConfig.heightBox(12),
             _TypeScoreBar(
                 label: 'Sensitive', value: skinType!.typeScores['sensitive']),
-            ResponsiveConfig.heightBox(12),
+            ResponsiveConfig.heightBox(16),
             Text(
               'Analyzed ${DateFormat('MMM d, y').format(skinType!.analyzedAt)}',
               style: ResponsiveConfig.textStyle(
-                size: 12,
+                size: 16,
                 color: AppTheme.mediumGray,
               ),
             ),
-            if (skinType!.concerns != null)
+            if (skinType!.concerns != null) ...[
+              ResponsiveConfig.heightBox(16),
               Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: Text('Concerns: ${skinType!.concerns}'),
+                padding: ResponsiveConfig.padding(top: 8),
+                child: Text(
+                  'Concerns: ${skinType!.concerns}',
+                  style: ResponsiveConfig.textStyle(
+                    size: 14,
+                    height: 1.5,
+                    color: AppTheme.primaryPink,
+                    weight: FontWeight.bold,
+                  ),
+                ),
               ),
-            if (skinType!.analysisNotes != null)
+            ],
+            if (skinType!.analysisNotes != null) ...[
+              ResponsiveConfig.heightBox(16),
               Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: Text(skinType!.analysisNotes!),
+                padding: ResponsiveConfig.padding(top: 8),
+                child: Text(
+                  'Notes: ${skinType!.analysisNotes}',
+                  style: ResponsiveConfig.textStyle(
+                    size: 14,
+                    height: 1.5,
+                    color: AppTheme.mediumGray,
+                  ),
+                ),
               ),
-            ResponsiveConfig.heightBox(12),
-            OutlinedButton(
-              onPressed: onAnalyze,
-              child: const Text('Re-analyze skin'),
+            ],
+            ResponsiveConfig.heightBox(24),
+            Center(
+              child: OutlinedButton(
+                onPressed: onAnalyze,
+                child: const Text('Re-analyze skin'),
+              ),
             ),
           ],
         ),
@@ -1985,7 +2095,8 @@ class _TypeScoreBar extends StatelessWidget {
           Expanded(
             child: LinearProgressIndicator(
               value: display / 10,
-              backgroundColor: AppTheme.primaryPink.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
+              backgroundColor: AppTheme.lightPink.withOpacity(0.4),
               valueColor: const AlwaysStoppedAnimation<Color>(
                 AppTheme.primaryPink,
               ),
@@ -2019,8 +2130,9 @@ class _HydrationCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final hasLogs = hydrationLogs.isNotEmpty;
     return Card(
+      margin: EdgeInsets.zero,
       child: Padding(
-        padding: ResponsiveConfig.padding(all: 16),
+        padding: ResponsiveConfig.padding(all: 24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -2038,7 +2150,7 @@ class _HydrationCard extends StatelessWidget {
                 ),
               ],
             ),
-            ResponsiveConfig.heightBox(8),
+            ResponsiveConfig.heightBox(24),
             Text(
               'Stay hydrated to keep your skin barrier happy. Log glasses to visualize progress.',
               style: ResponsiveConfig.textStyle(
@@ -2076,11 +2188,14 @@ class _HydrationCard extends StatelessWidget {
                     contentPadding: EdgeInsets.zero,
                     dense: true,
                     leading: CircleAvatar(
-                      backgroundColor: AppTheme.primaryPink.withOpacity(0.12),
+                      backgroundColor: metGoal
+                          ? AppTheme.primaryPink
+                          : AppTheme.primaryPink.withOpacity(0.12),
                       child: Text(
                         glasses.toString(),
                         style: ResponsiveConfig.textStyle(
                           size: 14,
+                          color: metGoal ? Colors.white : AppTheme.primaryPink,
                           weight: FontWeight.bold,
                         ),
                       ),
@@ -2102,22 +2217,30 @@ class _HydrationCard extends StatelessWidget {
             ResponsiveConfig.heightBox(16),
             Wrap(
               spacing: 12,
-              runSpacing: 12,
+              runSpacing: 24,
               children: [
-                OutlinedButton.icon(
-                  onPressed: onSchedule,
-                  icon: const FaIcon(FontAwesomeIcons.bell),
-                  label: const Text('Schedule reminder'),
+                Center(
+                  child: OutlinedButton.icon(
+                    onPressed: onSchedule,
+                    icon: const FaIcon(FontAwesomeIcons.bell),
+                    label: const Text('Schedule reminder'),
+                  ),
                 ),
-                FilledButton.icon(
+                TextButton.icon(
                   onPressed: onLogHydration,
-                  icon: const FaIcon(FontAwesomeIcons.glassWaterDroplet),
-                  label: const Text('Log hydration'),
+                  icon: const FaIcon(FontAwesomeIcons.glassWaterDroplet,
+                      color: AppTheme.primaryPink),
+                  label: Text('Log hydration',
+                      style: ResponsiveConfig.textStyle(
+                          size: 16, color: AppTheme.primaryPink)),
                 ),
                 TextButton.icon(
                   onPressed: onViewHydrationLogs,
-                  icon: const FaIcon(FontAwesomeIcons.list),
-                  label: const Text('View logs'),
+                  icon: const FaIcon(FontAwesomeIcons.list,
+                      color: AppTheme.primaryPink),
+                  label: Text('View logs',
+                      style: ResponsiveConfig.textStyle(
+                          size: 16, color: AppTheme.primaryPink)),
                 ),
               ],
             ),
@@ -2156,8 +2279,9 @@ class _InventoryCard extends StatelessWidget {
         products.where((p) => p.isExpiringSoon || p.isExpired).length;
 
     return Card(
+      margin: EdgeInsets.zero,
       child: Padding(
-        padding: ResponsiveConfig.padding(all: 16),
+        padding: ResponsiveConfig.padding(all: 24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -2198,7 +2322,7 @@ class _InventoryCard extends StatelessWidget {
                     Expanded(
                       child: _InventoryStatTile(
                         icon: FontAwesomeIcons.tag,
-                        label: 'Brands',
+                        label: 'Total Brands',
                         value: brands.toString(),
                         onTap: () =>
                             onOpenCategory(ProductInventoryView.brands),
@@ -2234,7 +2358,7 @@ class _InventoryCard extends StatelessWidget {
                 ),
               ],
             ),
-            ResponsiveConfig.heightBox(16),
+            ResponsiveConfig.heightBox(24),
             if (products.isEmpty)
               Text(
                 'No products added yet. Track your cleansers, treatments and sunscreens to monitor expiry dates.',
@@ -2264,7 +2388,7 @@ class _InventoryCard extends StatelessWidget {
                   ),
                 ),
             ],
-            ResponsiveConfig.heightBox(16),
+            ResponsiveConfig.heightBox(24),
             Row(
               children: [
                 /* FilledButton.icon(
@@ -2274,10 +2398,14 @@ class _InventoryCard extends StatelessWidget {
                 ),
                 ResponsiveConfig.widthBox(12),
                  */
-                OutlinedButton.icon(
-                  onPressed: onManageProducts,
-                  icon: const FaIcon(FontAwesomeIcons.listCheck),
-                  label: const Text('Manage inventory'),
+                Expanded(
+                  child: Center(
+                    child: OutlinedButton.icon(
+                      onPressed: onManageProducts,
+                      icon: const FaIcon(FontAwesomeIcons.listCheck),
+                      label: const Text('Manage inventory'),
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -2387,23 +2515,32 @@ class _InventoryStatTile extends StatelessWidget {
           borderRadius: ResponsiveConfig.borderRadius(16),
         ),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            FaIcon(icon, color: AppTheme.primaryPink),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                FaIcon(icon, color: AppTheme.primaryPink, size: 20),
+                ResponsiveConfig.widthBox(8),
+                Expanded(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: ResponsiveConfig.textStyle(
+                      size: 12,
+                      color: AppTheme.mediumGray,
+                    ),
+                  ),
+                ),
+              ],
+            ),
             ResponsiveConfig.heightBox(8),
             Text(
               value,
               style: ResponsiveConfig.textStyle(
                 size: 20,
-                weight: FontWeight.bold,
-              ),
-            ),
-            ResponsiveConfig.heightBox(4),
-            Text(
-              label,
-              style: ResponsiveConfig.textStyle(
-                size: 12,
-                color: AppTheme.mediumGray,
+                weight: FontWeight.w900,
               ),
             ),
           ],
@@ -2425,8 +2562,9 @@ class _AcneCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
+      margin: EdgeInsets.zero,
       child: Padding(
-        padding: ResponsiveConfig.padding(all: 16),
+        padding: ResponsiveConfig.padding(all: 24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -2503,8 +2641,9 @@ class _UVOverviewCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
+      margin: EdgeInsets.zero,
       child: Padding(
-        padding: ResponsiveConfig.padding(all: 16),
+        padding: ResponsiveConfig.padding(all: 24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -2575,7 +2714,7 @@ class _GoalCard extends StatelessWidget {
     if (goals.isEmpty) {
       return Card(
         child: Padding(
-          padding: ResponsiveConfig.padding(all: 16),
+          padding: ResponsiveConfig.padding(all: 24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -2612,8 +2751,9 @@ class _GoalCard extends StatelessWidget {
     }
 
     return Card(
+      margin: EdgeInsets.zero,
       child: Padding(
-        padding: ResponsiveConfig.padding(all: 16),
+        padding: ResponsiveConfig.padding(all: 24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -2660,8 +2800,8 @@ class _GoalCard extends StatelessWidget {
   }
 }
 
-class _BeautyTipsCard extends StatelessWidget {
-  const _BeautyTipsCard();
+class BeautyTipsCard extends StatelessWidget {
+  const BeautyTipsCard({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -2673,8 +2813,9 @@ class _BeautyTipsCard extends StatelessWidget {
     ];
 
     return Card(
+      margin: EdgeInsets.zero,
       child: Padding(
-        padding: ResponsiveConfig.padding(all: 16),
+        padding: ResponsiveConfig.padding(all: 24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -2694,8 +2835,11 @@ class _BeautyTipsCard extends StatelessWidget {
                   children: [
                     const FaIcon(FontAwesomeIcons.check,
                         size: 18, color: AppTheme.primaryPink),
-                    ResponsiveConfig.widthBox(8),
-                    Expanded(child: Text(tip)),
+                    ResponsiveConfig.widthBox(16),
+                    Expanded(
+                        child: Text(tip,
+                            style: ResponsiveConfig.textStyle(
+                                size: 14, letterSpacing: 0.5, height: 1.5))),
                   ],
                 ),
               ),
@@ -2713,8 +2857,9 @@ class _CommunityCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
+      margin: EdgeInsets.zero,
       child: Padding(
-        padding: ResponsiveConfig.padding(all: 16),
+        padding: ResponsiveConfig.padding(all: 24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -2765,8 +2910,9 @@ class _RoutineReminderCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
+      margin: EdgeInsets.zero,
       child: Padding(
-        padding: ResponsiveConfig.padding(all: 16),
+        padding: ResponsiveConfig.padding(all: 24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -2806,8 +2952,9 @@ class _IngredientScannerCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
+      margin: EdgeInsets.zero,
       child: Padding(
-        padding: ResponsiveConfig.padding(all: 16),
+        padding: ResponsiveConfig.padding(all: 24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -2854,8 +3001,9 @@ class _ClimateAdjusterCard extends StatelessWidget {
     ];
 
     return Card(
+      margin: EdgeInsets.zero,
       child: Padding(
-        padding: ResponsiveConfig.padding(all: 16),
+        padding: ResponsiveConfig.padding(all: 24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -2883,7 +3031,10 @@ class _ClimateAdjusterCard extends StatelessWidget {
                     const FaIcon(FontAwesomeIcons.cloud,
                         size: 18, color: AppTheme.primaryPink),
                     ResponsiveConfig.widthBox(8),
-                    Expanded(child: Text(tip)),
+                    Expanded(
+                        child: Text(tip,
+                            style: ResponsiveConfig.textStyle(
+                                size: 14, height: 1.5, letterSpacing: 0.25))),
                   ],
                 ),
               ),
@@ -2903,8 +3054,9 @@ class _DermatologistCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
+      margin: EdgeInsets.zero,
       child: Padding(
-        padding: ResponsiveConfig.padding(all: 16),
+        padding: ResponsiveConfig.padding(all: 24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -3019,8 +3171,9 @@ class _RoutineHistoryCard extends StatelessWidget {
     final recent = entries.take(5).toList();
     if (recent.isEmpty) return const SizedBox.shrink();
     return Card(
+      margin: EdgeInsets.zero,
       child: Padding(
-        padding: ResponsiveConfig.padding(all: 16),
+        padding: ResponsiveConfig.padding(all: 24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -3077,8 +3230,9 @@ class _HealthScoreCard extends StatelessWidget {
     final overall = ((hydrationScore + acneScore) / 20) * 100;
 
     return Card(
+      margin: EdgeInsets.zero,
       child: Padding(
-        padding: ResponsiveConfig.padding(all: 16),
+        padding: ResponsiveConfig.padding(all: 24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -3168,8 +3322,9 @@ class _HydrationTrendChart extends StatelessWidget {
     }
 
     return Card(
+      margin: EdgeInsets.zero,
       child: Padding(
-        padding: ResponsiveConfig.padding(all: 16),
+        padding: ResponsiveConfig.padding(all: 24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -3292,8 +3447,9 @@ class _SleepWellnessCard extends StatelessWidget {
         : 0.0;
 
     return Card(
+      margin: EdgeInsets.zero,
       child: Padding(
-        padding: ResponsiveConfig.padding(all: 16),
+        padding: ResponsiveConfig.padding(all: 24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -3384,8 +3540,9 @@ class _RecommendationCard extends StatelessWidget {
     }
 
     return Card(
+      margin: EdgeInsets.zero,
       child: Padding(
-        padding: ResponsiveConfig.padding(all: 16),
+        padding: ResponsiveConfig.padding(all: 24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -3426,8 +3583,9 @@ class _IngredientDictionaryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
+      margin: EdgeInsets.zero,
       child: Padding(
-        padding: ResponsiveConfig.padding(all: 16),
+        padding: ResponsiveConfig.padding(all: 24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -3465,8 +3623,9 @@ class _AIDermatologistCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
+      margin: EdgeInsets.zero,
       child: Padding(
-        padding: ResponsiveConfig.padding(all: 16),
+        padding: ResponsiveConfig.padding(all: 24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -3502,8 +3661,9 @@ class _ARPreviewCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
+      margin: EdgeInsets.zero,
       child: Padding(
-        padding: ResponsiveConfig.padding(all: 16),
+        padding: ResponsiveConfig.padding(all: 24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -3519,25 +3679,27 @@ class _ARPreviewCard extends StatelessWidget {
               'Preview routine results with augmented reality overlays and shade matching (beta).',
             ),
             ResponsiveConfig.heightBox(12),
-            OutlinedButton.icon(
-              onPressed: () {
-                showDialog(
-                  context: context,
-                  builder: (context) => AlertDialog(
-                    title: const Text('Coming Soon'),
-                    content: const Text(
-                        'AR Skin Preview is currently in beta testing and will be available soon.'),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text('OK'),
-                      ),
-                    ],
-                  ),
-                );
-              },
-              icon: const FaIcon(FontAwesomeIcons.glasses),
-              label: const Text('Preview (beta)'),
+            Center(
+              child: OutlinedButton.icon(
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text('Coming Soon'),
+                      content: const Text(
+                          'AR Skin Preview is currently in beta testing and will be available soon.'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('OK'),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+                icon: const FaIcon(FontAwesomeIcons.glasses),
+                label: const Text('Preview (beta)'),
+              ),
             ),
           ],
         ),
@@ -3560,8 +3722,9 @@ class _UVAnalyticsCard extends StatelessWidget {
     final highDays = entries.where((entry) => entry.uvIndex >= 6).length;
 
     return Card(
+      margin: EdgeInsets.zero,
       child: Padding(
-        padding: ResponsiveConfig.padding(all: 16),
+        padding: ResponsiveConfig.padding(all: 24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -3717,15 +3880,13 @@ class _HydrationEmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: ResponsiveConfig.padding(all: 16),
-        child: Text(
-          'Log hydration metrics for at least two days to unlock hydration trends.',
-          style: ResponsiveConfig.textStyle(
-            size: 14,
-            color: AppTheme.mediumGray,
-          ),
+    return Padding(
+      padding: ResponsiveConfig.padding(vertical: 12),
+      child: Text(
+        'Log hydration metrics for at least two days to unlock hydration trends.',
+        style: ResponsiveConfig.textStyle(
+          size: 14,
+          color: AppTheme.palePink,
         ),
       ),
     );
@@ -3783,83 +3944,46 @@ class _FindDermatologistCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            Theme.of(context).colorScheme.primary,
-            Theme.of(context).colorScheme.secondary,
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: AppTheme.primaryPink.withOpacity(0.2),
-          width: 1.5,
-        ),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () => context.push('/dermatologist-search'),
-          borderRadius: BorderRadius.circular(24),
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Row(
+    return Card(
+      margin: EdgeInsets.zero,
+      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+      child: Padding(
+        padding: ResponsiveConfig.padding(all: 24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppTheme.primaryPink.withOpacity(0.2),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: const FaIcon(
-                    FontAwesomeIcons.userDoctor,
-                    color: AppTheme.primaryPink,
-                    size: 24,
+                Text(
+                  'Specialist Finder',
+                  style: ResponsiveConfig.textStyle(
+                    size: 18,
+                    weight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(width: 20),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Specialist Search',
-                        style: ResponsiveConfig.textStyle(
-                          size: 18,
-                          weight: FontWeight.bold,
-                          color: Theme.of(context).colorScheme.onPrimary,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Find verified local dermatologists nearby.',
-                        style: ResponsiveConfig.textStyle(
-                            size: 13,
-                            color:
-                                Theme.of(context).colorScheme.surfaceContainer),
-                      ),
-                    ],
-                  ),
-                ),
-                Icon(
-                  Icons.arrow_forward_ios,
-                  size: 16,
-                  color: Theme.of(context).colorScheme.onPrimary,
-                ),
+                const Icon(Icons.location_on_outlined,
+                    color: AppTheme.primaryPink),
               ],
             ),
-          ),
+            ResponsiveConfig.heightBox(8),
+            Text(
+              'Find dermatologists nearby to support your skin health.',
+              style: ResponsiveConfig.textStyle(
+                size: 14,
+                color: AppTheme.mediumGray,
+              ),
+            ),
+            ResponsiveConfig.heightBox(16),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () => context.push('/dermatologist-search'),
+                icon: const Icon(Icons.search),
+                label: const Text('Find specialist'),
+              ),
+            ),
+          ],
         ),
       ),
     );

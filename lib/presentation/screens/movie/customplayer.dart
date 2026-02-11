@@ -12,6 +12,7 @@ import 'package:chewie/chewie.dart';
 import '../../../services/credit_manager.dart';
 import 'package:go_router/go_router.dart';
 import 'domain/entities/movie.dart';
+import 'presentation/providers/favorites_provider.dart';
 
 /// Netflix-style video player with embedded stream extraction and seamless episode switching.
 class CustomVideoPlayer extends ConsumerStatefulWidget {
@@ -63,6 +64,13 @@ class _CustomVideoPlayerState extends ConsumerState<CustomVideoPlayer> {
   bool _showCustomControls = true;
   Timer? _hideControlsTimer;
   Timer? _creditDeductionTimer;
+  Timer? _watchNextTimer;
+
+  // -- Auto-play State --
+  bool _showWatchNextOverlay = false;
+  int _watchNextCountdown = 10;
+  bool _isAutoPlaying = false;
+  final int _watchNextThresholdSeconds = 120; // 2 minutes
 
   // -- Scripts (copied from movies.dart) --
   static const String _extractionScript = r"""
@@ -223,7 +231,6 @@ class _CustomVideoPlayerState extends ConsumerState<CustomVideoPlayer> {
         errorBuilder: (context, errorMessage) =>
             _buildErrorWidget(errorMessage),
         allowedScreenSleep: false,
-        
       );
 
       SystemChrome.setPreferredOrientations(
@@ -233,6 +240,7 @@ class _CustomVideoPlayerState extends ConsumerState<CustomVideoPlayer> {
       if (mounted) {
         setState(() => _isInitialized = true);
         _startHideTimer();
+        _addProgressListener();
       }
     } catch (e) {
       if (mounted) setState(() => _errorMessage = e.toString());
@@ -440,6 +448,34 @@ class _CustomVideoPlayerState extends ConsumerState<CustomVideoPlayer> {
     _preloadNextEpisode();
   }
 
+  void _skipToNext() {
+    if (widget.episodes == null || widget.episodes!.isEmpty) return;
+    final nextEpIndex = widget.episodes!.indexWhere((e) =>
+        e['season'] == _currentSeason &&
+        e['episode'] == _currentEpisodeNum + 1);
+
+    if (nextEpIndex != -1) {
+      _switchToEpisode(widget.episodes![nextEpIndex]);
+      _showOverlay("Next Episode", Icons.skip_next);
+    } else {
+      _showOverlay("No Next Episode", Icons.error_outline);
+    }
+  }
+
+  void _skipToPrev() {
+    if (widget.episodes == null || widget.episodes!.isEmpty) return;
+    final prevEpIndex = widget.episodes!.indexWhere((e) =>
+        e['season'] == _currentSeason &&
+        e['episode'] == _currentEpisodeNum - 1);
+
+    if (prevEpIndex != -1) {
+      _switchToEpisode(widget.episodes![prevEpIndex]);
+      _showOverlay("Previous Episode", Icons.skip_previous);
+    } else {
+      _showOverlay("No Previous Episode", Icons.error_outline);
+    }
+  }
+
   void _retryCurrentEpisode() async {
     setState(() {
       _errorMessage = null;
@@ -454,6 +490,102 @@ class _CustomVideoPlayerState extends ConsumerState<CustomVideoPlayer> {
       setState(() => _errorMessage = 'Retry failed. Please try again.');
     }
     setState(() => _isLoadingNewStream = false);
+  }
+
+  // ============================================================================
+  // PROGRESS MONITORING & AUTO-PLAY
+  // ============================================================================
+  void _addProgressListener() {
+    _videoController?.addListener(_onProgressChanged);
+  }
+
+  void _onProgressChanged() {
+    if (_videoController == null || !_videoController!.value.isInitialized) {
+      return;
+    }
+
+    final duration = _videoController!.value.duration;
+    final position = _videoController!.value.position;
+    final remaining = duration - position;
+
+    // Trigger "Watch Next" 2 minutes before end
+    if (widget.episodes != null &&
+        widget.episodes!.isNotEmpty &&
+        widget.sourceMovie?.mediaType == 'tv' &&
+        remaining.inSeconds <= _watchNextThresholdSeconds &&
+        remaining.inSeconds > 0 &&
+        !_showWatchNextOverlay &&
+        !_isAutoPlaying) {
+      _triggerWatchNext();
+    }
+
+    // Auto-play when video ends
+    if (position >= duration && duration.inSeconds > 0 && !_isAutoPlaying) {
+      _onVideoEnded();
+    }
+  }
+
+  void _triggerWatchNext() {
+    final nextEpIndex = widget.episodes!.indexWhere((e) =>
+        e['season'] == _currentSeason &&
+        e['episode'] == _currentEpisodeNum + 1);
+
+    if (nextEpIndex != -1) {
+      setState(() {
+        _showWatchNextOverlay = true;
+        _watchNextCountdown = 10;
+      });
+      _startWatchNextCountdown();
+    }
+  }
+
+  void _startWatchNextCountdown() {
+    _watchNextTimer?.cancel();
+    _watchNextTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      if (_watchNextCountdown > 0) {
+        setState(() => _watchNextCountdown--);
+      } else {
+        timer.cancel();
+        _onWatchNextConfirmed();
+      }
+    });
+  }
+
+  void _onWatchNextConfirmed() {
+    if (_showWatchNextOverlay) {
+      setState(() {
+        _showWatchNextOverlay = false;
+        _isAutoPlaying = true;
+      });
+      final nextEpIndex = widget.episodes!.indexWhere((e) =>
+          e['season'] == _currentSeason &&
+          e['episode'] == _currentEpisodeNum + 1);
+      if (nextEpIndex != -1) {
+        _switchToEpisode(widget.episodes![nextEpIndex]);
+      }
+    }
+  }
+
+  void _onVideoEnded() {
+    setState(() => _isAutoPlaying = true);
+    final nextEpIndex = widget.episodes!.indexWhere((e) =>
+        e['season'] == _currentSeason &&
+        e['episode'] == _currentEpisodeNum + 1);
+    if (nextEpIndex != -1) {
+      _switchToEpisode(widget.episodes![nextEpIndex]);
+    } else {
+      // Last episode of the series or movie finished
+      Navigator.of(context).pop();
+    }
+  }
+
+  void _cancelWatchNext() {
+    _watchNextTimer?.cancel();
+    setState(() => _showWatchNextOverlay = false);
   }
 
   // ============================================================================
@@ -578,6 +710,7 @@ class _CustomVideoPlayerState extends ConsumerState<CustomVideoPlayer> {
     _overlayTimer?.cancel();
     _hideControlsTimer?.cancel();
     _creditDeductionTimer?.cancel();
+    _watchNextTimer?.cancel();
     _headlessWebView?.dispose();
     _videoController?.dispose();
     _chewieController?.dispose();
@@ -663,6 +796,100 @@ class _CustomVideoPlayerState extends ConsumerState<CustomVideoPlayer> {
 
             // 3. VLC Style Overlay
             if (_overlayIcon != null) _buildVlcOverlay(),
+
+            // 4. Watch Next Overlay (Netflix Style)
+            if (_showWatchNextOverlay) _buildWatchNextOverlay(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWatchNextOverlay() {
+    return Positioned(
+      bottom: 100,
+      right: 32,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        width: 320,
+        decoration: BoxDecoration(
+          color: Colors.black.withOpacity(0.85),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.white24, width: 1),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text("Up Next",
+                    style: TextStyle(
+                        color: Colors.pinkAccent,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14)),
+                IconButton(
+                  icon:
+                      const Icon(Icons.close, color: Colors.white70, size: 20),
+                  onPressed: _cancelWatchNext,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Container(
+                  width: 100,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    color: Colors.white10,
+                    borderRadius: BorderRadius.circular(8),
+                    image: widget.sourceMovie?.posterPath != null
+                        ? DecorationImage(
+                            image: NetworkImage(
+                                "https://image.tmdb.org/t/p/w200${widget.sourceMovie!.posterPath}"),
+                            fit: BoxFit.cover,
+                          )
+                        : null,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text("Episode ${_currentEpisodeNum + 1}",
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16)),
+                      Text("Starts in ${_watchNextCountdown}s",
+                          style: const TextStyle(
+                              color: Colors.white70, fontSize: 13)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              height: 44,
+              child: ElevatedButton(
+                onPressed: _onWatchNextConfirmed,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: Colors.black,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8)),
+                ),
+                child: const Text("Play Now",
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+              ),
+            ),
           ],
         ),
       ),
@@ -704,11 +931,34 @@ class _CustomVideoPlayerState extends ConsumerState<CustomVideoPlayer> {
                           icon: const Icon(Icons.playlist_play,
                               color: Colors.white, size: 32),
                           onPressed: _showEpisodeList),
-                    IconButton(
-                        icon: const Icon(Icons.favorite_border,
-                            color: Colors.white),
-                        onPressed: () =>
-                            _showOverlay("Added to Favorites", Icons.favorite)),
+                    if (widget.sourceMovie != null)
+                      Consumer(
+                        builder: (context, ref, child) {
+                          final isFavorite = ref.watch(
+                              isFavoriteProvider(widget.sourceMovie!.id));
+                          return IconButton(
+                            icon: Icon(
+                                isFavorite
+                                    ? Icons.favorite
+                                    : Icons.favorite_border,
+                                color: isFavorite
+                                    ? Colors.pinkAccent
+                                    : Colors.white),
+                            onPressed: () {
+                              ref
+                                  .read(favoritesProviders.notifier)
+                                  .toggleFavorite(widget.sourceMovie!);
+                              _showOverlay(
+                                  isFavorite
+                                      ? "Removed from Favorites"
+                                      : "Added to Favorites",
+                                  isFavorite
+                                      ? Icons.favorite_border
+                                      : Icons.favorite);
+                            },
+                          );
+                        },
+                      ),
                     IconButton(
                         icon: Icon(_isLocked ? Icons.lock : Icons.lock_open,
                             color: Colors.white),
@@ -727,19 +977,24 @@ class _CustomVideoPlayerState extends ConsumerState<CustomVideoPlayer> {
             // Center Play/Pause & Seeks
             if (!_isLocked)
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
+                  // Prev Episode (only for series)
+                  if (widget.episodes != null && widget.episodes!.isNotEmpty)
+                    _buildNavButton(Icons.skip_previous, _skipToPrev),
+                  const SizedBox(width: 24),
                   IconButton(
                       icon: const Icon(Icons.replay_10,
-                          color: Colors.white, size: 48),
+                          color: Colors.white, size: 42),
                       onPressed: () => _seek(false)),
+                  const SizedBox(width: 24),
                   IconButton(
                     icon: Icon(
                         _videoController!.value.isPlaying
                             ? Icons.pause_circle_filled
                             : Icons.play_circle_filled,
-                        color: Colors.pinkAccent,
-                        size: 84),
+                        color: Colors.white,
+                        size: 88),
                     onPressed: () {
                       setState(() {
                         _videoController!.value.isPlaying
@@ -749,10 +1004,15 @@ class _CustomVideoPlayerState extends ConsumerState<CustomVideoPlayer> {
                       if (_videoController!.value.isPlaying) _startHideTimer();
                     },
                   ),
+                  const SizedBox(width: 24),
                   IconButton(
                       icon: const Icon(Icons.forward_10,
-                          color: Colors.white, size: 48),
+                          color: Colors.white, size: 42),
                       onPressed: () => _seek(true)),
+                  const SizedBox(width: 24),
+                  // Next Episode (only for series)
+                  if (widget.episodes != null && widget.episodes!.isNotEmpty)
+                    _buildNavButton(Icons.skip_next, _skipToNext),
                 ],
               ),
             const Spacer(),
@@ -795,6 +1055,19 @@ class _CustomVideoPlayerState extends ConsumerState<CustomVideoPlayer> {
               ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildNavButton(IconData icon, VoidCallback onTap) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.15),
+        shape: BoxShape.circle,
+      ),
+      child: IconButton(
+        icon: Icon(icon, color: Colors.white, size: 28),
+        onPressed: onTap,
       ),
     );
   }

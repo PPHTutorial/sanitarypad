@@ -11,6 +11,8 @@ import 'package:sanitarypad/core/utils/error_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:sanitarypad/presentation/screens/movie/data/models/movie_model.dart';
+import 'package:sanitarypad/core/firebase/firebase_service.dart';
+import 'package:sanitarypad/services/config_service.dart';
 
 class CustomSplashScreen extends ConsumerStatefulWidget {
   const CustomSplashScreen({super.key});
@@ -79,8 +81,9 @@ class _CustomSplashScreenState extends ConsumerState<CustomSplashScreen>
       }
       await HiveStorage.initialize();
 
-      // 2. Initialize Firebase (Moved to main.dart)
-      // await FirebaseService.initialize();
+      // 2. Initialize Firebase & Config (Moved back from main.dart for faster startup)
+      await FirebaseService.initialize();
+      await ConfigService().initialize();
 
       // 3. Initialize Notifications
       final notificationService = ref.read(notificationServiceProvider);
@@ -100,6 +103,7 @@ class _CustomSplashScreenState extends ConsumerState<CustomSplashScreen>
 
       // 5. Initialize Ads
       AdsService().initialize();
+
     } catch (e, stackTrace) {
       debugPrint("Initialization error: $e");
       ErrorHandler.handleError(e, stackTrace, context: 'Splash Initialization');
@@ -114,27 +118,43 @@ class _CustomSplashScreenState extends ConsumerState<CustomSplashScreen>
     return Scaffold(
       backgroundColor: backgroundColor,
       body: Center(
-        child: AnimatedBuilder(
-          animation: _controller,
-          builder: (context, child) {
-            return FadeTransition(
-              opacity: _fadeAnimation,
-              child: ScaleTransition(
-                scale: _scaleAnimation,
-                child: Image.asset(
-                  'assets/images/logo.png',
-                  width: 240,
-                  height: 240,
-                  fit: BoxFit.contain,
-                  errorBuilder: (context, error, stackTrace) => const Icon(
-                    Icons.spa,
-                    color: AppTheme.primaryPink,
-                    size: 80,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            AnimatedBuilder(
+              animation: _controller,
+              builder: (context, child) {
+                return FadeTransition(
+                  opacity: _fadeAnimation,
+                  child: ScaleTransition(
+                    scale: _scaleAnimation,
+                    child: child,
                   ),
+                );
+              },
+              child: Image.asset(
+                'assets/images/logo.png',
+                width: 200,
+                height: 200,
+                fit: BoxFit.contain,
+                errorBuilder: (context, error, stackTrace) => const Icon(
+                  Icons.spa,
+                  color: AppTheme.primaryPink,
+                  size: 80,
                 ),
               ),
-            );
-          },
+            ),
+            const SizedBox(height: 40),
+            // Thin progress bar
+            const SizedBox(
+              width: 150,
+              child: LinearProgressIndicator(
+                minHeight: 2,
+                backgroundColor: Colors.white10,
+                valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryPink),
+              ),
+            ),
+          ],
         ),
       ),
     );

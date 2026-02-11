@@ -96,6 +96,7 @@ class PartnerDashboardScreen extends ConsumerWidget {
                       onScheduleKickReminder: null,
                       onAddAppointment: null,
                       onAddMedication: null,
+                      babyStream: const Stream.empty(),
                       isReadOnly: true,
                     ),
                     ResponsiveConfig.heightBox(16),

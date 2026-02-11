@@ -123,7 +123,7 @@ class ProfileScreen extends ConsumerWidget {
         // shadowColor handled by CardTheme
         margin: const EdgeInsets.only(bottom: 0),
         child: Padding(
-          padding: ResponsiveConfig.padding(all: 20),
+          padding: ResponsiveConfig.padding(all: 24),
           child: Row(
             children: [
               CircleAvatar(
@@ -274,131 +274,123 @@ class ProfileScreen extends ConsumerWidget {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Card(
-      margin: const EdgeInsets.only(bottom: 0),
-      child: Column(
-        children: [
-          _buildSettingsTile(
-            context,
-            icon: FontAwesomeIcons.calendar,
-            title: 'Cycle Settings',
-            onTap: () {
-              context.push('/cycle-settings');
-            },
-          ),
-          const Divider(),
-          _buildThemeToggleTile(context, ref),
-          const Divider(),
-          _buildSettingsTile(
-            context,
-            icon: FontAwesomeIcons.bell,
-            title: 'Notifications',
-            onTap: () {
-              context.push('/notification-settings');
-            },
-          ),
-          const Divider(),
-          _buildSettingsTile(
-            context,
-            icon: FontAwesomeIcons.lock,
-            title: 'Privacy & Security',
-            onTap: () {
-              context.push('/security-settings');
-            },
-          ),
-          const Divider(),
-          _buildSettingsTile(
-            context,
-            icon: FontAwesomeIcons.shieldHalved,
-            title: 'Privacy Settings',
-            onTap: () {
-              context.push('/privacy-settings');
-            },
-          ),
-          const Divider(),
-          _buildSettingsTile(
-            context,
-            icon: FontAwesomeIcons.database,
-            title: 'Data Management',
-            onTap: () {
-              _showDataManagementOptions(context, ref);
-            },
-          ),
-          const Divider(),
-          _buildSettingsTile(
-            context,
-            icon: FontAwesomeIcons.phone,
-            title: 'Emergency Contacts',
-            onTap: () {
-              context.push('/emergency-contacts');
-            },
-          ),
-          const Divider(),
-          _buildSettingsTile(
-            context,
-            icon: FontAwesomeIcons.triangleExclamation,
-            title: 'Health Alerts',
-            onTap: () {
-              context.push('/red-flag-alerts');
-            },
-          ),
-          const Divider(),
-          _buildSettingsTile(
-            context,
-            icon: FontAwesomeIcons.fileMedical,
-            title: 'Health Reports',
-            onTap: () {
-              context.push('/health-report');
-            },
-          ),
-          const Divider(),
-          _buildSettingsTile(
-            context,
-            icon: FontAwesomeIcons.newspaper,
-            title: 'Manage Wellness Content',
-            onTap: () {
-              context.push('/wellness-content-management');
-            },
-          ),
-          const Divider(),
-          // Help & Support
-          _buildSettingsTile(
-            context,
-            title: 'Help & Support',
-            icon: Icons.help_outline,
-            onTap: () => context.push('/help-support'),
-          ),
-
-          // Admin Dashboard
-          if (userAsync.value?.isAdmin == true) ...[
-            const Divider(),
-            ListTile(
-              leading: const Icon(Icons.admin_panel_settings,
-                  color: Colors.redAccent, size: 24),
-              title: const Text('Professional Dashboard',
-                  style: TextStyle(
-                      color: Colors.redAccent, fontWeight: FontWeight.bold)),
-              trailing: FaIcon(FontAwesomeIcons.chevronRight,
-                  size: 16, color: colorScheme.onSurfaceVariant),
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(
-                    builder: (context) => const AdminDashboardScreen()),
+        margin: const EdgeInsets.only(bottom: 0),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            children: [
+              _buildThemeToggleTile(context, ref),
+              const Divider(),
+              _buildSettingsTile(
+                context,
+                icon: FontAwesomeIcons.bell,
+                title: 'Notifications',
+                onTap: () {
+                  context.push('/notification-settings');
+                },
               ),
-            ),
-          ],
+              const Divider(),
+              _buildSettingsTile(
+                context,
+                icon: FontAwesomeIcons.lock,
+                title: 'Privacy & Security',
+                onTap: () {
+                  context.push('/security-settings');
+                },
+              ),
+              const Divider(),
+              _buildSettingsTile(
+                context,
+                icon: FontAwesomeIcons.shieldHalved,
+                title: 'Privacy Settings',
+                onTap: () {
+                  context.push('/privacy-settings');
+                },
+              ),
+              const Divider(),
+              _buildSettingsTile(
+                context,
+                icon: FontAwesomeIcons.database,
+                title: 'Data Management',
+                onTap: () {
+                  _showDataManagementOptions(context, ref);
+                },
+              ),
+              const Divider(),
+              _buildSettingsTile(
+                context,
+                icon: FontAwesomeIcons.phone,
+                title: 'Emergency Contacts',
+                onTap: () {
+                  context.push('/emergency-contacts');
+                },
+              ),
+              const Divider(),
+              _buildSettingsTile(
+                context,
+                icon: FontAwesomeIcons.triangleExclamation,
+                title: 'Health Alerts',
+                onTap: () {
+                  context.push('/red-flag-alerts');
+                },
+              ),
+              const Divider(),
+              _buildSettingsTile(
+                context,
+                icon: FontAwesomeIcons.fileMedical,
+                title: 'Health Reports',
+                onTap: () {
+                  context.push('/health-report');
+                },
+              ),
+              const Divider(),
+              _buildSettingsTile(
+                context,
+                icon: FontAwesomeIcons.newspaper,
+                title: 'Manage Wellness Content',
+                onTap: () {
+                  context.push('/wellness-content-management');
+                },
+              ),
+              const Divider(),
+              // Help & Support
+              _buildSettingsTile(
+                context,
+                title: 'Help & Support',
+                icon: Icons.help_outline,
+                onTap: () => context.push('/help-support'),
+              ),
 
-          const SizedBox(height: 32),
-
-          _buildSettingsTile(
-            context,
-            icon: FontAwesomeIcons.circleInfo,
-            title: 'About',
-            onTap: () {
-              _showAboutDialog(context);
-            },
+              // Admin Dashboard
+              if (userAsync.value?.isAdmin == true) ...[
+                const Divider(),
+                ListTile(
+                  leading: const Icon(Icons.admin_panel_settings,
+                      color: Colors.redAccent, size: 24),
+                  title: const Text('Professional Dashboard',
+                      style: TextStyle(
+                          color: Colors.redAccent,
+                          fontWeight: FontWeight.bold)),
+                  trailing: FaIcon(FontAwesomeIcons.chevronRight,
+                      size: 16, color: colorScheme.onSurfaceVariant),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                        builder: (context) => const AdminDashboardScreen()),
+                  ),
+                ),
+              ],
+              const Divider(),
+              _buildSettingsTile(
+                context,
+                icon: FontAwesomeIcons.circleInfo,
+                title: 'About',
+                onTap: () {
+                  _showAboutDialog(context);
+                },
+              ),
+            ],
           ),
-        ],
-      ),
-    );
+        ));
   }
 
   Widget _buildSettingsTile(
@@ -442,8 +434,7 @@ class ProfileScreen extends ConsumerWidget {
     return ListTile(
       leading: FaIcon(themeIcon,
           color: Theme.of(context).colorScheme.primary, size: 20),
-      title: const Text('Theme'),
-      subtitle: Text(themeLabel),
+      title: Text('Theme: $themeLabel'),
       trailing: Switch(
         value: themeMode == ThemeMode.dark,
         onChanged: (value) {
@@ -535,32 +526,35 @@ class ProfileScreen extends ConsumerWidget {
 
     return Card(
       margin: const EdgeInsets.only(bottom: 0),
-      child: Column(
-        children: [
-          ListTile(
-            leading: FaIcon(FontAwesomeIcons.rightFromBracket,
-                color: colorScheme.error, size: 20),
-            title: Text(
-              'Sign Out',
-              style: textTheme.bodyLarge?.copyWith(
-                color: colorScheme.error,
+      child: Padding(
+        padding: ResponsiveConfig.padding(all: 24),
+        child: Column(
+          children: [
+            ListTile(
+              leading: FaIcon(FontAwesomeIcons.rightFromBracket,
+                  color: colorScheme.error, size: 20),
+              title: Text(
+                'Sign Out',
+                style: textTheme.bodyLarge?.copyWith(
+                  color: colorScheme.error,
+                ),
               ),
+              onTap: () => _handleSignOut(context, ref),
             ),
-            onTap: () => _handleSignOut(context, ref),
-          ),
-          const Divider(),
-          ListTile(
-            leading: FaIcon(FontAwesomeIcons.trash,
-                color: colorScheme.error, size: 20),
-            title: Text(
-              'Delete Account',
-              style: textTheme.bodyLarge?.copyWith(
-                color: colorScheme.error,
+            const Divider(),
+            ListTile(
+              leading: FaIcon(FontAwesomeIcons.trash,
+                  color: colorScheme.error, size: 20),
+              title: Text(
+                'Delete Account',
+                style: textTheme.bodyLarge?.copyWith(
+                  color: colorScheme.error,
+                ),
               ),
+              onTap: () => _showDeleteAccountDialog(context, ref),
             ),
-            onTap: () => _showDeleteAccountDialog(context, ref),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -666,40 +660,43 @@ class ProfileScreen extends ConsumerWidget {
   Widget _buildLegalSection(BuildContext context) {
     return Card(
       margin: const EdgeInsets.only(bottom: 0),
-      child: Column(
-        children: [
-          _buildSettingsTile(
-            context,
-            icon: FontAwesomeIcons.shieldHalved,
-            title: 'Privacy Policy',
-            onTap: () => _navigateToPolicy(
-                context, 'Privacy Policy', LegalConstants.privacyPolicy),
-          ),
-          const Divider(),
-          _buildSettingsTile(
-            context,
-            icon: FontAwesomeIcons.fileContract,
-            title: 'Terms of Service',
-            onTap: () => _navigateToPolicy(
-                context, 'Terms of Service', LegalConstants.termsOfService),
-          ),
-          const Divider(),
-          _buildSettingsTile(
-            context,
-            icon: FontAwesomeIcons.scaleBalanced,
-            title: 'EULA',
-            onTap: () => _navigateToPolicy(
-                context, 'End User License Agreement', LegalConstants.eula),
-          ),
-          const Divider(),
-          _buildSettingsTile(
-            context,
-            icon: FontAwesomeIcons.userDoctor,
-            title: 'Medical Disclaimer',
-            onTap: () => _navigateToPolicy(context, 'Medical Disclaimer',
-                LegalConstants.medicalDisclaimer),
-          ),
-        ],
+      child: Padding(
+        padding: ResponsiveConfig.padding(all: 24),
+        child: Column(
+          children: [
+            _buildSettingsTile(
+              context,
+              icon: FontAwesomeIcons.shieldHalved,
+              title: 'Privacy Policy',
+              onTap: () => _navigateToPolicy(
+                  context, 'Privacy Policy', LegalConstants.privacyPolicy),
+            ),
+            const Divider(),
+            _buildSettingsTile(
+              context,
+              icon: FontAwesomeIcons.fileContract,
+              title: 'Terms of Service',
+              onTap: () => _navigateToPolicy(
+                  context, 'Terms of Service', LegalConstants.termsOfService),
+            ),
+            const Divider(),
+            _buildSettingsTile(
+              context,
+              icon: FontAwesomeIcons.scaleBalanced,
+              title: 'EULA',
+              onTap: () => _navigateToPolicy(
+                  context, 'End User License Agreement', LegalConstants.eula),
+            ),
+            const Divider(),
+            _buildSettingsTile(
+              context,
+              icon: FontAwesomeIcons.userDoctor,
+              title: 'Medical Disclaimer',
+              onTap: () => _navigateToPolicy(context, 'Medical Disclaimer',
+                  LegalConstants.medicalDisclaimer),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -707,49 +704,52 @@ class ProfileScreen extends ConsumerWidget {
   Widget _buildSocialSection(BuildContext context) {
     return Card(
       margin: const EdgeInsets.only(bottom: 0),
-      child: Column(
-        children: [
-          _buildSettingsTile(
-            context,
-            icon: FontAwesomeIcons.userPlus,
-            title: 'Invite Friends',
-            onTap: () {
-              Share.share(
-                  'Join me on FemCare+! The smart assistant for women\'s health and wellness.\nDownload now: https://femcare.app/download',
-                  subject: 'Invite to FemCare+');
-            },
-          ),
-          const Divider(),
-          _buildSettingsTile(
-            context,
-            icon: FontAwesomeIcons.shareNodes,
-            title: 'Share App',
-            onTap: () {
-              Share.share(
-                  'Check out FemCare+, it is amazing for tracking health and cycle!\nhttps://femcare.app',
-                  subject: 'FemCare+ App');
-            },
-          ),
-          const Divider(),
-          _buildSettingsTile(
-            context,
-            icon: FontAwesomeIcons.solidStar,
-            title: 'Rate App',
-            onTap: () async {
-              final InAppReview inAppReview = InAppReview.instance;
-              if (await inAppReview.isAvailable()) {
-                await inAppReview.requestReview();
-              } else {
-                // Fallback: Open store listing manually
-                await inAppReview.openStoreListing(
-                  // Replace with actual app ID once published
-                  appStoreId: 'com.femcare.app', // iOS App Store ID
-                  // microsoftStoreId: '...' // Optional for Windows
-                );
-              }
-            },
-          ),
-        ],
+      child: Padding(
+        padding: ResponsiveConfig.padding(all: 24),
+        child: Column(
+          children: [
+            _buildSettingsTile(
+              context,
+              icon: FontAwesomeIcons.userPlus,
+              title: 'Invite Friends',
+              onTap: () {
+                Share.share(
+                    'Join me on FemCare+! The smart assistant for women\'s health and wellness.\nDownload now: https://femcare.app/download',
+                    subject: 'Invite to FemCare+');
+              },
+            ),
+            const Divider(),
+            _buildSettingsTile(
+              context,
+              icon: FontAwesomeIcons.shareNodes,
+              title: 'Share App',
+              onTap: () {
+                Share.share(
+                    'Check out FemCare+, it is amazing for tracking health and cycle!\nhttps://femcare.app',
+                    subject: 'FemCare+ App');
+              },
+            ),
+            const Divider(),
+            _buildSettingsTile(
+              context,
+              icon: FontAwesomeIcons.solidStar,
+              title: 'Rate App',
+              onTap: () async {
+                final InAppReview inAppReview = InAppReview.instance;
+                if (await inAppReview.isAvailable()) {
+                  await inAppReview.requestReview();
+                } else {
+                  // Fallback: Open store listing manually
+                  await inAppReview.openStoreListing(
+                    // Replace with actual app ID once published
+                    appStoreId: 'com.femcare.app', // iOS App Store ID
+                    // microsoftStoreId: '...' // Optional for Windows
+                  );
+                }
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1019,92 +1019,96 @@ class ProfileScreen extends ConsumerWidget {
 
     return Card(
       margin: const EdgeInsets.only(bottom: 0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(left: 16, right: 16, top: 16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Transaction History',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
+      child: Padding(
+        padding: ResponsiveConfig.padding(all: 24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(left: 16, right: 16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Transaction History',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
-                TextButton(
-                  onPressed: () => context.push('/credit-history'),
-                  child: const Text('View All'),
-                ),
-              ],
+                  TextButton(
+                    onPressed: () => context.push('/credit-history'),
+                    child: const Text('View All'),
+                  ),
+                ],
+              ),
             ),
-          ),
-          transactionsAsync.when(
-            data: (transactions) {
-              if (transactions.isEmpty) {
-                return const Padding(
-                  padding: EdgeInsets.all(16.0),
-                  child: Center(
-                    child: Text('No transactions yet.',
-                        style: TextStyle(color: Colors.grey)),
-                  ),
-                );
-              }
-
-              // Show only last 5
-              final displayList = transactions.take(3).toList();
-
-              return ListView.separated(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: displayList.length,
-                separatorBuilder: (context, index) => const Divider(height: 1),
-                itemBuilder: (context, index) {
-                  final tx = displayList[index];
-                  final isCredit = tx.type == TransactionType.credit;
-
-                  return ListTile(
-                    dense: true,
-                    leading: CircleAvatar(
-                      radius: 14,
-                      backgroundColor: isCredit
-                          ? Colors.green.withOpacity(0.1)
-                          : Colors.red.withOpacity(0.1),
-                      child: FaIcon(
-                        isCredit
-                            ? FontAwesomeIcons.arrowUp
-                            : FontAwesomeIcons.arrowDown,
-                        size: 10,
-                        color: isCredit ? Colors.green : Colors.red,
-                      ),
-                    ),
-                    title: Text(tx.description),
-                    subtitle: Text(
-                      DateFormat('MMM d, h:mm a').format(tx.timestamp),
-                      style: const TextStyle(fontSize: 10),
-                    ),
-                    trailing: Text(
-                      '${isCredit ? '+' : '-'}${tx.amount}',
-                      style: theme.textTheme.labelLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: isCredit ? Colors.green : Colors.red,
-                      ),
+            transactionsAsync.when(
+              data: (transactions) {
+                if (transactions.isEmpty) {
+                  return const Padding(
+                    padding: EdgeInsets.all(16.0),
+                    child: Center(
+                      child: Text('No transactions yet.',
+                          style: TextStyle(color: Colors.grey)),
                     ),
                   );
-                },
-              );
-            },
-            loading: () => const Padding(
-              padding: EdgeInsets.all(16.0),
-              child: Center(child: CircularProgressIndicator()),
+                }
+
+                // Show only last 5
+                final displayList = transactions.take(3).toList();
+
+                return ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: displayList.length,
+                  separatorBuilder: (context, index) =>
+                      const Divider(height: 1),
+                  itemBuilder: (context, index) {
+                    final tx = displayList[index];
+                    final isCredit = tx.type == TransactionType.credit;
+
+                    return ListTile(
+                      dense: true,
+                      leading: CircleAvatar(
+                        radius: 14,
+                        backgroundColor: isCredit
+                            ? Colors.green.withOpacity(0.1)
+                            : Colors.red.withOpacity(0.1),
+                        child: FaIcon(
+                          isCredit
+                              ? FontAwesomeIcons.arrowUp
+                              : FontAwesomeIcons.arrowDown,
+                          size: 10,
+                          color: isCredit ? Colors.green : Colors.red,
+                        ),
+                      ),
+                      title: Text(tx.description),
+                      subtitle: Text(
+                        DateFormat('MMM d, h:mm a').format(tx.timestamp),
+                        style: const TextStyle(fontSize: 10),
+                      ),
+                      trailing: Text(
+                        '${isCredit ? '+' : '-'}${tx.amount}',
+                        style: theme.textTheme.labelLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: isCredit ? Colors.green : Colors.red,
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+              loading: () => const Padding(
+                padding: EdgeInsets.all(16.0),
+                child: Center(child: CircularProgressIndicator()),
+              ),
+              error: (e, s) => Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Text('Error: $e'),
+              ),
             ),
-            error: (e, s) => Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Text('Error: $e'),
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

@@ -14,6 +14,8 @@ class Pregnancy extends Equatable {
   final String? notes;
   final DateTime createdAt;
   final DateTime? updatedAt;
+  final bool isCompleted;
+  final List<String> babyIds;
 
   const Pregnancy({
     this.id,
@@ -27,6 +29,8 @@ class Pregnancy extends Equatable {
     this.notes,
     required this.createdAt,
     this.updatedAt,
+    this.isCompleted = false,
+    this.babyIds = const [],
   });
 
   /// Calculate due date from LMP (40 weeks)
@@ -68,6 +72,9 @@ class Pregnancy extends Equatable {
       updatedAt: data['updatedAt'] != null
           ? (data['updatedAt'] as Timestamp).toDate()
           : null,
+      isCompleted: data['isCompleted'] as bool? ?? false,
+      babyIds: (data['babyIds'] as List<dynamic>?)?.cast<String>() ??
+          (data['babyId'] != null ? [data['babyId'] as String] : []),
     );
   }
 
@@ -84,6 +91,8 @@ class Pregnancy extends Equatable {
       'notes': notes,
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': updatedAt != null ? Timestamp.fromDate(updatedAt!) : null,
+      'isCompleted': isCompleted,
+      'babyIds': babyIds,
     };
   }
 
@@ -95,6 +104,8 @@ class Pregnancy extends Equatable {
     List<String>? symptoms,
     String? notes,
     DateTime? updatedAt,
+    bool? isCompleted,
+    List<String>? babyIds,
   }) {
     return Pregnancy(
       id: id,
@@ -112,6 +123,8 @@ class Pregnancy extends Equatable {
       notes: notes ?? this.notes,
       createdAt: createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      isCompleted: isCompleted ?? this.isCompleted,
+      babyIds: babyIds ?? this.babyIds,
     );
   }
 
@@ -140,6 +153,8 @@ class Pregnancy extends Equatable {
         notes,
         createdAt,
         updatedAt,
+        isCompleted,
+        babyIds,
       ];
 }
 

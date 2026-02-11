@@ -8,6 +8,7 @@ import 'package:sanitarypad/models/workout_models.dart';
 import 'package:sanitarypad/services/workout_service.dart';
 import 'package:sanitarypad/services/video_feed_service.dart';
 import 'package:sanitarypad/services/video_overlay_service.dart';
+import 'package:sanitarypad/services/credit_manager.dart';
 
 class WorkoutProgramScreen extends ConsumerWidget {
   final WorkoutProgram program;
@@ -489,11 +490,25 @@ class _DayCard extends StatelessWidget {
                           margin: EdgeInsets.zero,
                           clipBehavior: Clip.antiAlias,
                           child: InkWell(
-                            onTap: () {
-                              Navigator.pop(context);
-                              ref
-                                  .read(videoOverlayProvider.notifier)
-                                  .playVideo(video.videoId);
+                            onTap: () async {
+                              final creditManager =
+                                  ref.read(creditManagerProvider);
+                              final hasCredits =
+                                  await creditManager.requestCredit(
+                                context,
+                                ActionType.videoWatch,
+                              );
+
+                              if (hasCredits) {
+                                await creditManager
+                                    .consumeCredits(ActionType.videoWatch);
+                                if (context.mounted) {
+                                  Navigator.pop(context);
+                                  ref
+                                      .read(videoOverlayProvider.notifier)
+                                      .playVideo(video.videoId);
+                                }
+                              }
                             },
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,

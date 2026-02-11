@@ -38,10 +38,10 @@ class FemCareBottomNav extends StatelessWidget {
       route: '/insights',
     ),
     const NavItem(
-      icon: FontAwesomeIcons.heart,
-      activeIcon: FontAwesomeIcons.heartCircleCheck,
-      label: 'Wellness',
-      route: '/wellness',
+      icon: FontAwesomeIcons.droplet,
+      activeIcon: FontAwesomeIcons.droplet,
+      label: 'Cycles',
+      route: '/cycles-main',
     ),
     const NavItem(
       icon: FontAwesomeIcons.user,

@@ -28,6 +28,7 @@ enum VideoCategory {
   weightLoss,
   muscleBuilding,
   wellness,
+  skincare,
 }
 
 extension VideoCategoryExtension on VideoCategory {
@@ -65,6 +66,8 @@ extension VideoCategoryExtension on VideoCategory {
         return 'muscle building exercises';
       case VideoCategory.wellness:
         return 'wellness exercises';
+      case VideoCategory.skincare:
+        return 'dermatologist skincare routine tips';
     }
   }
 
@@ -102,6 +105,8 @@ extension VideoCategoryExtension on VideoCategory {
         return 'Muscle Building';
       case VideoCategory.wellness:
         return 'Wellness';
+      case VideoCategory.skincare:
+        return 'Skincare';
     }
   }
 }
@@ -162,7 +167,6 @@ class VideoFeedService {
             viewCount: video.engagement.viewCount,
             isSaved: false,
             likes: video.engagement.likeCount,
-            
           ));
         }
 
@@ -255,6 +259,10 @@ class VideoFeedService {
         return ExerciseCategory.hiit;
       case VideoCategory.pilates:
         return ExerciseCategory.pilates;
+      case VideoCategory.skincare:
+        return ExerciseCategory.skincare;
+      case VideoCategory.wellness:
+        return ExerciseCategory.other;
       default:
         return null;
     }

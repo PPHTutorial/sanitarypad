@@ -1,3 +1,5 @@
+import 'package:cloud_functions/cloud_functions.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -7,12 +9,15 @@ import '../../../core/constants/app_constants.dart';
 import '../../../services/wellness_content_service.dart';
 import '../../../core/widgets/back_button_handler.dart';
 import '../../../core/providers/auth_provider.dart';
+import '../../../services/credit_manager.dart';
 
 /// Screen for adding/editing wellness content
 class WellnessContentFormScreen extends ConsumerStatefulWidget {
   final WellnessContent? content; // For editing
+  final bool isAutoGenerate; // For AI generation trigger
 
-  const WellnessContentFormScreen({super.key, this.content});
+  const WellnessContentFormScreen(
+      {super.key, this.content, this.isAutoGenerate = false});
 
   @override
   ConsumerState<WellnessContentFormScreen> createState() =>
@@ -31,11 +36,14 @@ class _WellnessContentFormScreenState
   final _imageUrlController = TextEditingController();
   final _readTimeController = TextEditingController();
   final _tagsController = TextEditingController();
+  final _priceController = TextEditingController();
 
   // State
   String _selectedType = AppConstants.contentTypeTip;
   bool _isPremium = false;
+  bool _isPaid = false;
   bool _isLoading = false;
+  bool _isAIGenerating = false;
   List<String> _tags = [];
 
   @override
@@ -43,6 +51,11 @@ class _WellnessContentFormScreenState
     super.initState();
     if (widget.content != null) {
       _loadContentData(widget.content!);
+    } else if (widget.isAutoGenerate) {
+      // Small delay to ensure UI is ready
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _showGenerateDialog();
+      });
     }
   }
 
@@ -54,6 +67,8 @@ class _WellnessContentFormScreenState
     _imageUrlController.text = content.imageUrl ?? '';
     _readTimeController.text = content.readTime?.toString() ?? '';
     _isPremium = content.isPremium;
+    _isPaid = content.isPaid;
+    _priceController.text = content.price?.toString() ?? '';
     _tags = List.from(content.tags ?? []);
     _tagsController.text = _tags.join(', ');
   }
@@ -66,6 +81,7 @@ class _WellnessContentFormScreenState
     _imageUrlController.dispose();
     _readTimeController.dispose();
     _tagsController.dispose();
+    _priceController.dispose();
     super.dispose();
   }
 
@@ -82,6 +98,109 @@ class _WellnessContentFormScreenState
     }
   }
 
+  Future<void> _generateAIContent() async {
+    if (_titleController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter a title first')),
+      );
+      return;
+    }
+
+    final creditManager = ref.read(creditManagerProvider);
+    final hasCredits = await creditManager
+        .requestCredit(context, ActionType.aiGeneration, showDialog: true);
+
+    if (!hasCredits) return;
+
+    setState(() => _isAIGenerating = true);
+
+    try {
+      final functions = FirebaseFunctions.instance;
+      final callable = functions.httpsCallable('generateWellnessContent');
+
+      final result = await callable.call({
+        'title': _titleController.text.trim(),
+        'type': _selectedType,
+        'category': _categoryController.text.trim().isEmpty
+            ? null
+            : _categoryController.text.trim(),
+        'tags': _tags,
+      });
+
+      final data = result.data as Map<String, dynamic>;
+      final content = data['content'] as String;
+      final suggestedTags = List<String>.from(data['suggestedTags'] ?? []);
+
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Confirm AI Content'),
+            content: SingleChildScrollView(
+              child: Text(content),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Reject'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  setState(() {
+                    _contentController.text = content;
+                    if (suggestedTags.isNotEmpty) {
+                      _tags.addAll(suggestedTags);
+                      _tags = _tags.toSet().toList(); // Unique tags
+                      _tagsController.text = _tags.join(', ');
+                    }
+                  });
+                  Navigator.pop(context);
+                  creditManager.consumeCredits(ActionType.aiGeneration);
+                },
+                child: const Text('Apply Content'),
+              ),
+            ],
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('AI Error: ${e.toString()}')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isAIGenerating = false);
+      }
+    }
+  }
+
+  void _showGenerateDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('AI Content Assistant'),
+        content: const Text(
+          'Confirm to start AI generation based on the title and type. This will cost 10 credits.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _generateAIContent();
+            },
+            child: const Text('Proceed'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _saveContent() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -93,6 +212,9 @@ class _WellnessContentFormScreenState
       final readTime = _readTimeController.text.trim().isEmpty
           ? null
           : int.tryParse(_readTimeController.text.trim());
+      final price = _priceController.text.trim().isEmpty
+          ? null
+          : double.tryParse(_priceController.text.trim());
 
       final now = DateTime.now();
 
@@ -112,6 +234,12 @@ class _WellnessContentFormScreenState
               : _imageUrlController.text.trim(),
           tags: _tags.isEmpty ? null : _tags,
           isPremium: _isPremium,
+          isPaid: _isPaid,
+          price: price,
+          isAIGenerated: widget.content!.isAIGenerated ||
+              _contentController.text.isNotEmpty &&
+                  !widget.content!.content
+                      .contains(_contentController.text), // Simple check
           readTime: readTime,
           createdAt: widget.content!.createdAt,
           updatedAt: now,
@@ -142,6 +270,9 @@ class _WellnessContentFormScreenState
               : _imageUrlController.text.trim(),
           tags: _tags.isEmpty ? null : _tags,
           isPremium: _isPremium,
+          isPaid: _isPaid,
+          price: price,
+          isAIGenerated: _contentController.text.isNotEmpty,
           readTime: readTime,
           createdAt: now,
         );
@@ -179,6 +310,26 @@ class _WellnessContentFormScreenState
         backgroundColor: Colors.transparent,
         appBar: AppBar(
           title: Text(widget.content != null ? 'Edit Content' : 'Add Content'),
+          actions: [
+            if (!_isAIGenerating)
+              IconButton(
+                icon: const FaIcon(FontAwesomeIcons.wandMagicSparkles),
+                tooltip: 'Generate with AI',
+                onPressed: _showGenerateDialog,
+              )
+            else
+              const Padding(
+                padding: EdgeInsets.all(16.0),
+                child: SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  ),
+                ),
+              ),
+          ],
         ),
         body: SingleChildScrollView(
           padding: ResponsiveConfig.padding(all: 16),
@@ -318,6 +469,35 @@ class _WellnessContentFormScreenState
                     });
                   },
                 ),
+
+                // Paid Toggle
+                SwitchListTile(
+                  title: const Text('Paid Post'),
+                  subtitle: const Text('Users must pay a price to access'),
+                  value: _isPaid,
+                  onChanged: (value) {
+                    setState(() {
+                      _isPaid = value;
+                    });
+                  },
+                ),
+
+                if (_isPaid) ...[
+                  ResponsiveConfig.heightBox(8),
+                  TextFormField(
+                    controller: _priceController,
+                    decoration: InputDecoration(
+                      labelText: 'Price (optional)',
+                      hintText: 'e.g., 5.00',
+                      prefixIcon: const Icon(Icons.attach_money),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
+                  ),
+                ],
                 ResponsiveConfig.heightBox(24),
 
                 // Save Button
@@ -354,6 +534,8 @@ class _WellnessContentFormScreenState
     return FilterChip(
       selected: isSelected,
       label: Text(label),
+      showCheckmark: false,
+      checkmarkColor: Colors.white,
       onSelected: (selected) {
         setState(() {
           _selectedType = type;

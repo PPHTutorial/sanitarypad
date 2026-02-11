@@ -18,9 +18,13 @@ import '../../../data/models/pregnancy_model.dart';
 import '../../../services/pregnancy_service.dart';
 import '../reminders/create_reminder_dialog.dart';
 import '../../../services/credit_manager.dart';
+import '../../../data/models/baby_model.dart';
+import '../../../services/baby_service.dart';
 
 class PregnancyTrackingScreen extends ConsumerStatefulWidget {
-  const PregnancyTrackingScreen({super.key});
+  const PregnancyTrackingScreen({super.key, this.pregnancyId});
+
+  final String? pregnancyId;
 
   @override
   ConsumerState<PregnancyTrackingScreen> createState() =>
@@ -31,6 +35,7 @@ class _PregnancyTrackingScreenState
     extends ConsumerState<PregnancyTrackingScreen>
     with TickerProviderStateMixin {
   final _pregnancyService = PregnancyService();
+  final _babyService = BabyService();
   late TabController _tabController;
 
   @override
@@ -57,7 +62,9 @@ class _PregnancyTrackingScreenState
     return BackButtonHandler(
       fallbackRoute: '/home',
       child: StreamBuilder<Pregnancy?>(
-        stream: _pregnancyService.watchActivePregnancy(user.userId),
+        stream: widget.pregnancyId != null
+            ? _pregnancyService.watchPregnancyById(widget.pregnancyId!)
+            : _pregnancyService.watchActivePregnancy(user.userId),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Scaffold(
@@ -87,21 +94,45 @@ class _PregnancyTrackingScreenState
                 title: const Text('Pregnancy Tracking'),
                 actions: [
                   IconButton(
+                    icon: const Icon(Icons.history_outlined),
+                    tooltip: 'Pregnancy History',
+                    onPressed: () => context.pushNamed('pregnancy-history'),
+                  ),
+                  IconButton(
                     icon: const Icon(Icons.add_circle_outline),
                     tooltip: 'Start Tracking',
-                    onPressed: () =>
-                        Navigator.of(context).pushNamed('/pregnancy-form'),
+                    onPressed: () => context.pushNamed('pregnancy-form'),
                   ),
                 ],
               ),
-              body: _EmptyState(
-                icon: Icons.child_care_outlined,
-                title: 'No Active Pregnancy',
-                message:
-                    'Start a pregnancy profile to unlock FemCare+ guidance.',
-                actionLabel: 'Create pregnancy profile',
-                onAction: () =>
-                    Navigator.of(context).pushNamed('/pregnancy-form'),
+              body: SingleChildScrollView(
+                padding: ResponsiveConfig.padding(all: 16),
+                child: Column(
+                  children: [
+                    StreamBuilder<List<Baby>>(
+                      stream: _babyService.watchBabies(user.userId),
+                      builder: (context, babiesSnapshot) {
+                        final babies = babiesSnapshot.data ?? [];
+                        if (babies.isEmpty) return const SizedBox.shrink();
+                        return Column(
+                          children: [
+                            _MyBabiesSection(babies: babies),
+                            const Divider(),
+                            ResponsiveConfig.heightBox(16),
+                          ],
+                        );
+                      },
+                    ),
+                    _EmptyState(
+                      icon: Icons.child_care_outlined,
+                      title: 'No Active Pregnancy',
+                      message:
+                          'Start a pregnancy profile to unlock FemCare+ guidance.',
+                      actionLabel: 'Create pregnancy profile',
+                      onAction: () => context.pushNamed('pregnancy-form'),
+                    ),
+                  ],
+                ),
               ),
             );
           }
@@ -125,14 +156,23 @@ class _PregnancyTrackingScreenState
 
           return Scaffold(
             appBar: AppBar(
-              title: const Text('Pregnancy Journey'),
+              title: widget.pregnancyId != null
+                  ? const Text('Pregnancy Record')
+                  : const Text('Pregnancy Tracking'),
               actions: [
-                IconButton(
-                  icon: const Icon(Icons.add_circle_outline),
-                  tooltip: 'Quick Actions',
-                  onPressed: () =>
-                      _showQuickActionsMenu(context, user.userId, pregnancyId),
-                ),
+                if (widget.pregnancyId == null)
+                  IconButton(
+                    icon: const Icon(Icons.history_outlined),
+                    tooltip: 'Pregnancy History',
+                    onPressed: () => context.pushNamed('pregnancy-history'),
+                  ),
+                if (!pregnancy.isCompleted && widget.pregnancyId == null)
+                  IconButton(
+                    icon: const Icon(Icons.analytics_outlined),
+                    tooltip: 'Quick Actions',
+                    onPressed: () => _showQuickActionsMenu(
+                        context, user.userId, pregnancy.id!),
+                  ),
               ],
               bottom: PreferredSize(
                 preferredSize: const Size.fromHeight(72),
@@ -150,12 +190,14 @@ class _PregnancyTrackingScreenState
                     kickStream: kickStream,
                     appointmentStream: appointmentStream,
                     medicationStream: medicationStream,
+                    babyStream: _babyService.watchBabies(user.userId),
                     onScheduleKickReminder: () =>
                         _scheduleReminder(user.userId, 'kick_check'),
                     onAddAppointment: () => _showAppointmentSheet(
                         context, user.userId, pregnancyId),
                     onAddMedication: () =>
                         _showMedicationSheet(context, user.userId, pregnancyId),
+                    isReadOnly: widget.pregnancyId != null,
                   ),
                   _JournalTab(
                     pregnancy: pregnancy,
@@ -165,6 +207,7 @@ class _PregnancyTrackingScreenState
                         _showJournalSheet(context, user.userId, pregnancyId),
                     onLogWeight: () =>
                         _showWeightSheet(context, user.userId, pregnancyId),
+                    isReadOnly: widget.pregnancyId != null,
                   ),
                   _PlannerTab(
                     pregnancy: pregnancy,
@@ -177,6 +220,7 @@ class _PregnancyTrackingScreenState
                         _showMedicationSheet(context, user.userId, pregnancyId),
                     onAddChecklist: () =>
                         _showChecklistSheet(context, user.userId, pregnancyId),
+                    isReadOnly: widget.pregnancyId != null,
                   ),
                   _InsightsTab(
                     pregnancy: pregnancy,
@@ -188,6 +232,7 @@ class _PregnancyTrackingScreenState
                         _showKickSheet(context, user.userId, pregnancyId),
                     onLogContraction: () => _showContractionSheet(
                         context, user.userId, pregnancyId),
+                    isReadOnly: widget.pregnancyId != null,
                   ),
                 ],
               ),
@@ -367,117 +412,124 @@ class _PregnancyTrackingScreenState
     double durationMinutes = 10;
 
     await showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (context) {
-        return _sheetWrapper(
-          context,
-          Form(
-            key: formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Log baby kicks',
-                  style: ResponsiveConfig.textStyle(
-                    size: 18,
-                    weight: FontWeight.bold,
+        context: context,
+        isScrollControlled: true,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        builder: (context) {
+          return StatefulBuilder(
+            builder: (context, setState) {
+              return _sheetWrapper(
+                context,
+                Form(
+                  key: formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Log baby kicks',
+                        style: ResponsiveConfig.textStyle(
+                          size: 18,
+                          weight: FontWeight.bold,
+                        ),
+                      ),
+                      ResponsiveConfig.heightBox(16),
+                      TextFormField(
+                        controller: countController,
+                        keyboardType: TextInputType.number,
+                        decoration:
+                            const InputDecoration(labelText: 'Kick count'),
+                        validator: (value) {
+                          final parsed = int.tryParse(value ?? '');
+                          if (parsed == null || parsed <= 0) {
+                            return 'Enter a valid number of kicks';
+                          }
+                          return null;
+                        },
+                      ),
+                      ResponsiveConfig.heightBox(16),
+                      _SliderInput(
+                        label: 'Duration (minutes)',
+                        initialValue: durationMinutes,
+                        min: 5,
+                        max: 60,
+                        onChanged: (value) =>
+                            setState(() => durationMinutes = value),
+                      ),
+                      ResponsiveConfig.heightBox(16),
+                      TextField(
+                        controller: notesController,
+                        decoration: const InputDecoration(
+                            labelText: 'Notes (optional)'),
+                        maxLines: 2,
+                      ),
+                      ResponsiveConfig.heightBox(24),
+                      ElevatedButton(
+                        onPressed: () async {
+                          if (!formKey.currentState!.validate()) return;
+
+                          // Credit Check
+                          final hasCredit = await ref
+                              .read(creditManagerProvider)
+                              .requestCredit(context, ActionType.pregnancy);
+                          if (!hasCredit) return;
+
+                          try {
+                            final entry = KickEntry(
+                              userId: userId,
+                              pregnancyId: pregnancyId,
+                              date: DateTime.now(),
+                              time: DateTime.now(),
+                              kickCount: int.parse(countController.text.trim()),
+                              duration:
+                                  Duration(minutes: durationMinutes.round()),
+                              notes: notesController.text.trim().isEmpty
+                                  ? null
+                                  : notesController.text.trim(),
+                              createdAt: DateTime.now(),
+                            );
+
+                            await _pregnancyService.logKickEntry(entry);
+                            await ref
+                                .read(creditManagerProvider)
+                                .consumeCredits(ActionType.pregnancy);
+
+                            if (!mounted) return;
+
+                            Navigator.of(context).pop();
+
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content:
+                                      Text('✅ Saved ${entry.kickCount} kicks'),
+                                  duration: const Duration(seconds: 2),
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                      '❌ Error saving kicks: ${e.toString()}'),
+                                  duration: const Duration(seconds: 3),
+                                ),
+                              );
+                            }
+                          }
+                        },
+                        child: const Text('Save kicks'),
+                      ),
+                    ],
                   ),
                 ),
-                ResponsiveConfig.heightBox(16),
-                TextFormField(
-                  controller: countController,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: 'Kick count'),
-                  validator: (value) {
-                    final parsed = int.tryParse(value ?? '');
-                    if (parsed == null || parsed <= 0) {
-                      return 'Enter a valid number of kicks';
-                    }
-                    return null;
-                  },
-                ),
-                ResponsiveConfig.heightBox(16),
-                _SliderInput(
-                  label: 'Duration (minutes)',
-                  initialValue: durationMinutes,
-                  min: 5,
-                  max: 60,
-                  onChanged: (value) => durationMinutes = value,
-                ),
-                ResponsiveConfig.heightBox(16),
-                TextField(
-                  controller: notesController,
-                  decoration:
-                      const InputDecoration(labelText: 'Notes (optional)'),
-                  maxLines: 2,
-                ),
-                ResponsiveConfig.heightBox(24),
-                ElevatedButton(
-                  onPressed: () async {
-                    if (!formKey.currentState!.validate()) return;
-
-                    // Credit Check
-                    final hasCredit = await ref
-                        .read(creditManagerProvider)
-                        .requestCredit(context, ActionType.pregnancy);
-                    if (!hasCredit) return;
-
-                    try {
-                      final entry = KickEntry(
-                        userId: userId,
-                        pregnancyId: pregnancyId,
-                        date: DateTime.now(),
-                        time: DateTime.now(),
-                        kickCount: int.parse(countController.text.trim()),
-                        duration: Duration(minutes: durationMinutes.round()),
-                        notes: notesController.text.trim().isEmpty
-                            ? null
-                            : notesController.text.trim(),
-                        createdAt: DateTime.now(),
-                      );
-
-                      await _pregnancyService.logKickEntry(entry);
-                      await ref
-                          .read(creditManagerProvider)
-                          .consumeCredits(ActionType.pregnancy);
-
-                      if (!mounted) return;
-
-                      Navigator.of(context).pop();
-
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('✅ Saved ${entry.kickCount} kicks'),
-                            duration: const Duration(seconds: 2),
-                          ),
-                        );
-                      }
-                    } catch (e) {
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content:
-                                Text('❌ Error saving kicks: ${e.toString()}'),
-                            duration: const Duration(seconds: 3),
-                          ),
-                        );
-                      }
-                    }
-                  },
-                  child: const Text('Save kicks'),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
+              );
+            },
+          );
+        });
   }
 
   Future<void> _showContractionSheet(
@@ -493,116 +545,122 @@ class _PregnancyTrackingScreenState
     double intensity = 5;
 
     await showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (context) {
-        return _sheetWrapper(
-          context,
-          Form(
-            key: formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Log contraction',
-                  style: ResponsiveConfig.textStyle(
-                    size: 18,
-                    weight: FontWeight.bold,
+        context: context,
+        isScrollControlled: true,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        builder: (context) {
+          return StatefulBuilder(
+            builder: (context, setState) {
+              return _sheetWrapper(
+                context,
+                Form(
+                  key: formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Log contraction',
+                        style: ResponsiveConfig.textStyle(
+                          size: 18,
+                          weight: FontWeight.bold,
+                        ),
+                      ),
+                      ResponsiveConfig.heightBox(16),
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: const Icon(Icons.access_time_outlined),
+                        title: Text('Start: ${startTime.format(context)}'),
+                        onTap: () async {
+                          final picked = await showTimePicker(
+                            context: context,
+                            initialTime: startTime,
+                          );
+                          if (picked != null) {
+                            setState(() => startTime = picked);
+                          }
+                        },
+                      ),
+                      ResponsiveConfig.heightBox(16),
+                      _SliderInput(
+                        label: 'Duration (minutes)',
+                        initialValue: durationMinutes,
+                        min: 1,
+                        max: 10,
+                        onChanged: (value) =>
+                            setState(() => durationMinutes = value),
+                      ),
+                      ResponsiveConfig.heightBox(16),
+                      _SliderInput(
+                        label: 'Interval since last (minutes)',
+                        initialValue: intervalMinutes,
+                        min: 1,
+                        max: 30,
+                        onChanged: (value) =>
+                            setState(() => intervalMinutes = value),
+                      ),
+                      ResponsiveConfig.heightBox(16),
+                      _SliderInput(
+                        label: 'Intensity',
+                        initialValue: intensity,
+                        min: 1,
+                        max: 10,
+                        onChanged: (value) => setState(() => intensity = value),
+                      ),
+                      ResponsiveConfig.heightBox(16),
+                      TextField(
+                        controller: notesController,
+                        decoration: const InputDecoration(
+                            labelText: 'Notes (optional)'),
+                        maxLines: 2,
+                      ),
+                      ResponsiveConfig.heightBox(24),
+                      ElevatedButton(
+                        onPressed: () async {
+                          // Credit Check
+                          final hasCredit = await ref
+                              .read(creditManagerProvider)
+                              .requestCredit(context, ActionType.pregnancy);
+                          if (!hasCredit) return;
+
+                          final now = DateTime.now();
+                          final start = DateTime(now.year, now.month, now.day,
+                              startTime.hour, startTime.minute);
+                          final entry = ContractionEntry(
+                            userId: userId,
+                            pregnancyId: pregnancyId,
+                            startTime: start,
+                            endTime: start.add(
+                                Duration(minutes: durationMinutes.round())),
+                            duration:
+                                Duration(minutes: durationMinutes.round()),
+                            interval:
+                                Duration(minutes: intervalMinutes.round()),
+                            intensity: intensity.round(),
+                            notes: notesController.text.trim().isEmpty
+                                ? null
+                                : notesController.text.trim(),
+                            createdAt: DateTime.now(),
+                          );
+                          await _pregnancyService.logContraction(entry);
+                          await ref
+                              .read(creditManagerProvider)
+                              .consumeCredits(ActionType.pregnancy);
+
+                          if (!mounted) return;
+                          Navigator.of(context).pop();
+                        },
+                        child: const Text('Save contraction'),
+                      ),
+                    ],
                   ),
                 ),
-                ResponsiveConfig.heightBox(16),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.access_time_outlined),
-                  title: Text('Start: ${startTime.format(context)}'),
-                  onTap: () async {
-                    final picked = await showTimePicker(
-                      context: context,
-                      initialTime: startTime,
-                    );
-                    if (picked != null) {
-                      startTime = picked;
-                      if (context.mounted) setState(() {});
-                    }
-                  },
-                ),
-                ResponsiveConfig.heightBox(16),
-                _SliderInput(
-                  label: 'Duration (minutes)',
-                  initialValue: durationMinutes,
-                  min: 1,
-                  max: 10,
-                  onChanged: (value) => durationMinutes = value,
-                ),
-                ResponsiveConfig.heightBox(16),
-                _SliderInput(
-                  label: 'Interval since last (minutes)',
-                  initialValue: intervalMinutes,
-                  min: 1,
-                  max: 30,
-                  onChanged: (value) => intervalMinutes = value,
-                ),
-                ResponsiveConfig.heightBox(16),
-                _SliderInput(
-                  label: 'Intensity',
-                  initialValue: intensity,
-                  min: 1,
-                  max: 10,
-                  onChanged: (value) => intensity = value,
-                ),
-                ResponsiveConfig.heightBox(16),
-                TextField(
-                  controller: notesController,
-                  decoration:
-                      const InputDecoration(labelText: 'Notes (optional)'),
-                  maxLines: 2,
-                ),
-                ResponsiveConfig.heightBox(24),
-                ElevatedButton(
-                  onPressed: () async {
-                    // Credit Check
-                    final hasCredit = await ref
-                        .read(creditManagerProvider)
-                        .requestCredit(context, ActionType.pregnancy);
-                    if (!hasCredit) return;
-
-                    final now = DateTime.now();
-                    final start = DateTime(now.year, now.month, now.day,
-                        startTime.hour, startTime.minute);
-                    final entry = ContractionEntry(
-                      userId: userId,
-                      pregnancyId: pregnancyId,
-                      startTime: start,
-                      endTime:
-                          start.add(Duration(minutes: durationMinutes.round())),
-                      duration: Duration(minutes: durationMinutes.round()),
-                      interval: Duration(minutes: intervalMinutes.round()),
-                      intensity: intensity.round(),
-                      notes: notesController.text.trim().isEmpty
-                          ? null
-                          : notesController.text.trim(),
-                      createdAt: DateTime.now(),
-                    );
-                    await _pregnancyService.logContraction(entry);
-                    await ref
-                        .read(creditManagerProvider)
-                        .consumeCredits(ActionType.pregnancy);
-
-                    if (!mounted) return;
-                    Navigator.of(context).pop();
-                  },
-                  child: const Text('Save contraction'),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
+              );
+            },
+          );
+        });
   }
 
   Future<void> _showJournalSheet(
@@ -618,120 +676,128 @@ class _PregnancyTrackingScreenState
     DateTime selectedDate = DateTime.now();
 
     await showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (context) {
-        return _sheetWrapper(
-          context,
-          Form(
-            key: formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'New journal entry',
-                  style: ResponsiveConfig.textStyle(
-                    size: 18,
-                    weight: FontWeight.bold,
+        context: context,
+        isScrollControlled: true,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        builder: (context) {
+          return StatefulBuilder(
+            builder: (context, setState) {
+              return _sheetWrapper(
+                context,
+                Form(
+                  key: formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'New journal entry',
+                        style: ResponsiveConfig.textStyle(
+                          size: 18,
+                          weight: FontWeight.bold,
+                        ),
+                      ),
+                      ResponsiveConfig.heightBox(16),
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: const Icon(Icons.calendar_today_outlined),
+                        title: Text(
+                            DateFormat('EEE, MMM d, y').format(selectedDate)),
+                        onTap: () async {
+                          final picked = await showDatePicker(
+                            context: context,
+                            initialDate: selectedDate,
+                            firstDate: DateTime.now()
+                                .subtract(const Duration(days: 280)),
+                            lastDate: DateTime.now(),
+                          );
+                          if (picked != null) {
+                            setState(() => selectedDate = picked);
+                          }
+                        },
+                      ),
+                      ResponsiveConfig.heightBox(16),
+                      DropdownButtonFormField<String>(
+                        value: mood,
+                        decoration: const InputDecoration(labelText: 'Mood'),
+                        items: const [
+                          DropdownMenuItem(
+                              value: 'happy', child: Text('Happy')),
+                          DropdownMenuItem(value: 'calm', child: Text('Calm')),
+                          DropdownMenuItem(
+                              value: 'anxious', child: Text('Anxious')),
+                          DropdownMenuItem(
+                              value: 'tired', child: Text('Tired')),
+                          DropdownMenuItem(
+                              value: 'excited', child: Text('Excited')),
+                        ],
+                        onChanged: (value) => setState(() => mood = value),
+                      ),
+                      ResponsiveConfig.heightBox(16),
+                      TextField(
+                        controller: symptomsController,
+                        decoration: const InputDecoration(
+                          labelText: 'Symptoms (comma separated)',
+                        ),
+                      ),
+                      ResponsiveConfig.heightBox(16),
+                      TextField(
+                        controller: sleepController,
+                        decoration:
+                            const InputDecoration(labelText: 'Sleep hours'),
+                        keyboardType: TextInputType.number,
+                      ),
+                      ResponsiveConfig.heightBox(16),
+                      TextField(
+                        controller: notesController,
+                        decoration: const InputDecoration(labelText: 'Notes'),
+                        maxLines: 3,
+                      ),
+                      ResponsiveConfig.heightBox(24),
+                      ElevatedButton(
+                        onPressed: () async {
+                          // Credit Check
+                          final hasCredit = await ref
+                              .read(creditManagerProvider)
+                              .requestCredit(context, ActionType.pregnancy);
+                          if (!hasCredit) return;
+
+                          final entry = PregnancyJournalEntry(
+                            userId: userId,
+                            pregnancyId: pregnancyId,
+                            date: selectedDate,
+                            mood: mood,
+                            symptoms: symptomsController.text
+                                .split(',')
+                                .map((e) => e.trim())
+                                .where((e) => e.isNotEmpty)
+                                .toList(),
+                            journalText: notesController.text.trim().isEmpty
+                                ? null
+                                : notesController.text.trim(),
+                            sleepHours: sleepController.text.trim().isEmpty
+                                ? null
+                                : int.tryParse(sleepController.text.trim()),
+                            createdAt: DateTime.now(),
+                          );
+                          await _pregnancyService.saveJournalEntry(entry);
+                          await ref
+                              .read(creditManagerProvider)
+                              .consumeCredits(ActionType.pregnancy);
+
+                          if (!mounted) return;
+                          Navigator.of(context).pop();
+                        },
+                        child: const Text('Save journal'),
+                      ),
+                    ],
                   ),
                 ),
-                ResponsiveConfig.heightBox(16),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.calendar_today_outlined),
-                  title: Text(DateFormat('EEE, MMM d, y').format(selectedDate)),
-                  onTap: () async {
-                    final picked = await showDatePicker(
-                      context: context,
-                      initialDate: selectedDate,
-                      firstDate:
-                          DateTime.now().subtract(const Duration(days: 280)),
-                      lastDate: DateTime.now(),
-                    );
-                    if (picked != null) {
-                      selectedDate = picked;
-                      setState(() {});
-                    }
-                  },
-                ),
-                ResponsiveConfig.heightBox(16),
-                DropdownButtonFormField<String>(
-                  value: mood,
-                  decoration: const InputDecoration(labelText: 'Mood'),
-                  items: const [
-                    DropdownMenuItem(value: 'happy', child: Text('Happy')),
-                    DropdownMenuItem(value: 'calm', child: Text('Calm')),
-                    DropdownMenuItem(value: 'anxious', child: Text('Anxious')),
-                    DropdownMenuItem(value: 'tired', child: Text('Tired')),
-                    DropdownMenuItem(value: 'excited', child: Text('Excited')),
-                  ],
-                  onChanged: (value) => mood = value,
-                ),
-                ResponsiveConfig.heightBox(16),
-                TextField(
-                  controller: symptomsController,
-                  decoration: const InputDecoration(
-                    labelText: 'Symptoms (comma separated)',
-                  ),
-                ),
-                ResponsiveConfig.heightBox(16),
-                TextField(
-                  controller: sleepController,
-                  decoration: const InputDecoration(labelText: 'Sleep hours'),
-                  keyboardType: TextInputType.number,
-                ),
-                ResponsiveConfig.heightBox(16),
-                TextField(
-                  controller: notesController,
-                  decoration: const InputDecoration(labelText: 'Notes'),
-                  maxLines: 3,
-                ),
-                ResponsiveConfig.heightBox(24),
-                ElevatedButton(
-                  onPressed: () async {
-                    // Credit Check
-                    final hasCredit = await ref
-                        .read(creditManagerProvider)
-                        .requestCredit(context, ActionType.pregnancy);
-                    if (!hasCredit) return;
-
-                    final entry = PregnancyJournalEntry(
-                      userId: userId,
-                      pregnancyId: pregnancyId,
-                      date: selectedDate,
-                      mood: mood,
-                      symptoms: symptomsController.text
-                          .split(',')
-                          .map((e) => e.trim())
-                          .where((e) => e.isNotEmpty)
-                          .toList(),
-                      journalText: notesController.text.trim().isEmpty
-                          ? null
-                          : notesController.text.trim(),
-                      sleepHours: sleepController.text.trim().isEmpty
-                          ? null
-                          : int.tryParse(sleepController.text.trim()),
-                      createdAt: DateTime.now(),
-                    );
-                    await _pregnancyService.saveJournalEntry(entry);
-                    await ref
-                        .read(creditManagerProvider)
-                        .consumeCredits(ActionType.pregnancy);
-
-                    if (!mounted) return;
-                    Navigator.of(context).pop();
-                  },
-                  child: const Text('Save journal'),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
+              );
+            },
+          );
+        });
   }
 
   Future<void> _showWeightSheet(
@@ -1342,6 +1408,7 @@ class OverviewTab extends StatefulWidget {
     required this.kickStream,
     required this.appointmentStream,
     required this.medicationStream,
+    required this.babyStream,
     required this.onScheduleKickReminder,
     required this.onAddAppointment,
     required this.onAddMedication,
@@ -1352,6 +1419,8 @@ class OverviewTab extends StatefulWidget {
   final Stream<List<KickEntry>> kickStream;
   final Stream<List<PregnancyAppointment>> appointmentStream;
   final Stream<List<PregnancyMedication>> medicationStream;
+  final Stream<List<Baby>> babyStream;
+
   final VoidCallback? onScheduleKickReminder;
   final VoidCallback? onAddAppointment;
   final VoidCallback? onAddMedication;
@@ -1400,6 +1469,18 @@ class _OverviewTabState extends State<OverviewTab> {
             onWeekSelected: (week) => setState(() => _selectedWeek = week),
           ),
           ResponsiveConfig.heightBox(16),
+          StreamBuilder<List<Baby>>(
+            stream: widget.babyStream,
+            builder: (context, snapshot) {
+              return _MyBabiesSection(babies: snapshot.data ?? []);
+            },
+          ),
+          if (widget.pregnancy.currentWeek >= 36 &&
+              !widget.isReadOnly &&
+              widget.pregnancy.babyIds.isEmpty) ...[
+            _ChildbirthCTA(pregnancy: widget.pregnancy),
+            ResponsiveConfig.heightBox(16),
+          ],
           PregnancyProgressionSection(
             currentWeek: _selectedWeek,
             trimester: _getTrimesterForWeek(_selectedWeek),
@@ -1487,26 +1568,102 @@ class ProgressCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Week $selectedWeek',
-                      style: ResponsiveConfig.textStyle(
-                        size: 24,
-                        weight: FontWeight.bold,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            'Week $selectedWeek',
+                            style: ResponsiveConfig.textStyle(
+                              size: 24,
+                              weight: FontWeight.bold,
+                            ),
+                          ),
+                          ResponsiveConfig.widthBox(8),
+                          Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: () async {
+                                final now = DateTime.now();
+                                final firstDate =
+                                    now.subtract(const Duration(days: 280));
+                                final lastDate =
+                                    now.add(const Duration(days: 280));
+
+                                final picked = await showDatePicker(
+                                  context: context,
+                                  initialDate: now,
+                                  firstDate: firstDate,
+                                  lastDate: lastDate,
+                                  builder: (context, child) {
+                                    return Theme(
+                                      data: Theme.of(context).copyWith(
+                                        colorScheme: const ColorScheme.light(
+                                          primary: AppTheme.primaryPink,
+                                          onPrimary: Colors.white,
+                                          onSurface: AppTheme.darkGray,
+                                        ),
+                                      ),
+                                      child: child!,
+                                    );
+                                  },
+                                );
+
+                                if (picked != null) {
+                                  // Approximate week calculation based on conception/LMP logic
+                                  // If we don't have LMP here easily, we can ask user to pick "Week Start Date"
+                                  // BUT, simplest is to just let them pick a week number directly from a dialog
+                                  // OR, just map the date to week if we had LMP.
+                                  // Since we only have 'pregnancy' object, let's use its LMP to calculate the selected week from the picked date.
+                                  final difference = picked.difference(
+                                      pregnancy.lastMenstrualPeriod);
+                                  final week = (difference.inDays / 7)
+                                      .ceil()
+                                      .clamp(1, 42);
+                                  onWeekSelected(week);
+                                }
+                              },
+                              borderRadius: BorderRadius.circular(20),
+                              child: const Padding(
+                                padding: EdgeInsets.all(4.0),
+                                child: Icon(
+                                  Icons.calendar_month_outlined,
+                                  color: AppTheme.primaryPink,
+                                  size: 24,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                    Text(
-                      'Day ${pregnancy.currentDay} of journey',
-                      style: ResponsiveConfig.textStyle(
-                        size: 14,
-                        color: AppTheme.mediumGray,
+                      ResponsiveConfig.heightBox(4),
+                      Text(
+                        daysUntilDue != null
+                            ? '$daysUntilDue days left to delivery'
+                            : 'Day ${pregnancy.currentDay} of journey',
+                        style: ResponsiveConfig.textStyle(
+                          size: 14,
+                          color: AppTheme.mediumGray,
+                        ),
                       ),
-                    ),
-                  ],
+                      if (pregnancy.dueDate != null) ...[
+                        ResponsiveConfig.heightBox(4),
+                        Text(
+                          'Expected: ${DateFormat('MMM d, yyyy').format(pregnancy.dueDate!)}',
+                          style: ResponsiveConfig.textStyle(
+                            size: 14,
+                            weight: FontWeight.w600,
+                            color: AppTheme.primaryPink,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
                 Container(
                   padding:
@@ -1527,20 +1684,16 @@ class ProgressCard extends StatelessWidget {
               ],
             ),
             ResponsiveConfig.heightBox(20),
-            LinearProgressIndicator(
-              value: pregnancy.progressPercentage / 100,
-              backgroundColor: AppTheme.palePink,
-              valueColor: const AlwaysStoppedAnimation<Color>(
-                AppTheme.primaryPink,
-              ),
-              minHeight: 8,
+            ClipRRect(
               borderRadius: BorderRadius.circular(10),
-            ),
-            ResponsiveConfig.heightBox(20),
-            _PregnancyTimeline(
-              selectedWeek: selectedWeek,
-              currentWeek: pregnancy.currentWeek,
-              onWeekSelected: onWeekSelected,
+              child: LinearProgressIndicator(
+                value: (selectedWeek / 40).clamp(0.0, 1.0),
+                backgroundColor: AppTheme.palePink,
+                valueColor: const AlwaysStoppedAnimation<Color>(
+                  AppTheme.primaryPink,
+                ),
+                minHeight: 8,
+              ),
             ),
           ],
         ),
@@ -1555,125 +1708,188 @@ class ProgressCard extends StatelessWidget {
   }
 }
 
-class _PregnancyTimeline extends StatefulWidget {
-  const _PregnancyTimeline({
-    required this.selectedWeek,
-    required this.currentWeek,
-    required this.onWeekSelected,
-  });
+class _ChildbirthCTA extends StatelessWidget {
+  const _ChildbirthCTA({required this.pregnancy});
 
-  final int selectedWeek;
-  final int currentWeek;
-  final ValueChanged<int> onWeekSelected;
-
-  @override
-  State<_PregnancyTimeline> createState() => _PregnancyTimelineState();
-}
-
-class _PregnancyTimelineState extends State<_PregnancyTimeline> {
-  late ScrollController _scrollController;
-
-  @override
-  void initState() {
-    super.initState();
-    // Start at current week
-    _scrollController = ScrollController(
-      initialScrollOffset: (widget.selectedWeek - 1) * 60.0,
-    );
-  }
-
-  @override
-  void dispose() {
-    _scrollController.dispose();
-    super.dispose();
-  }
+  final Pregnancy pregnancy;
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    return Card(
+      elevation: 0,
+      color: AppTheme.primaryPink.withOpacity(0.05),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(24),
+        side: BorderSide(color: AppTheme.primaryPink.withOpacity(0.2)),
+      ),
+      child: Padding(
+        padding: ResponsiveConfig.padding(all: 20),
+        child: Row(
+          children: [
+            Container(
+              padding: ResponsiveConfig.padding(all: 12),
+              decoration: BoxDecoration(
+                color: AppTheme.primaryPink.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.child_care_rounded,
+                color: AppTheme.primaryPink,
+                size: 32,
+              ),
+            ),
+            ResponsiveConfig.widthBox(16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Time to meet your baby?',
+                    style: ResponsiveConfig.textStyle(
+                      size: 16,
+                      weight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    'Record your childbirth details and start newborn tracking.',
+                    style: ResponsiveConfig.textStyle(
+                      size: 13,
+                      color: AppTheme.mediumGray,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            ResponsiveConfig.widthBox(12),
+            IconButton.filled(
+              onPressed: () => context.pushNamed(
+                'childbirth-form',
+                extra: pregnancy,
+              ),
+              icon: const Icon(Icons.arrow_forward),
+              style: IconButton.styleFrom(
+                backgroundColor: AppTheme.primaryPink,
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MyBabiesSection extends StatelessWidget {
+  const _MyBabiesSection({required this.babies});
+  final List<Baby> babies;
+
+  @override
+  Widget build(BuildContext context) {
+    if (babies.isEmpty) return const SizedBox.shrink();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Pregnancy Timeline',
+          'My Babies',
           style: ResponsiveConfig.textStyle(
-            size: 14,
+            size: 16,
             weight: FontWeight.bold,
-            color: AppTheme.mediumGray,
           ),
         ),
         ResponsiveConfig.heightBox(12),
         SizedBox(
-          height: 70,
+          height: 100,
           child: ListView.builder(
-            controller: _scrollController,
             scrollDirection: Axis.horizontal,
-            itemCount: 41,
+            itemCount: babies.length,
+            padding: EdgeInsets.zero,
             itemBuilder: (context, index) {
-              final week = index + 1;
-              final isSelected = week == widget.selectedWeek;
-              final isCurrent = week == widget.currentWeek;
-
-              return GestureDetector(
-                onTap: () => widget.onWeekSelected(week),
-                child: Container(
-                  width: 55,
-                  margin: const EdgeInsets.only(right: 10),
-                  decoration: BoxDecoration(
-                    color: isSelected
-                        ? AppTheme.primaryPink
-                        : colorScheme.secondaryContainer,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: isSelected
-                          ? AppTheme.primaryPink
-                          : isCurrent
-                              ? AppTheme.primaryPink.withOpacity(0.5)
-                              : colorScheme.surface,
-                      width: 2,
-                    ),
-                    boxShadow: isSelected
-                        ? [
-                            BoxShadow(
-                              color: AppTheme.primaryPink.withOpacity(0.3),
-                              blurRadius: 8,
-                              offset: const Offset(0, 4),
-                            )
-                          ]
-                        : null,
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        'W$week',
-                        style: ResponsiveConfig.textStyle(
-                          size: 12,
-                          weight:
-                              isSelected ? FontWeight.bold : FontWeight.normal,
-                          color:
-                              isSelected ? Colors.white : AppTheme.mediumGray,
-                        ),
-                      ),
-                      if (isCurrent && !isSelected)
-                        Container(
-                          width: 6,
-                          height: 6,
-                          margin: const EdgeInsets.only(top: 4),
-                          decoration: const BoxDecoration(
-                            color: AppTheme.primaryPink,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              );
+              final baby = babies[index];
+              return _BabyCard(baby: baby);
             },
           ),
         ),
+        ResponsiveConfig.heightBox(16),
       ],
     );
+  }
+}
+
+class _BabyCard extends StatelessWidget {
+  const _BabyCard({required this.baby});
+  final Baby baby;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () =>
+          context.goNamed('baby-dashboard', pathParameters: {'id': baby.id!}),
+      child: Container(
+        width: 160,
+        margin: const EdgeInsets.only(right: 12),
+        padding: ResponsiveConfig.padding(all: 12),
+        decoration: BoxDecoration(
+          color: AppTheme.primaryPink.withOpacity(0.05),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppTheme.primaryPink.withOpacity(0.1)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: ResponsiveConfig.padding(all: 8),
+              decoration: BoxDecoration(
+                color: AppTheme.primaryPink.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.child_care_rounded,
+                color: AppTheme.primaryPink,
+                size: 24,
+              ),
+            ),
+            ResponsiveConfig.widthBox(10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    baby.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: ResponsiveConfig.textStyle(
+                      size: 14,
+                      weight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    _getBabyAge(baby.birthDate),
+                    style: ResponsiveConfig.textStyle(
+                      size: 11,
+                      color: AppTheme.mediumGray,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _getBabyAge(DateTime birthDate) {
+    final now = DateTime.now();
+    final difference = now.difference(birthDate);
+    if (difference.inDays < 30) {
+      return '${difference.inDays} days old';
+    } else if (difference.inDays < 365) {
+      final months = (difference.inDays / 30).floor();
+      return '$months months old';
+    } else {
+      final years = (difference.inDays / 365).floor();
+      return '$years years old';
+    }
   }
 }
 
@@ -2363,6 +2579,7 @@ class _JournalTab extends StatelessWidget {
     required this.weightStream,
     required this.onLogJournal,
     required this.onLogWeight,
+    this.isReadOnly = false,
   });
 
   final Pregnancy pregnancy;
@@ -2370,6 +2587,7 @@ class _JournalTab extends StatelessWidget {
   final Stream<List<PregnancyWeightEntry>> weightStream;
   final VoidCallback onLogJournal;
   final VoidCallback onLogWeight;
+  final bool isReadOnly;
 
   @override
   Widget build(BuildContext context) {
@@ -2378,7 +2596,10 @@ class _JournalTab extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _JournalHeader(pregnancy: pregnancy, onLogJournal: onLogJournal),
+          _JournalHeader(
+              pregnancy: pregnancy,
+              onLogJournal: onLogJournal,
+              isReadOnly: isReadOnly),
           ResponsiveConfig.heightBox(16),
           StreamBuilder<List<PregnancyJournalEntry>>(
             stream: journalStream,
@@ -2390,8 +2611,8 @@ class _JournalTab extends StatelessWidget {
                   title: 'No journals yet',
                   message:
                       'Log mood, symptoms and notes to track emotional wellbeing.',
-                  actionLabel: 'Log journal',
-                  onAction: onLogJournal,
+                  actionLabel: isReadOnly ? null : 'Log journal',
+                  onAction: isReadOnly ? null : onLogJournal,
                 );
               }
               return Column(
@@ -2405,7 +2626,10 @@ class _JournalTab extends StatelessWidget {
             stream: weightStream,
             builder: (context, snapshot) {
               return _WeightTrendCard(
-                  entries: snapshot.data ?? [], onLogWeight: onLogWeight);
+                entries: snapshot.data ?? [],
+                onLogWeight: onLogWeight,
+                isReadOnly: isReadOnly,
+              );
             },
           ),
         ],
@@ -2415,10 +2639,15 @@ class _JournalTab extends StatelessWidget {
 }
 
 class _JournalHeader extends StatelessWidget {
-  const _JournalHeader({required this.pregnancy, required this.onLogJournal});
+  const _JournalHeader({
+    required this.pregnancy,
+    required this.onLogJournal,
+    required this.isReadOnly,
+  });
 
   final Pregnancy pregnancy;
   final VoidCallback onLogJournal;
+  final bool isReadOnly;
 
   @override
   Widget build(BuildContext context) {
@@ -2449,11 +2678,12 @@ class _JournalHeader extends StatelessWidget {
               ],
             ),
             ResponsiveConfig.heightBox(12),
-            ElevatedButton.icon(
-              onPressed: onLogJournal,
-              icon: const Icon(Icons.edit_outlined),
-              label: const Text('Log journal'),
-            ),
+            if (!isReadOnly)
+              ElevatedButton.icon(
+                onPressed: onLogJournal,
+                icon: const Icon(Icons.edit_outlined),
+                label: const Text('Log journal'),
+              ),
           ],
         ),
       ),
@@ -2503,10 +2733,15 @@ class _JournalEntryTile extends StatelessWidget {
 }
 
 class _WeightTrendCard extends StatelessWidget {
-  const _WeightTrendCard({required this.entries, required this.onLogWeight});
+  const _WeightTrendCard({
+    required this.entries,
+    required this.onLogWeight,
+    this.isReadOnly = false,
+  });
 
   final List<PregnancyWeightEntry> entries;
   final VoidCallback onLogWeight;
+  final bool isReadOnly;
 
   @override
   Widget build(BuildContext context) {
@@ -2529,11 +2764,12 @@ class _WeightTrendCard extends StatelessWidget {
                     weight: FontWeight.bold,
                   ),
                 ),
-                OutlinedButton.icon(
-                  onPressed: onLogWeight,
-                  icon: const Icon(Icons.monitor_weight_outlined),
-                  label: const Text('Log weight'),
-                ),
+                if (!isReadOnly)
+                  OutlinedButton.icon(
+                    onPressed: onLogWeight,
+                    icon: const Icon(Icons.monitor_weight_outlined),
+                    label: const Text('Log weight'),
+                  ),
               ],
             ),
             ResponsiveConfig.heightBox(12),
@@ -2641,6 +2877,7 @@ class _PlannerTab extends StatelessWidget {
     required this.onAddAppointment,
     required this.onAddMedication,
     required this.onAddChecklist,
+    this.isReadOnly = false,
   });
 
   final Pregnancy pregnancy;
@@ -2650,6 +2887,7 @@ class _PlannerTab extends StatelessWidget {
   final VoidCallback onAddAppointment;
   final VoidCallback onAddMedication;
   final VoidCallback onAddChecklist;
+  final bool isReadOnly;
 
   @override
   Widget build(BuildContext context) {
@@ -2662,6 +2900,7 @@ class _PlannerTab extends StatelessWidget {
             pregnancy: pregnancy,
             onAddAppointment: onAddAppointment,
             onAddMedication: onAddMedication,
+            isReadOnly: isReadOnly,
           ),
           ResponsiveConfig.heightBox(16),
           StreamBuilder<List<PregnancyAppointment>>(
@@ -2670,6 +2909,7 @@ class _PlannerTab extends StatelessWidget {
               return _AppointmentListCard(
                 appointments: snapshot.data ?? [],
                 emptyAction: onAddAppointment,
+                isReadOnly: isReadOnly,
               );
             },
           ),
@@ -2680,6 +2920,7 @@ class _PlannerTab extends StatelessWidget {
               return _MedicationListCard(
                 medications: snapshot.data ?? [],
                 onAddMedication: onAddMedication,
+                isReadOnly: isReadOnly,
               );
             },
           ),
@@ -2690,6 +2931,7 @@ class _PlannerTab extends StatelessWidget {
               return _HospitalChecklistCard(
                 items: snapshot.data ?? [],
                 onAdd: onAddChecklist,
+                isReadOnly: isReadOnly,
               );
             },
           ),
@@ -2706,11 +2948,13 @@ class _PlannerHeader extends StatelessWidget {
     required this.pregnancy,
     required this.onAddAppointment,
     required this.onAddMedication,
+    this.isReadOnly = false,
   });
 
   final Pregnancy pregnancy;
   final VoidCallback onAddAppointment;
   final VoidCallback onAddMedication;
+  final bool isReadOnly;
 
   @override
   Widget build(BuildContext context) {
@@ -2736,23 +2980,24 @@ class _PlannerHeader extends StatelessWidget {
               ),
             ),
             ResponsiveConfig.heightBox(16),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                ElevatedButton.icon(
-                  onPressed: onAddAppointment,
-                  icon: const Icon(Icons.event_note_outlined),
-                  label: const Text('New appointment'),
-                ),
-                ResponsiveConfig.heightBox(12),
-                OutlinedButton.icon(
-                  onPressed: onAddMedication,
-                  icon: const Icon(Icons.medication_outlined),
-                  label: const Text('Add medication'),
-                ),
-              ],
-            ),
+            if (!isReadOnly)
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: onAddAppointment,
+                    icon: const Icon(Icons.event_note_outlined),
+                    label: const Text('New appointment'),
+                  ),
+                  ResponsiveConfig.heightBox(12),
+                  OutlinedButton.icon(
+                    onPressed: onAddMedication,
+                    icon: const Icon(Icons.medication_outlined),
+                    label: const Text('Add medication'),
+                  ),
+                ],
+              ),
           ],
         ),
       ),
@@ -2764,10 +3009,12 @@ class _AppointmentListCard extends StatelessWidget {
   const _AppointmentListCard({
     required this.appointments,
     required this.emptyAction,
+    this.isReadOnly = false,
   });
 
   final List<PregnancyAppointment> appointments;
   final VoidCallback emptyAction;
+  final bool isReadOnly;
 
   @override
   Widget build(BuildContext context) {
@@ -2777,8 +3024,8 @@ class _AppointmentListCard extends StatelessWidget {
         title: 'No appointments yet',
         message:
             'Schedule prenatal check-ups and classes so the app can remind you.',
-        actionLabel: 'Add appointment',
-        onAction: emptyAction,
+        actionLabel: isReadOnly ? null : 'Add appointment',
+        onAction: isReadOnly ? null : emptyAction,
       );
     }
 
@@ -2815,10 +3062,12 @@ class _MedicationListCard extends StatelessWidget {
   const _MedicationListCard({
     required this.medications,
     required this.onAddMedication,
+    this.isReadOnly = false,
   });
 
   final List<PregnancyMedication> medications;
   final VoidCallback onAddMedication;
+  final bool isReadOnly;
 
   @override
   Widget build(BuildContext context) {
@@ -2827,8 +3076,8 @@ class _MedicationListCard extends StatelessWidget {
         icon: Icons.medical_services_outlined,
         title: 'No medications tracked',
         message: 'Add prenatal vitamins or prescriptions to receive reminders.',
-        actionLabel: 'Add medication',
-        onAction: onAddMedication,
+        actionLabel: isReadOnly ? null : 'Add medication',
+        onAction: isReadOnly ? null : onAddMedication,
       );
     }
 
@@ -2856,10 +3105,15 @@ class _MedicationListCard extends StatelessWidget {
 }
 
 class _HospitalChecklistCard extends StatelessWidget {
-  const _HospitalChecklistCard({required this.items, required this.onAdd});
+  const _HospitalChecklistCard({
+    required this.items,
+    required this.onAdd,
+    this.isReadOnly = false,
+  });
 
   final List<HospitalChecklistItem> items;
   final VoidCallback onAdd;
+  final bool isReadOnly;
 
   @override
   Widget build(BuildContext context) {
@@ -2868,8 +3122,8 @@ class _HospitalChecklistCard extends StatelessWidget {
         icon: Icons.luggage_outlined,
         title: 'Hospital bag checklist',
         message: 'Create your hospital bag checklist so nothing is forgotten.',
-        actionLabel: 'Add item',
-        onAction: onAdd,
+        actionLabel: isReadOnly ? null : 'Add item',
+        onAction: isReadOnly ? null : onAdd,
       );
     }
 
@@ -2976,6 +3230,7 @@ class _InsightsTab extends StatelessWidget {
     required this.journalStream,
     required this.onLogKick,
     required this.onLogContraction,
+    this.isReadOnly = false,
   });
 
   final Pregnancy pregnancy;
@@ -2985,6 +3240,7 @@ class _InsightsTab extends StatelessWidget {
   final Stream<List<PregnancyJournalEntry>> journalStream;
   final VoidCallback onLogKick;
   final VoidCallback onLogContraction;
+  final bool isReadOnly;
 
   @override
   Widget build(BuildContext context) {
@@ -2994,7 +3250,10 @@ class _InsightsTab extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _InsightsHeader(
-              onLogKick: onLogKick, onLogContraction: onLogContraction),
+            onLogKick: onLogKick,
+            onLogContraction: onLogContraction,
+            isReadOnly: isReadOnly,
+          ),
           ResponsiveConfig.heightBox(16),
           StreamBuilder<List<KickEntry>>(
             stream: kickStream,
@@ -3034,14 +3293,19 @@ class _InsightsTab extends StatelessWidget {
 }
 
 class _InsightsHeader extends StatelessWidget {
-  const _InsightsHeader(
-      {required this.onLogKick, required this.onLogContraction});
+  const _InsightsHeader({
+    required this.onLogKick,
+    required this.onLogContraction,
+    this.isReadOnly = false,
+  });
 
   final VoidCallback onLogKick;
   final VoidCallback onLogContraction;
+  final bool isReadOnly;
 
   @override
   Widget build(BuildContext context) {
+    if (isReadOnly) return const SizedBox.shrink();
     return Card(
       child: Padding(
         padding: ResponsiveConfig.padding(all: 16),
